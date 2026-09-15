@@ -37,7 +37,7 @@ let state=players(M.makeLayout(),12),ids=state.players.map(p=>p.id);
 state=grouped(state,ids.slice(0,3),1);state=grouped(state,ids.slice(3,6),10);
 state=M.assign(state,ids[0],state.objects.find(o=>o.beacon==='A').id);
 const legacy=M.clone(state);legacy.version=1;delete legacy.season;delete legacy.groups;
-const migrated=M.validate(legacy);assert.equal(migrated.version,2);assert.equal(migrated.season,'4');assert.equal(migrated.groups.length,10);assert.ok(migrated.groups.every(g=>!g.playerIds.length));
+const migrated=M.validate(legacy);assert.equal(migrated.version,3);assert.equal(migrated.season,'4');assert.equal(migrated.groups.length,10);assert.ok(migrated.groups.every(g=>!g.playerIds.length));
 assert.deepEqual(migrated.objects,state.objects);assert.deepEqual(migrated.players,state.players);
 assert.deepEqual(M.validate(JSON.parse(JSON.stringify(state))),state);
 const switched=M.setSeason(state,'off');assert.deepEqual(switched.groups,state.groups);assert.deepEqual(switched.players,state.players);

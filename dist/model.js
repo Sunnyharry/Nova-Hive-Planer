@@ -1,9 +1,12 @@
 /* Pure map model. One unit is one map tile; coordinates identify building centers. */
 (function(root){
 'use strict';
-const SCHEMA='nova-hive-planner',VERSION=2;
+const SCHEMA='nova-hive-planner',VERSION=3;
 const t=(key,params={})=>globalThis.HiveI18n?.t(key,params)??key.replace(/\{(\w+)\}/g,(_,k)=>String(params[k]??'{'+k+'}'));
 const DEFAULT_NAMES={center:'Allianzzentrum',marshall:'Marshall’s Guard',terrain:'Terrain'};
+const PRIORITY_DEFAULTS=['Zuverlässiger Kern','Aktiv','Casual'];
+const priorityOf=player=>player?.priority??2;
+const priorityLabel=(state,level)=>state.priorityLabels?.[level-1]||t(PRIORITY_DEFAULTS[level-1]);
 const SEASONS=['off','1','2','3','4','5','6'];
 const emptyGroups=()=>Array.from({length:10},(_,i)=>({id:i+1,playerIds:[]}));
 const isSeason4=state=>(state.season??'4')==='4';
@@ -29,7 +32,7 @@ function objectLabel(state,o){
 function makeLayout(kind='spaced',existing=null){
  const season=existing?.season??'4';
  if(!SEASONS.includes(season))throw new Error(t('Ungültige Season.'));
- const state={schema:SCHEMA,version:VERSION,season,groups:clone(existing?.groups??emptyGroups()),title:existing?.title??'NOVA FAMILY',origin:clone(existing?.origin??{x:500,y:500,mapX:0,mapY:0}),showLight:season==='4'?(existing?.showLight??true):false,layout:kind,players:clone(existing?.players??[]),objects:[]};
+ const state={schema:SCHEMA,version:VERSION,season,groups:clone(existing?.groups??emptyGroups()),priorityLabels:clone(existing?.priorityLabels??['','','']),title:existing?.title??'NOVA FAMILY',origin:clone(existing?.origin??{x:500,y:500,mapX:0,mapY:0}),showLight:season==='4'?(existing?.showLight??true):false,layout:kind,players:clone(existing?.players??[]).map(p=>({...p,priority:priorityOf(p)})),objects:[]};
  const ox=state.origin.mapX,oy=state.origin.mapY;
  if(kind==='empty')return state;
  if(!['spaced','compact'].includes(kind))throw new Error(t('Unbekannte Vorlage.'));
@@ -125,7 +128,7 @@ function addPlayerNames(state,names){
  const raw=names.map(normalizeName).filter(Boolean);
  if(raw.some(name=>name.length>80))throw new Error(t('Ein Name darf höchstens 80 Zeichen lang sein.'));
  const next=clone(state),seen=new Set(next.players.map(p=>nameKey(p.name)));let added=0;
- for(const name of raw){if(seen.has(nameKey(name)))continue;seen.add(nameKey(name));next.players.push({id:uid('player'),name});added++;}
+ for(const name of raw){if(seen.has(nameKey(name)))continue;seen.add(nameKey(name));next.players.push({id:uid('player'),name,priority:2});added++;}
  if(next.players.length>300)throw new Error(t('Die Liste kann höchstens 300 Spieler enthalten.'));
  return {state:next,added,skipped:raw.length-added};
 }
@@ -140,15 +143,31 @@ function autofillOptions(state,includeBeacons=false){
  return {players,seats,reserved:includeBeacons?0:empty.filter(o=>o.beacon).length};
 }
 function groupForPlayer(state,id){return (state.groups??[]).find(g=>g.playerIds.includes(id))??null;}
-function setPlayerGroup(state,playerId,groupId){
- if(!state.players.some(p=>p.id===playerId))throw new Error(t('Spieler nicht gefunden.'));
+function requirePlayerIds(state,playerIds){
+ if(!Array.isArray(playerIds)||!playerIds.length||playerIds.length>300||playerIds.some(id=>!state.players.some(p=>p.id===id)))throw new Error(t('Spieler nicht gefunden.'));
+ return new Set(playerIds);
+}
+function setPlayerGroups(state,playerIds,groupId){
+ const ids=requirePlayerIds(state,playerIds);
  if(groupId!==null&&(!Number.isInteger(groupId)||groupId<1||groupId>10))throw new Error(t('Bitte eine Gruppe von 1 bis 10 wählen.'));
- if((groupForPlayer(state,playerId)?.id??null)===groupId)return state;
+ if([...ids].every(id=>(groupForPlayer(state,id)?.id??null)===groupId))return state;
  const next=clone(state);next.groups=clone(next.groups??emptyGroups());
- for(const g of next.groups)g.playerIds=g.playerIds.filter(id=>id!==playerId);
- if(groupId!==null){let group=next.groups.find(g=>g.id===groupId);if(!group){group={id:groupId,playerIds:[]};next.groups.push(group);}group.playerIds.push(playerId);}
+ for(const g of next.groups)g.playerIds=g.playerIds.filter(id=>!ids.has(id));
+ if(groupId!==null){let group=next.groups.find(g=>g.id===groupId);if(!group){group={id:groupId,playerIds:[]};next.groups.push(group);}group.playerIds.push(...state.players.filter(p=>ids.has(p.id)).map(p=>p.id));}
  return next;
 }
+function setPlayerGroup(state,playerId,groupId){return setPlayerGroups(state,[playerId],groupId);}
+function setPlayerPriorities(state,playerIds,priority){
+ const ids=requirePlayerIds(state,playerIds);
+ if(!Number.isInteger(priority)||priority<1||priority>3)throw new Error(t('Priorität muss 1, 2 oder 3 sein.'));
+ if(state.players.filter(p=>ids.has(p.id)).every(p=>priorityOf(p)===priority))return state;
+ const next=clone(state);for(const p of next.players)if(ids.has(p.id))p.priority=priority;return next;
+}
+function setPriorityLabel(state,level,label){
+ if(!Number.isInteger(level)||level<1||level>3||typeof label!=='string'||label.length>40)throw new Error(t('Die Prioritätsbezeichnung darf höchstens 40 Zeichen haben.'));
+ const next=clone(state);next.priorityLabels=clone(next.priorityLabels??['','','']);next.priorityLabels[level-1]=normalizeName(label);return next;
+}
+function groupPriority(state,group){const members=state.players.filter(p=>group.playerIds.includes(p.id));return members.length?members.reduce((sum,p)=>sum+priorityOf(p),0)/members.length:2;}
 function clearPlayers(state){const next=clone(state);next.players=[];next.groups=emptyGroups();for(const o of next.objects)if(o.type==='base')o.playerId=null;return next;}
 function areNeighbors(a,b,gap=1){return a.id!==b.id&&Math.abs(a.x-b.x)<=(a.w+b.w)/2+gap+1e-8&&Math.abs(a.y-b.y)<=(a.h+b.h)/2+gap+1e-8;}
 function groupComponents(objects,gap=1){
@@ -191,17 +210,27 @@ function autofill(state,includeBeacons=false){
  const {players,seats,reserved}=autofillOptions(state,includeBeacons),assigned=Math.min(players.length,seats.length);
  if(!assigned)return {state,assigned:0,remaining:players.length,freeSeats:seats.length,reserved,splitGroups:[]};
  const next=clone(state),unassigned=new Set(players.map(p=>p.id)),available=new Map(seats.map(o=>[o.id,o])),placements=new Map();
- const activeGroups=(state.groups??[]).filter(g=>g.playerIds.some(id=>unassigned.has(id))).map(g=>({...g,anchors:state.objects.filter(o=>g.playerIds.includes(o.playerId))}));
- activeGroups.sort((a,b)=>Number(!!b.anchors.length)-Number(!!a.anchors.length)||a.id-b.id);
- for(const group of activeGroups){
-  const members=group.playerIds.filter(id=>unassigned.has(id)),chosen=groupSeats(state,[...available.values()],group.anchors,Math.min(members.length,available.size));
-  chosen.forEach((seat,i)=>{placements.set(seat.id,members[i]);available.delete(seat.id);unassigned.delete(members[i]);});
+ const order=new Map(state.players.map((p,i)=>[p.id,i])),byId=new Map(state.players.map(p=>[p.id,p]));
+ const distance=o=>(o.x-state.origin.mapX)**2+(o.y-state.origin.mapY)**2;
+ const seatOrder=(a,b)=>distance(a)-distance(b)||a.slot-b.slot||a.id.localeCompare(b.id);
+ const units=[],grouped=new Set();
+ for(const group of state.groups??[]){
+  const members=group.playerIds.filter(id=>unassigned.has(id));if(!members.length)continue;
+  for(const id of members)grouped.add(id);
+  units.push({members,anchors:state.objects.filter(o=>group.playerIds.includes(o.playerId)),score:groupPriority(state,group),order:Math.min(...group.playerIds.map(id=>order.get(id)))});
  }
- // Ungrouped or still-unassigned members use the remaining central seats.
- const rest=players.filter(p=>unassigned.has(p.id));
- [...available.values()].slice(0,rest.length).forEach((seat,i)=>{placements.set(seat.id,rest[i].id);unassigned.delete(rest[i].id);});
+ for(const player of players)if(!grouped.has(player.id))units.push({members:[player.id],anchors:[],score:priorityOf(player),order:order.get(player.id)});
+ // Fixed placements constrain nearby group seats. All other groups and individuals share one priority ranking.
+ units.sort((a,b)=>Number(!!b.anchors.length)-Number(!!a.anchors.length)||a.score-b.score||a.order-b.order);
+ for(const unit of units){
+  const members=[...unit.members].sort((a,b)=>priorityOf(byId.get(a))-priorityOf(byId.get(b))||order.get(a)-order.get(b));
+  const count=Math.min(members.length,available.size),free=[...available.values()];
+  const chosen=unit.members.length===1&&!unit.anchors.length?free.slice(0,count):groupSeats(state,free,unit.anchors,count);
+  // Higher-priority members occupy the inner side of their selected cluster; existing members remain fixed.
+  chosen.sort(seatOrder).forEach((seat,i)=>{placements.set(seat.id,members[i]);available.delete(seat.id);});
+ }
  for(const o of next.objects)if(placements.has(o.id))o.playerId=placements.get(o.id);
- const splitGroups=(next.groups??[]).filter(g=>g.playerIds.length>1&&g.playerIds.some(id=>players.some(p=>p.id===id))).filter(g=>{
+ const splitGroups=(next.groups??[]).filter(g=>g.playerIds.length>1&&g.playerIds.some(id=>unassigned.has(id))).filter(g=>{
   const objects=next.objects.filter(o=>g.playerIds.includes(o.playerId));return objects.length<g.playerIds.length||groupComponents(objects,state.layout==='compact'?0:1)>1;
  }).map(g=>g.id);
  return {state:next,assigned:placements.size,remaining:players.length-placements.size,freeSeats:seats.length-placements.size,reserved,splitGroups};
@@ -264,17 +293,18 @@ function bounds(state,includeLight=state.showLight){
  const rs=all.map(rect);return {left:Math.min(...rs.map(r=>r.left)),right:Math.max(...rs.map(r=>r.right)),bottom:Math.min(...rs.map(r=>r.bottom)),top:Math.max(...rs.map(r=>r.top))};
 }
 function validate(raw){
- if(!raw||raw.schema!==SCHEMA||![1,VERSION].includes(raw.version))throw new Error(t('Das ist keine unterstützte Hive-Plan-Datei.'));
+ if(!raw||raw.schema!==SCHEMA||![1,2,VERSION].includes(raw.version))throw new Error(t('Das ist keine unterstützte Hive-Plan-Datei.'));
  if(typeof raw.title!=='string'||raw.title.length>80)throw new Error(t('Ungültiger Planname.'));
  if(!raw.origin||!['x','y','mapX','mapY'].every(k=>Number.isInteger(raw.origin[k])))throw new Error(t('Ungültiger Koordinatenursprung.'));
  if(!finite(raw.origin.x,0,999999)||!finite(raw.origin.y,0,999999)||!finite(raw.origin.mapX,-5000,5000)||!finite(raw.origin.mapY,-5000,5000))throw new Error(t('Ungültiger Koordinatenursprung.'));
  if(!Array.isArray(raw.players)||raw.players.length>300||!Array.isArray(raw.objects)||raw.objects.length>800)throw new Error(t('Die Datei enthält zu viele oder ungültige Elemente.'));
  const season=raw.version===1?'4':raw.season;
  if(!SEASONS.includes(season))throw new Error(t('Ungültige Season.'));
- const state={schema:SCHEMA,version:VERSION,season,groups:[],title:raw.title,origin:{x:raw.origin.x,y:raw.origin.y,mapX:raw.origin.mapX,mapY:raw.origin.mapY},showLight:raw.showLight!==false,layout:['spaced','compact','empty'].includes(raw.layout)?raw.layout:'empty',players:[],objects:[]};
+ const state={schema:SCHEMA,version:VERSION,season,groups:[],priorityLabels:['','',''],title:raw.title,origin:{x:raw.origin.x,y:raw.origin.y,mapX:raw.origin.mapX,mapY:raw.origin.mapY},showLight:raw.showLight!==false,layout:['spaced','compact','empty'].includes(raw.layout)?raw.layout:'empty',players:[],objects:[]};
+ if(raw.version===VERSION){if(!Array.isArray(raw.priorityLabels)||raw.priorityLabels.length!==3||raw.priorityLabels.some(v=>typeof v!=='string'||v.length>40))throw new Error(t('Ungültige Prioritätsbezeichnungen.'));state.priorityLabels=raw.priorityLabels.map(normalizeName);}
  const ids=new Set(),names=new Set(),assigned=new Set(),beacons=new Set();
  const validId=id=>typeof id==='string'&&id.length>0&&id.length<=100&&/^[A-Za-z0-9_-]+$/.test(id);
- for(const p of raw.players){if(!p||!validId(p.id)||ids.has(p.id)||typeof p.name!=='string'||!normalizeName(p.name)||p.name.length>80||names.has(nameKey(p.name)))throw new Error(t('Ungültige oder doppelte Spieler.'));ids.add(p.id);names.add(nameKey(p.name));state.players.push({id:p.id,name:normalizeName(p.name)});}
+ for(const p of raw.players){if(!p||!validId(p.id)||ids.has(p.id)||typeof p.name!=='string'||!normalizeName(p.name)||p.name.length>80||names.has(nameKey(p.name)))throw new Error(t('Ungültige oder doppelte Spieler.'));ids.add(p.id);names.add(nameKey(p.name));const priority=raw.version===VERSION?p.priority:2;if(!Number.isInteger(priority)||priority<1||priority>3)throw new Error(t('Priorität muss 1, 2 oder 3 sein.'));state.players.push({id:p.id,name:normalizeName(p.name),priority});}
  const groups=raw.version===1?emptyGroups():raw.groups,groupIds=new Set(),groupedPlayers=new Set();
  if(!Array.isArray(groups)||groups.length>10)throw new Error(t('Ungültige Gruppenliste.'));
  for(const g of groups){
@@ -306,5 +336,5 @@ function validate(raw){
  }
  return state;
 }
-root.HiveModel={SCHEMA,VERSION,SEASONS,emptyGroups,isSeason4,isDeveloping,anchorType,setSeason,groupForPlayer,setPlayerGroup,clearPlayers,areNeighbors,groupComponents,terrainResizeCandidate,resizeTerrain,COLORS,clone,uid,normalizeName,snap,rect,overlaps,coords,positionFromCoords,playerFor,objectForPlayer,objectLabel,makeLayout,collision,assertPlacement,moveObject,nextBeacon,makeObject,addObject,removeObject,parsePlayerFile,decodePlayerFile,importPlayers,addPlayers,autofillOptions,autofill,assign,unassign,unassignAll,removePlayer,setOrigin,updateObject,coverage,bounds,validate};
+root.HiveModel={SCHEMA,VERSION,PRIORITY_DEFAULTS,priorityOf,priorityLabel,setPlayerPriorities,setPriorityLabel,setPlayerGroups,groupPriority,SEASONS,emptyGroups,isSeason4,isDeveloping,anchorType,setSeason,groupForPlayer,setPlayerGroup,clearPlayers,areNeighbors,groupComponents,terrainResizeCandidate,resizeTerrain,COLORS,clone,uid,normalizeName,snap,rect,overlaps,coords,positionFromCoords,playerFor,objectForPlayer,objectLabel,makeLayout,collision,assertPlacement,moveObject,nextBeacon,makeObject,addObject,removeObject,parsePlayerFile,decodePlayerFile,importPlayers,addPlayers,autofillOptions,autofill,assign,unassign,unassignAll,removePlayer,setOrigin,updateObject,coverage,bounds,validate};
 })(globalThis);

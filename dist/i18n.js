@@ -2307,6 +2307,246 @@ const messages={
   "Adicionar: B = base, M = Marshall, A = centro da aliança, T = terreno, L = sinalizador. Pressione a tecla e clique no mapa. A e L só estão disponíveis na temporada 4. Os atalhos ficam desativados durante a digitação.",
   "Thêm: B = căn cứ, M = Marshall, A = trung tâm liên minh, T = địa hình, L = beacon. Nhấn phím rồi nhấp vào bản đồ. A và L chỉ dùng trong Mùa 4. Các phím tắt này không hoạt động khi đang nhập văn bản.",
   "추가: B = 기지, M = 마샬, A = 연맹 센터, T = 지형, L = 비콘. 키를 누른 다음 지도를 클릭하세요. A와 L은 시즌 4에서만 사용할 수 있습니다. 텍스트 입력 중에는 이 단축키가 작동하지 않습니다."
+ ],
+ "Zuverlässiger Kern": [
+  "Reliable core",
+  "Noyau fiable",
+  "Núcleo fiable",
+  "Núcleo confiável",
+  "Nòng cốt đáng tin cậy",
+  "믿음직한 핵심 멤버"
+ ],
+ "Aktiv": [
+  "Active",
+  "Actif",
+  "Activo",
+  "Ativo",
+  "Năng động",
+  "활동적"
+ ],
+ "Casual": [
+  "Casual",
+  "Occasionnel",
+  "Ocasional",
+  "Casual",
+  "Chơi thư giãn",
+  "라이트 유저"
+ ],
+ "Priority": [
+  "Priority",
+  "Priorité",
+  "Prioridad",
+  "Prioridade",
+  "Ưu tiên",
+  "우선순위"
+ ],
+ "Priority & Gruppen": [
+  "Priority & groups",
+  "Priorité et groupes",
+  "Prioridad y grupos",
+  "Prioridade e grupos",
+  "Ưu tiên & nhóm",
+  "우선순위 및 그룹"
+ ],
+ "Freundesgruppen": [
+  "Friend groups",
+  "Groupes d’amis",
+  "Grupos de amigos",
+  "Grupos de amigos",
+  "Nhóm bạn bè",
+  "친구 그룹"
+ ],
+ "Spieler organisieren": [
+  "Organize players",
+  "Organiser les joueurs",
+  "Organizar jugadores",
+  "Organizar jogadores",
+  "Sắp xếp người chơi",
+  "플레이어 정리"
+ ],
+ "Alle sichtbaren auswählen": [
+  "Select all visible",
+  "Sélectionner tous les joueurs visibles",
+  "Seleccionar todos los visibles",
+  "Selecionar todos os visíveis",
+  "Chọn tất cả đang hiển thị",
+  "표시된 플레이어 모두 선택"
+ ],
+ "Auswahl aufheben": [
+  "Clear selection",
+  "Effacer la sélection",
+  "Quitar selección",
+  "Limpar seleção",
+  "Bỏ chọn tất cả",
+  "선택 해제"
+ ],
+ "Auswahl zuweisen zu": [
+  "Assign selection to",
+  "Affecter la sélection à",
+  "Asignar selección a",
+  "Atribuir seleção a",
+  "Gán lựa chọn vào",
+  "선택 항목 배정 대상"
+ ],
+ "Zuweisen": [
+  "Assign",
+  "Affecter",
+  "Asignar",
+  "Atribuir",
+  "Gán",
+  "배정"
+ ],
+ "Markieren, dann gemeinsam ziehen oder unten zuweisen.": [
+  "Select players, then drag them together or assign them below.",
+  "Sélectionnez des joueurs, puis faites-les glisser ensemble ou affectez-les ci-dessous.",
+  "Selecciona jugadores y arrástralos juntos o asígnalos abajo.",
+  "Selecione jogadores e arraste-os juntos ou atribua-os abaixo.",
+  "Chọn người chơi, rồi kéo cùng lúc hoặc gán bên dưới.",
+  "플레이어를 선택한 뒤 함께 드래그하거나 아래에서 배정하세요."
+ ],
+ "P1 nach innen, P3 nach außen. Neue Spieler: P2. Eigene Namen ändern die Reihenfolge nicht.": [
+  "P1 toward the center, P3 toward the edge. New players: P2. Custom labels do not change the order.",
+  "P1 vers le centre, P3 vers le bord. Nouveaux joueurs : P2. Les noms personnalisés ne changent pas cet ordre.",
+  "P1 hacia el centro, P3 hacia el borde. Nuevos jugadores: P2. Los nombres personalizados no cambian el orden.",
+  "P1 em direção ao centro, P3 às bordas. Novos jogadores: P2. Nomes personalizados não alteram a ordem.",
+  "P1 gần tâm, P3 ra ngoài. Người chơi mới: P2. Đổi tên mức ưu tiên không đổi thứ tự.",
+  "P1은 안쪽, P3는 바깥쪽에 배치됩니다. 새 플레이어는 P2입니다. 이름을 바꿔도 순서는 유지됩니다."
+ ],
+ "Der Prioritätsdurchschnitt bestimmt die Reihenfolge der Gruppen. Feste Plätze dienen als Anker. Jede Person gehört höchstens einer Gruppe an.": [
+  "Groups are ordered by average priority. Placed members anchor their group. Each player can belong to one group.",
+  "La priorité moyenne détermine l’ordre des groupes. Les membres déjà placés servent de points d’ancrage. Chaque joueur appartient à un seul groupe au maximum.",
+  "La prioridad media determina el orden de los grupos. Los miembros ya colocados sirven de referencia. Cada jugador puede pertenecer a un solo grupo.",
+  "A prioridade média determina a ordem dos grupos. Membros já posicionados servem de referência. Cada jogador pode pertencer a apenas um grupo.",
+  "Mức ưu tiên trung bình quyết định thứ tự nhóm. Thành viên đã đặt là điểm neo cho nhóm. Mỗi người chỉ thuộc tối đa một nhóm.",
+  "그룹은 평균 우선순위에 따라 배치됩니다. 이미 배치된 멤버를 기준으로 그룹을 배치합니다. 각 플레이어는 최대 한 그룹에 속할 수 있습니다."
+ ],
+ "Durchschnitt: {value}": [
+  "Average: {value}",
+  "Moyenne : {value}",
+  "Media: {value}",
+  "Média: {value}",
+  "Trung bình: {value}",
+  "평균: {value}"
+ ],
+ "Bezeichnung bearbeiten": [
+  "Edit label",
+  "Modifier le nom",
+  "Editar nombre",
+  "Editar nome",
+  "Sửa tên",
+  "이름 편집"
+ ],
+ "Bezeichnung für P{n}": [
+  "Label for P{n}",
+  "Nom de P{n}",
+  "Nombre de P{n}",
+  "Nome de P{n}",
+  "Tên của P{n}",
+  "P{n} 이름"
+ ],
+ "Prioritätsbezeichnung": [
+  "Priority label",
+  "Nom de priorité",
+  "Nombre de prioridad",
+  "Nome da prioridade",
+  "Tên mức ưu tiên",
+  "우선순위 이름"
+ ],
+ "Spieler hier hineinziehen": [
+  "Drag players here",
+  "Glissez les joueurs ici",
+  "Arrastra jugadores aquí",
+  "Arraste jogadores aqui",
+  "Kéo người chơi vào đây",
+  "여기에 플레이어를 드래그하세요"
+ ],
+ "{name} auswählen": [
+  "Select {name}",
+  "Sélectionner {name}",
+  "Seleccionar a {name}",
+  "Selecionar {name}",
+  "Chọn {name}",
+  "{name} 선택"
+ ],
+ "{n} Spieler ausgewählt": [
+  "{n} players selected",
+  "{n} joueurs sélectionnés",
+  "{n} jugadores seleccionados",
+  "{n} jogadores selecionados",
+  "Đã chọn {n} người chơi",
+  "플레이어 {n}명 선택됨"
+ ],
+ "{n} Spieler zugewiesen.": [
+  "{n} players assigned.",
+  "{n} joueurs affectés.",
+  "{n} jugadores asignados.",
+  "{n} jogadores atribuídos.",
+  "Đã gán {n} người chơi.",
+  "플레이어 {n}명을 배정했습니다."
+ ],
+ "Mehrere Spieler bitte einer Priorität oder Gruppe zuordnen.": [
+  "Assign multiple players to a priority or a group.",
+  "Affectez les joueurs sélectionnés à une priorité ou à un groupe.",
+  "Asigna los jugadores seleccionados a una prioridad o a un grupo.",
+  "Atribua os jogadores selecionados a uma prioridade ou a um grupo.",
+  "Hãy gán nhiều người chơi vào một mức ưu tiên hoặc nhóm.",
+  "여러 플레이어는 우선순위 또는 그룹에 배정해 주세요."
+ ],
+ "Priorität muss 1, 2 oder 3 sein.": [
+  "Priority must be 1, 2 or 3.",
+  "La priorité doit être 1, 2 ou 3.",
+  "La prioridad debe ser 1, 2 o 3.",
+  "A prioridade deve ser 1, 2 ou 3.",
+  "Mức ưu tiên phải là 1, 2 hoặc 3.",
+  "우선순위는 1, 2 또는 3이어야 합니다."
+ ],
+ "Die Prioritätsbezeichnung darf höchstens 40 Zeichen haben.": [
+  "Priority labels must be 40 characters or fewer.",
+  "Le nom de priorité ne doit pas dépasser 40 caractères.",
+  "El nombre de prioridad debe tener como máximo 40 caracteres.",
+  "O nome da prioridade deve ter no máximo 40 caracteres.",
+  "Tên mức ưu tiên không được dài quá 40 ký tự.",
+  "우선순위 이름은 40자 이하여야 합니다."
+ ],
+ "Ungültige Prioritätsbezeichnungen.": [
+  "Invalid priority labels.",
+  "Noms de priorité non valides.",
+  "Nombres de prioridad no válidos.",
+  "Nomes de prioridade inválidos.",
+  "Tên mức ưu tiên không hợp lệ.",
+  "우선순위 이름이 올바르지 않습니다."
+ ],
+ "Autofill: Prioritäten und Gruppendurchschnitt, von innen nach außen.": [
+  "Autofill: player priorities and group averages, from the center outward.",
+  "Remplissage auto : priorités individuelles et moyennes des groupes, du centre vers l’extérieur.",
+  "Autofill: prioridades y medias de grupo, del centro hacia fuera.",
+  "Autofill: prioridades e médias dos grupos, do centro para fora.",
+  "Tự điền: ưu tiên cá nhân và trung bình nhóm, từ tâm ra ngoài.",
+  "자동 배치: 개인 우선순위와 그룹 평균에 따라 안쪽부터 바깥쪽으로 배치합니다."
+ ],
+ "Öffne „Priority & Gruppen“ unter der Spielerliste. Markiere mehrere Spieler und ziehe sie in P1, P2 oder P3, dann im zweiten Tab in eine der zehn Freundesgruppen. Alternativ nutze „Zuweisen“. Priorität und Gruppe sind unabhängig. Neue Spieler beginnen mit P2. Die Prioritätsnamen sind editierbar.": [
+  "Open “Priority & groups” below the roster. Select multiple players and drag them to P1, P2 or P3, then to one of ten friend groups in the second tab. You can also use “Assign”. Priority and group are independent. New players start at P2. Priority labels are editable.",
+  "Ouvrez « Priorité et groupes » sous la liste. Sélectionnez plusieurs joueurs et glissez-les dans P1, P2 ou P3, puis dans l’un des dix groupes du second onglet. Vous pouvez aussi utiliser « Affecter ». Priorité et groupe sont indépendants. Les nouveaux joueurs commencent en P2. Les noms des priorités sont modifiables.",
+  "Abre «Prioridad y grupos» bajo la lista. Selecciona varios jugadores y arrástralos a P1, P2 o P3 y luego a uno de los diez grupos de amigos en la segunda pestaña. También puedes usar «Asignar». Prioridad y grupo son independientes. Los nuevos jugadores empiezan en P2. Los nombres de prioridad se pueden editar.",
+  "Abra “Prioridade e grupos” abaixo da lista. Selecione vários jogadores e arraste-os para P1, P2 ou P3 e depois para um dos dez grupos de amigos na segunda aba. Você também pode usar “Atribuir”. Prioridade e grupo são independentes. Novos jogadores começam em P2. Os nomes das prioridades são editáveis.",
+  "Mở “Ưu tiên & nhóm” dưới danh sách. Chọn nhiều người chơi, kéo vào P1, P2 hoặc P3, rồi vào một trong mười nhóm bạn bè ở thẻ thứ hai. Bạn cũng có thể dùng “Gán”. Ưu tiên và nhóm độc lập với nhau. Người chơi mới bắt đầu ở P2. Có thể sửa tên mức ưu tiên.",
+  "목록 아래에서 “우선순위 및 그룹”을 여세요. 여러 플레이어를 선택해 P1, P2, P3으로 드래그한 다음 두 번째 탭의 친구 그룹 10개 중 하나로 드래그하세요. “배정” 버튼도 사용할 수 있습니다. 우선순위와 그룹은 서로 독립적입니다. 새 플레이어는 P2로 시작하며 우선순위 이름은 편집할 수 있습니다."
+ ],
+ "Autofill ordnet einzelne Spieler nach Priorität und Gruppen nach ihrem Prioritätsdurchschnitt von innen nach außen. Gruppen bleiben möglichst zusammen. Manuell gesetzte Mitglieder bleiben fest und dienen als Anker für ihre Gruppe. Bei einem Feld Abstand gelten benachbarte Plätze als zusammenhängend.": [
+  "Autofill places individuals by priority and groups by average priority, from the center outward. Groups stay together where possible. Manually placed members stay fixed and anchor their group. In a one-tile-gap layout, neighboring seats across the gap count as connected.",
+  "Le remplissage auto place les joueurs selon leur priorité et les groupes selon leur moyenne, du centre vers l’extérieur. Les groupes restent ensemble si possible. Les membres placés manuellement restent fixes et servent d’ancrage. Avec un espacement d’une case, les places voisines sont considérées comme reliées.",
+  "Autofill coloca a los jugadores según su prioridad y a los grupos según su media, del centro hacia fuera. Mantiene los grupos juntos cuando es posible. Los miembros colocados manualmente quedan fijos y sirven de referencia. Con un espacio de una casilla, los puestos vecinos se consideran conectados.",
+  "Autofill posiciona jogadores pela prioridade e grupos pela média, do centro para fora. Mantém os grupos juntos quando possível. Membros posicionados manualmente ficam fixos e servem de referência. Com um espaço de uma célula, posições vizinhas são consideradas conectadas.",
+  "Tự điền xếp cá nhân theo ưu tiên và nhóm theo mức trung bình, từ tâm ra ngoài. Nhóm ở cạnh nhau khi có thể. Thành viên đặt thủ công được giữ nguyên và làm điểm neo cho nhóm. Khi cách nhau một ô, các vị trí liền kề vẫn được tính là kết nối.",
+  "자동 배치는 개인의 우선순위와 그룹의 평균 우선순위에 따라 안쪽부터 배치하며, 가능한 한 그룹을 모아 둡니다. 수동 배치된 멤버는 고정되며 그룹 배치의 기준이 됩니다. 한 칸 간격 배치에서는 간격을 사이에 둔 이웃 자리도 연결된 것으로 봅니다."
+ ],
+ "Plan-Dateien speichern Season, Gruppen, Prioritäten und eigene Prioritätsnamen. PNG/SVG zeigen Namen und Koordinaten, CSV zusätzlich Gruppe und Priorität.": [
+  "Plan files save season, groups, priorities and custom priority labels. PNG/SVG show names and coordinates; CSV also includes group and priority.",
+  "Les fichiers de plan enregistrent saison, groupes, priorités et noms personnalisés. Les PNG/SVG affichent noms et coordonnées ; le CSV ajoute groupe et priorité.",
+  "Los planes guardan temporada, grupos, prioridades y nombres personalizados. PNG/SVG muestran nombres y coordenadas; CSV incluye también grupo y prioridad.",
+  "Os planos salvam temporada, grupos, prioridades e nomes personalizados. PNG/SVG mostram nomes e coordenadas; CSV inclui também grupo e prioridade.",
+  "Tệp kế hoạch lưu mùa, nhóm, ưu tiên và tên ưu tiên tùy chỉnh. PNG/SVG hiển thị tên và tọa độ; CSV còn có nhóm và ưu tiên.",
+  "계획 파일에는 시즌, 그룹, 우선순위와 사용자 지정 우선순위 이름이 저장됩니다. PNG/SVG에는 이름과 좌표가, CSV에는 그룹과 우선순위도 포함됩니다."
  ]
 };
 let language='de';

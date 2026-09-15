@@ -32,6 +32,34 @@ button.danger-solid{background:#8c333b;border-color:#be555d;color:#fff0ef;flex-s
 /* Hive assignment reset and user-facing release number. */
 .settings-bottom{display:flex;flex-direction:column;align-items:stretch;gap:8px}.hive-reset{margin-bottom:5px}.hive-reset .field-help{margin:7px 0 0}.settings-bottom #unassign-all{font-size:.875rem;line-height:1.4}.settings-bottom .text-button{align-self:flex-start}.settings-bottom .app-version{border-top:1px solid var(--border);padding-top:10px;margin-top:2px;font-size:.75rem;color:#9bb0c4;font-variant-numeric:tabular-nums}
 
+/* The organization drawer overlays the map without changing its grid column or camera. */
+.workspace{position:relative;--roster-width:262px}
+[hidden]{display:none!important}
+.organizer-launch{display:flex;align-items:center;justify-content:space-between;gap:10px;border-color:#3d857c;color:#baffef;background:#153a36;text-align:left}
+.organizer-arrow{font-size:1.7rem;line-height:.7}.organizer-launch[aria-expanded=true] .organizer-arrow{transform:rotate(180deg)}
+.selection-tools{display:flex;flex-wrap:wrap;gap:3px 12px}.selection-tools .text-button{font-size:.7rem;text-align:left;padding:3px 0}
+.player-badges{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}.priority-pill{font-size:.65rem;font-weight:750;border:1px solid;padding:2px 5px;border-radius:4px;white-space:nowrap;line-height:1.2}
+.priority-1{color:#ffdc93;border-color:#785f32;background:#3c3323}.priority-2{color:#9be8db;border-color:#36766b;background:#173b37}.priority-3{color:#b8cafa;border-color:#515f88;background:#25304c}
+.player-row.is-selected,.org-member.is-selected{background:#1c4944;border-color:#65d9c5}.player-check{margin:0}
+.player-row:focus-visible,.org-member:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+.organizer{position:absolute;left:var(--roster-width);top:0;bottom:0;width:min(760px,calc(100% - var(--roster-width) - 12px));z-index:35;display:flex;flex-direction:column;min-width:0;background:#102332;border:1px solid #3b665f;border-top:0;border-radius:0 0 12px 0;box-shadow:18px 8px 50px #0009;overflow:hidden;padding:20px;gap:12px}
+.organizer-heading{display:flex;justify-content:space-between;align-items:flex-start;gap:12px}.organizer-heading h2{font-size:1.1rem}.organizer-heading .field-help{margin:5px 0 0}.organizer-heading button{background:transparent;border:0}
+.organizer-tabs{display:flex;gap:5px;border-bottom:1px solid var(--border);padding-bottom:8px}.organizer-tabs button{flex:1;background:transparent;border-color:transparent}.organizer-tabs [aria-selected=true]{background:#1b443e;border-color:#398877;color:#c8fff2}
+.organizer-help{font-size:.78rem;color:#acc5d6;line-height:1.55}
+.organization-bulk{display:grid;grid-template-columns:1fr auto;gap:7px}.organization-bulk output{grid-column:1/-1;font-size:.75rem;color:#92b2c4}.organization-bulk select{width:100%}
+.priority-columns{flex:1;min-height:0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;overflow:auto}
+.org-card{background:#0e1c2b;border:1px solid #304a5c;border-radius:9px;min-width:0;display:flex;flex-direction:column;overflow:hidden}.org-card.drop-active{border-color:var(--accent);background:#1b433c;box-shadow:inset 0 0 0 2px #58dbca}
+.org-card-head{padding:12px 10px 9px;border-bottom:1px solid var(--border)}.org-card-title{display:flex;justify-content:space-between;align-items:center;gap:7px}.org-card-title h3{margin:0;font-size:.82rem}.org-card-title .count{font-size:.7rem;min-width:22px;padding:3px 6px}.org-card-head input{margin-top:9px;font-size:.75rem;padding:8px 6px}.org-card-head input::placeholder{color:#b9cbd8;opacity:1}
+.org-members{padding:8px;min-height:80px;overflow:auto;scrollbar-width:thin;flex:1}.org-empty{font-size:.75rem;color:#779bb1;line-height:1.5;margin:8px 0}
+.org-member{display:flex;align-items:center;gap:6px;min-width:0;cursor:grab;user-select:none;touch-action:pan-y;padding:8px 6px;border:1px solid transparent;border-radius:5px;margin-bottom:3px;background:#152b3b;position:relative}.org-member-name{font-size:.75rem;overflow-wrap:anywhere;flex:1;min-width:0}.org-member button{border:0;padding:3px;background:transparent;color:#9bb9c9}.org-member .player-badges{margin-top:4px}.org-member .player-check{width:14px;height:14px}
+.friend-cards{flex:1;min-height:0;overflow:auto;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));grid-auto-rows:minmax(195px,260px);gap:10px;align-content:start;padding-right:3px}.friend-cards .org-members{min-height:60px}.org-card-status{font-size:.68rem;line-height:1.4;color:#8fabbd;margin:7px 0 0}.group-score{font-size:.7rem;color:#d4ddb4;margin:6px 0 0}.org-card-status.group-warning{color:#f2cc8b}
+@media(min-width:1700px){.workspace{--roster-width:290px}}
+@media(max-width:1200px){.workspace{--roster-width:215px}.organizer{padding:16px}}
+@media(max-width:920px){.workspace{--roster-width:220px}.organizer{bottom:auto;height:max(700px,calc(100dvh - 74px))}.priority-columns{grid-template-columns:1fr;grid-auto-rows:minmax(175px,260px)}.friend-cards{grid-template-columns:1fr}}
+@media(max-width:640px){body.organizer-open{overflow:hidden}body.organizer-open .roster{display:flex;flex-direction:column;position:fixed;left:0;top:0;bottom:0;width:42vw;height:100dvh;min-height:0;z-index:36;padding:14px 8px;gap:10px}body.organizer-open .roster-imports,body.organizer-open .panel-hint,body.organizer-open .roster .autofill-controls,body.organizer-open #clear-players{display:none}body.organizer-open .player-list{display:block;max-height:none;min-height:60px}body.organizer-open .player-row{padding:7px 5px;gap:5px}body.organizer-open .grip{display:none}body.organizer-open .player-name{font-size:.75rem}body.organizer-open .player-position{font-size:.65rem}body.organizer-open .roster-tabs{flex-wrap:wrap}.organizer{position:fixed;left:42vw;top:0;bottom:0;width:58vw;height:100dvh;padding:12px 8px;gap:9px;border-radius:0}.organizer-heading h2{font-size:.88rem}.organizer-heading{gap:2px}.organizer-heading .field-help{display:none}.organizer-tabs{flex-wrap:wrap}.organizer-tabs button{padding:7px 5px;font-size:.75rem}.organizer-help{font-size:.7rem}.organization-bulk{grid-template-columns:1fr}.organization-bulk select,.organization-bulk button{font-size:.75rem}.priority-columns,.friend-cards{grid-template-columns:1fr;gap:8px}.org-card-head{padding:8px}.organizer-launch{font-size:.75rem;padding:10px 7px}}
+
+@media(max-width:640px){.organizer-launch,.selection-tools{grid-column:1/-1}}
+
 </style>
 
 </head>
@@ -46,21 +74,22 @@ button.danger-solid{background:#8c333b;border-color:#be555d;color:#fff0ef;flex-s
   <div class="roster-imports"><button class="primary full" id="import-names">+ <span data-i18n="Namen einfügen">Namen einfügen</span></button><button class="full" id="import-player-file" aria-describedby="player-file-help"><span data-i18n="Datei importieren">Datei importieren</span></button><p id="player-file-help" class="field-help"><span data-i18n="TXT: ein Name pro Zeile. CSV: Namen mit Semikolon trennen.">TXT: ein Name pro Zeile. CSV: Namen mit Semikolon trennen.</span></p></div>
   <label class="search"><span class="sr-only"><span data-i18n="Spieler suchen">Spieler suchen</span></span><input id="player-search" type="search" placeholder="Spieler suchen …" autocomplete="off" data-i18n-placeholder="Spieler suchen …"></label>
   <div class="roster-tabs" role="group" aria-label="Spielerliste filtern" data-i18n-aria-label="Spielerliste filtern"><button class="active" id="filter-all" aria-pressed="true"><span data-i18n="Alle">Alle</span></button><button id="filter-free" aria-pressed="false"><span data-i18n="Ohne Platz">Ohne Platz</span> <span id="unplaced-count">0</span></button></div>
+  <div id="selection-tools" class="selection-tools" hidden><button id="select-visible" class="text-button"><span data-i18n="Alle sichtbaren auswählen">Alle sichtbaren auswählen</span></button><button id="clear-selection" class="text-button"><span data-i18n="Auswahl aufheben">Auswahl aufheben</span></button></div>
   <div id="player-list" class="player-list" aria-label="Spieler zum Platzieren" data-i18n-aria-label="Spieler zum Platzieren"></div>
 
   <button id="clear-players" class="danger-solid full" disabled><span data-i18n="Alle Spieler entfernen">Alle Spieler entfernen</span></button>
-  <section class="groups-section" aria-labelledby="groups-title">
-   <div class="panel-title"><h2 id="groups-title"><span data-i18n="Gruppen">Gruppen</span></h2><span class="small-tag" id="groups-count">0 / 10</span></div>
-   <label class="sr-only" for="group-select"><span data-i18n="Gruppe auswählen">Gruppe auswählen</span></label><select id="group-select"></select>
-   <div id="group-panel" hidden>
-    <div id="group-drop-zone" class="group-drop-zone" aria-labelledby="group-active-title"><h3 id="group-active-title"></h3><p class="field-help"><span data-i18n="Spieler aus der Liste hier hineinziehen.">Spieler aus der Liste hier hineinziehen.</span></p><div id="group-members" class="group-members"></div></div>
-    <div class="group-add-row"><label class="sr-only" for="group-player-select"><span data-i18n="Spieler zur Gruppe hinzufügen">Spieler zur Gruppe hinzufügen</span></label><select id="group-player-select"></select><button id="group-add-player" aria-label="Spieler zur Gruppe hinzufügen" data-i18n-aria-label="Spieler zur Gruppe hinzufügen">+</button></div>
-    <p id="group-status" class="field-help"></p>
-   </div>
-  </section>
+  <button id="toggle-organizer" class="organizer-launch full" aria-expanded="false" aria-controls="organizer" title="Spieler organisieren" data-i18n-title="Spieler organisieren"><span data-i18n="Priority & Gruppen">Priority & Gruppen</span><span class="organizer-arrow" aria-hidden="true">›</span></button>
   <section class="autofill-controls" aria-label="Freie Plätze automatisch füllen" data-i18n-aria-label="Freie Plätze automatisch füllen"><button id="autofill" class="full" aria-describedby="autofill-summary" disabled><span data-i18n="Autofill">Autofill</span></button><p class="field-help autofill-direction" id="autofill-direction"><span data-i18n="Autofill belegt freie Plätze vom Allianzzentrum nach außen.">Autofill belegt freie Plätze vom Allianzzentrum nach außen.</span></p><label class="check-label" data-s4-only><input id="autofill-beacons" type="checkbox"> <span data-i18n="Freie Beacon-Plätze einbeziehen">Freie Beacon-Plätze einbeziehen</span></label><p id="autofill-result" class="field-help group-warning" role="status" hidden></p><p id="autofill-summary" class="field-help"><span data-i18n="Füge zuerst Spieler hinzu.">Füge zuerst Spieler hinzu.</span></p></section>
   <p class="panel-hint"><span data-i18n="Namen auf einen Platz ziehen. Oder einen Namen anklicken und danach den gewünschten Platz.">Namen auf einen Platz ziehen. Oder einen Namen anklicken und danach den gewünschten Platz.</span></p>
  </aside>
+ <section id="organizer" class="organizer" aria-labelledby="organizer-title" hidden>
+  <div class="organizer-heading"><div><h2 id="organizer-title" data-i18n="Spieler organisieren">Spieler organisieren</h2><p class="field-help" data-i18n="Markieren, dann gemeinsam ziehen oder unten zuweisen.">Markieren, dann gemeinsam ziehen oder unten zuweisen.</p></div><button id="close-organizer" class="icon-button" aria-label="Schließen" data-i18n-aria-label="Schließen">×</button></div>
+  <div class="organizer-tabs" role="tablist" aria-label="Spieler organisieren" data-i18n-aria-label="Spieler organisieren"><button id="priority-tab" role="tab" aria-controls="priority-panel" aria-selected="true" data-tab="priority" data-i18n="Priority">Priority</button><button id="friends-tab" role="tab" aria-controls="friends-panel" aria-selected="false" tabindex="-1" data-tab="friends" data-i18n="Freundesgruppen">Freundesgruppen</button></div>
+  <p id="organizer-help" class="organizer-help"></p>
+  <div class="organization-bulk"><output id="selection-count" aria-live="polite"></output><label class="sr-only" for="organizer-target" data-i18n="Auswahl zuweisen zu">Auswahl zuweisen zu</label><select id="organizer-target"></select><button id="apply-organization" class="primary" disabled data-i18n="Zuweisen">Zuweisen</button></div>
+  <div id="priority-panel" class="priority-columns" role="tabpanel" aria-labelledby="priority-tab"></div>
+  <div id="friends-panel" class="friend-cards" role="tabpanel" aria-labelledby="friends-tab" hidden></div>
+ </section>
  <section class="map-workspace" aria-label="Hive-Karte" data-i18n-aria-label="Hive-Karte">
   <div id="season-warning" class="development-banner" role="status" hidden><strong><span data-i18n="Noch in Bearbeitung">Noch in Bearbeitung</span></strong><span><span data-i18n="Diese Season enthält bisher nur eine neutrale Grundaufstellung.">Diese Season enthält bisher nur eine neutrale Grundaufstellung.</span></span></div>
   <div class="map-heading"><div><label class="sr-only" for="plan-title"><span data-i18n="Planname">Planname</span></label><input id="plan-title" class="plan-title" maxlength="80" value="NOVA FAMILY"><p id="map-summary"><span data-i18n="100 Plätze · 1 Feld Abstand">100 Plätze · 1 Feld Abstand</span></p></div><div class="history-actions"><button id="undo" class="icon-button" title="Rückgängig (Strg+Z)" aria-label="Rückgängig" data-i18n-aria-label="Rückgängig" data-i18n-title="Rückgängig (Strg+Z)">↶</button><button id="redo" class="icon-button" title="Wiederholen (Strg+Umschalt+Z)" aria-label="Wiederholen" data-i18n-aria-label="Wiederholen" data-i18n-title="Wiederholen (Strg+Umschalt+Z)">↷</button></div></div>
@@ -73,7 +102,7 @@ button.danger-solid{background:#8c333b;border-color:#be555d;color:#fff0ef;flex-s
   <section class="settings-section"><h2 id="anchor-title">Allianzzentrum</h2><p class="field-help"><span data-i18n="Kartenkoordinaten der Gebäudemitte">Kartenkoordinaten der Gebäudemitte</span></p><form id="anchor-form" class="coordinate-form"><label>X<input id="anchor-x" type="number" step="1" min="0" max="999999" value="500" required></label><label>Y<input id="anchor-y" type="number" step="1" min="0" max="999999" value="500" required></label><button type="submit" class="full"><span data-i18n="Koordinaten übernehmen">Koordinaten übernehmen</span></button></form><p class="field-help" id="anchor-help"><span data-i18n="Alle Spielerkoordinaten berechnen sich daraus. X steigt nach rechts, Y nach oben.">Alle Spielerkoordinaten berechnen sich daraus. X steigt nach rechts, Y nach oben.</span></p></section>
   <section class="settings-section"><h2><span data-i18n="Startaufstellung">Startaufstellung</span></h2><label class="sr-only" for="layout-select"><span data-i18n="Hive-Vorlage">Hive-Vorlage</span></label><select id="layout-select"><option value="spaced" data-i18n="100 Plätze · 1 Feld Abstand">100 Plätze · 1 Feld Abstand</option><option value="compact" data-i18n="100 Plätze · ohne Abstand">100 Plätze · ohne Abstand</option><option value="empty" data-i18n="Leere Karte">Leere Karte</option></select><button class="full" id="apply-layout"><span data-i18n="Vorlage anwenden">Vorlage anwenden</span></button></section>
   <section class="settings-section selection-section"><div class="panel-title"><h2><span data-i18n="Ausgewählter Platz">Ausgewählter Platz</span></h2><span id="selection-type" class="small-tag" hidden></span></div><div id="inspector"><div class="selection-empty"><span aria-hidden="true">⌖</span><p><span data-i18n="Wähle eine Basis, den Marshall oder ein anderes Element auf der Karte.">Wähle eine Basis, den Marshall oder ein anderes Element auf der Karte.</span></p></div></div></section>
-  <div class="settings-bottom"><div class="hive-reset"><button id="unassign-all" class="danger full" aria-describedby="unassign-all-help" disabled><span data-i18n="Alle Spieler aus dem Hive entfernen">Alle Spieler aus dem Hive entfernen</span></button><p id="unassign-all-help" class="field-help"><span data-i18n="Spielerliste und Gruppen bleiben erhalten. Alle Plätze werden frei.">Spielerliste und Gruppen bleiben erhalten. Alle Plätze werden frei.</span></p></div><p><span data-i18n="Pläne werden als Datei gespeichert. Öffne die Datei später hier, um weiterzuplanen.">Pläne werden als Datei gespeichert. Öffne die Datei später hier, um weiterzuplanen.</span></p><button id="show-help" class="text-button"><span data-i18n="Kurzanleitung">Kurzanleitung</span></button><p id="app-version" class="app-version">Version 1.1.2</p></div>
+  <div class="settings-bottom"><div class="hive-reset"><button id="unassign-all" class="danger full" aria-describedby="unassign-all-help" disabled><span data-i18n="Alle Spieler aus dem Hive entfernen">Alle Spieler aus dem Hive entfernen</span></button><p id="unassign-all-help" class="field-help"><span data-i18n="Spielerliste und Gruppen bleiben erhalten. Alle Plätze werden frei.">Spielerliste und Gruppen bleiben erhalten. Alle Plätze werden frei.</span></p></div><p><span data-i18n="Pläne werden als Datei gespeichert. Öffne die Datei später hier, um weiterzuplanen.">Pläne werden als Datei gespeichert. Öffne die Datei später hier, um weiterzuplanen.</span></p><button id="show-help" class="text-button"><span data-i18n="Kurzanleitung">Kurzanleitung</span></button><p id="app-version" class="app-version">Version 1.1.3</p></div>
  </aside>
 </main>
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
@@ -85,7 +114,7 @@ button.danger-solid{background:#8c333b;border-color:#be555d;color:#fff0ef;flex-s
 extrageneity
 …" required maxlength="30000"></textarea><div class="dialog-footer"><span id="names-preview"><span data-i18n="Noch keine Namen">Noch keine Namen</span></span><button class="primary" type="submit"><span data-i18n="Zur Liste hinzufügen">Zur Liste hinzufügen</span></button></div></form></dialog>
 <dialog id="confirm-dialog"><div class="dialog-heading"><h2 id="confirm-title"><span data-i18n="Änderung übernehmen?">Änderung übernehmen?</span></h2><button class="icon-button" data-close="confirm-dialog" aria-label="Schließen" data-i18n-aria-label="Schließen">×</button></div><p id="confirm-message"></p><div class="dialog-footer"><button data-close="confirm-dialog"><span data-i18n="Abbrechen">Abbrechen</span></button><button id="confirm-yes" class="primary"><span data-i18n="Übernehmen">Übernehmen</span></button></div></dialog>
-<dialog id="help-dialog"><div class="dialog-heading"><h2><span data-i18n="Dein Hive, Platz für Platz">Dein Hive, Platz für Platz</span></h2><button class="icon-button" data-close="help-dialog" aria-label="Schließen" data-i18n-aria-label="Schließen">×</button></div><ol class="help-list"><li><strong><span data-i18n="Spieler importieren.">Spieler importieren.</span></strong> <span data-i18n="Namen einfügen oder eine TXT-Datei (ein Name pro Zeile) bzw. CSV (Semikolon) importieren. Nur Namen, keine Kopfzeile. UTF-8 und UTF-16 mit BOM werden unterstützt. Leere und doppelte Einträge werden übersprungen.">Namen einfügen oder eine TXT-Datei (ein Name pro Zeile) bzw. CSV (Semikolon) importieren. Nur Namen, keine Kopfzeile. UTF-8 und UTF-16 mit BOM werden unterstützt. Leere und doppelte Einträge werden übersprungen.</span></li><li><strong><span data-i18n="Season auswählen">Season auswählen</span></strong> <span data-i18n="Off Season: Marshall im Mittelpunkt. Season 4: Allianzzentrum und Beacons. Die übrigen Seasons sind als in Bearbeitung markiert.">Off Season: Marshall im Mittelpunkt. Season 4: Allianzzentrum und Beacons. Die übrigen Seasons sind als in Bearbeitung markiert.</span></li><li><strong><span data-i18n="Koordinaten setzen.">Koordinaten setzen.</span></strong> <span data-i18n="Trage die X/Y-Koordinaten des Mittelpunkts ein: Marshall oder Allianzzentrum, passend zur gewählten Season.">Trage die X/Y-Koordinaten des Mittelpunkts ein: Marshall oder Allianzzentrum, passend zur gewählten Season.</span></li><li><strong><span data-i18n="Spieler zuordnen.">Spieler zuordnen.</span></strong> <span data-i18n="Ziehe einen Namen auf eine Basis. Alternativ: Name anklicken, dann Basis anklicken.">Ziehe einen Namen auf eine Basis. Alternativ: Name anklicken, dann Basis anklicken.</span></li><li><strong><span data-i18n="Gruppen">Gruppen</span></strong> <span data-i18n="Wähle unter der Spielerliste Gruppe 1–10. Ziehe Namen in das Gruppenfeld oder nutze die Spielerauswahl. Jeder Spieler gehört höchstens einer Gruppe an. Das × entfernt ihn nur aus der Gruppe.">Wähle unter der Spielerliste Gruppe 1–10. Ziehe Namen in das Gruppenfeld oder nutze die Spielerauswahl. Jeder Spieler gehört höchstens einer Gruppe an. Das × entfernt ihn nur aus der Gruppe.</span></li><li><strong><span data-i18n="Autofill nutzen.">Autofill nutzen.</span></strong> <span data-i18n="Autofill setzt Gruppen möglichst kompakt und zusammenhängend, dann einzelne Spieler von innen nach außen. Manuell gesetzte Mitglieder bleiben fest. Bei einem Feld Abstand gelten benachbarte Plätze als zusammenhängend.">Autofill setzt Gruppen möglichst kompakt und zusammenhängend, dann einzelne Spieler von innen nach außen. Manuell gesetzte Mitglieder bleiben fest. Bei einem Feld Abstand gelten benachbarte Plätze als zusammenhängend.</span></li><li><strong><span data-i18n="Umgebung ergänzen.">Umgebung ergänzen.</span></strong> <span data-i18n="Terrain auswählen und an einem der vier Eckpfeile ziehen. Die gegenüberliegende Ecke bleibt fest. Breite und Höhe sind auch rechts eingebbar. Nur Terrainflächen dürfen sich überlappen.">Terrain auswählen und an einem der vier Eckpfeile ziehen. Die gegenüberliegende Ecke bleibt fest. Breite und Höhe sind auch rechts eingebbar. Nur Terrainflächen dürfen sich überlappen.</span></li><li><strong><span data-i18n="Alle Spieler entfernen">Alle Spieler entfernen</span></strong> <span data-i18n="Der rote Button leert die Spielerliste, Gruppen und Platzzuweisungen. Die Karte bleibt erhalten. Strg+Z stellt alles wieder her.">Der rote Button leert die Spielerliste, Gruppen und Platzzuweisungen. Die Karte bleibt erhalten. Strg+Z stellt alles wieder her.</span></li><li><strong><span data-i18n="Speichern und weitergeben.">Speichern und weitergeben.</span></strong> <span data-i18n="Plan-Dateien speichern auch Season und Gruppen. PNG/SVG zeigen Namen und Koordinaten, CSV zusätzlich die Gruppenzuordnung.">Plan-Dateien speichern auch Season und Gruppen. PNG/SVG zeigen Namen und Koordinaten, CSV zusätzlich die Gruppenzuordnung.</span></li></ol><p class="help-note" id="mode-help-note"></p><p class="help-note"><span data-i18n="Hinzufügen: B = Basis, M = Marshall, A = Allianzzentrum, T = Terrain, L = Beacon. Taste drücken, dann auf die Karte klicken. A und L sind nur in Season 4 verfügbar. Beim Schreiben sind diese Kürzel deaktiviert.">Hinzufügen: B = Basis, M = Marshall, A = Allianzzentrum, T = Terrain, L = Beacon. Taste drücken, dann auf die Karte klicken. A und L sind nur in Season 4 verfügbar. Beim Schreiben sind diese Kürzel deaktiviert.</span></p><p class="help-note"><span data-i18n="Tastatur: Pfeile = 1 Feld, Umschalt+Pfeile = 5 Felder, Entf = Entfernen, Strg+Z = Rückgängig, Esc = Abbrechen.">Tastatur: Pfeile = 1 Feld, Umschalt+Pfeile = 5 Felder, Entf = Entfernen, Strg+Z = Rückgängig, Esc = Abbrechen.</span></p></dialog>
+<dialog id="help-dialog"><div class="dialog-heading"><h2><span data-i18n="Dein Hive, Platz für Platz">Dein Hive, Platz für Platz</span></h2><button class="icon-button" data-close="help-dialog" aria-label="Schließen" data-i18n-aria-label="Schließen">×</button></div><ol class="help-list"><li><strong><span data-i18n="Spieler importieren.">Spieler importieren.</span></strong> <span data-i18n="Namen einfügen oder eine TXT-Datei (ein Name pro Zeile) bzw. CSV (Semikolon) importieren. Nur Namen, keine Kopfzeile. UTF-8 und UTF-16 mit BOM werden unterstützt. Leere und doppelte Einträge werden übersprungen.">Namen einfügen oder eine TXT-Datei (ein Name pro Zeile) bzw. CSV (Semikolon) importieren. Nur Namen, keine Kopfzeile. UTF-8 und UTF-16 mit BOM werden unterstützt. Leere und doppelte Einträge werden übersprungen.</span></li><li><strong><span data-i18n="Season auswählen">Season auswählen</span></strong> <span data-i18n="Off Season: Marshall im Mittelpunkt. Season 4: Allianzzentrum und Beacons. Die übrigen Seasons sind als in Bearbeitung markiert.">Off Season: Marshall im Mittelpunkt. Season 4: Allianzzentrum und Beacons. Die übrigen Seasons sind als in Bearbeitung markiert.</span></li><li><strong><span data-i18n="Koordinaten setzen.">Koordinaten setzen.</span></strong> <span data-i18n="Trage die X/Y-Koordinaten des Mittelpunkts ein: Marshall oder Allianzzentrum, passend zur gewählten Season.">Trage die X/Y-Koordinaten des Mittelpunkts ein: Marshall oder Allianzzentrum, passend zur gewählten Season.</span></li><li><strong><span data-i18n="Spieler zuordnen.">Spieler zuordnen.</span></strong> <span data-i18n="Ziehe einen Namen auf eine Basis. Alternativ: Name anklicken, dann Basis anklicken.">Ziehe einen Namen auf eine Basis. Alternativ: Name anklicken, dann Basis anklicken.</span></li><li><strong><span data-i18n="Gruppen">Gruppen</span></strong> <span data-i18n="Öffne „Priority & Gruppen“ unter der Spielerliste. Markiere mehrere Spieler und ziehe sie in P1, P2 oder P3, dann im zweiten Tab in eine der zehn Freundesgruppen. Alternativ nutze „Zuweisen“. Priorität und Gruppe sind unabhängig. Neue Spieler beginnen mit P2. Die Prioritätsnamen sind editierbar.">Öffne „Priority & Gruppen“ unter der Spielerliste. Markiere mehrere Spieler und ziehe sie in P1, P2 oder P3, dann im zweiten Tab in eine der zehn Freundesgruppen. Alternativ nutze „Zuweisen“. Priorität und Gruppe sind unabhängig. Neue Spieler beginnen mit P2. Die Prioritätsnamen sind editierbar.</span></li><li><strong><span data-i18n="Autofill nutzen.">Autofill nutzen.</span></strong> <span data-i18n="Autofill ordnet einzelne Spieler nach Priorität und Gruppen nach ihrem Prioritätsdurchschnitt von innen nach außen. Gruppen bleiben möglichst zusammen. Manuell gesetzte Mitglieder bleiben fest und dienen als Anker für ihre Gruppe. Bei einem Feld Abstand gelten benachbarte Plätze als zusammenhängend.">Autofill ordnet einzelne Spieler nach Priorität und Gruppen nach ihrem Prioritätsdurchschnitt von innen nach außen. Gruppen bleiben möglichst zusammen. Manuell gesetzte Mitglieder bleiben fest und dienen als Anker für ihre Gruppe. Bei einem Feld Abstand gelten benachbarte Plätze als zusammenhängend.</span></li><li><strong><span data-i18n="Umgebung ergänzen.">Umgebung ergänzen.</span></strong> <span data-i18n="Terrain auswählen und an einem der vier Eckpfeile ziehen. Die gegenüberliegende Ecke bleibt fest. Breite und Höhe sind auch rechts eingebbar. Nur Terrainflächen dürfen sich überlappen.">Terrain auswählen und an einem der vier Eckpfeile ziehen. Die gegenüberliegende Ecke bleibt fest. Breite und Höhe sind auch rechts eingebbar. Nur Terrainflächen dürfen sich überlappen.</span></li><li><strong><span data-i18n="Alle Spieler entfernen">Alle Spieler entfernen</span></strong> <span data-i18n="Der rote Button leert die Spielerliste, Gruppen und Platzzuweisungen. Die Karte bleibt erhalten. Strg+Z stellt alles wieder her.">Der rote Button leert die Spielerliste, Gruppen und Platzzuweisungen. Die Karte bleibt erhalten. Strg+Z stellt alles wieder her.</span></li><li><strong><span data-i18n="Speichern und weitergeben.">Speichern und weitergeben.</span></strong> <span data-i18n="Plan-Dateien speichern Season, Gruppen, Prioritäten und eigene Prioritätsnamen. PNG/SVG zeigen Namen und Koordinaten, CSV zusätzlich Gruppe und Priorität.">Plan-Dateien speichern Season, Gruppen, Prioritäten und eigene Prioritätsnamen. PNG/SVG zeigen Namen und Koordinaten, CSV zusätzlich Gruppe und Priorität.</span></li></ol><p class="help-note" id="mode-help-note"></p><p class="help-note"><span data-i18n="Hinzufügen: B = Basis, M = Marshall, A = Allianzzentrum, T = Terrain, L = Beacon. Taste drücken, dann auf die Karte klicken. A und L sind nur in Season 4 verfügbar. Beim Schreiben sind diese Kürzel deaktiviert.">Hinzufügen: B = Basis, M = Marshall, A = Allianzzentrum, T = Terrain, L = Beacon. Taste drücken, dann auf die Karte klicken. A und L sind nur in Season 4 verfügbar. Beim Schreiben sind diese Kürzel deaktiviert.</span></p><p class="help-note"><span data-i18n="Tastatur: Pfeile = 1 Feld, Umschalt+Pfeile = 5 Felder, Entf = Entfernen, Strg+Z = Rückgängig, Esc = Abbrechen.">Tastatur: Pfeile = 1 Feld, Umschalt+Pfeile = 5 Felder, Entf = Entfernen, Strg+Z = Rückgängig, Esc = Abbrechen.</span></p></dialog>
 <script>
 /* Complete interface messages. Order: English, French, Spanish, Portuguese, Vietnamese, Korean; keys are German. */
 (function(root){
@@ -2396,6 +2425,246 @@ const messages={
   "Adicionar: B = base, M = Marshall, A = centro da aliança, T = terreno, L = sinalizador. Pressione a tecla e clique no mapa. A e L só estão disponíveis na temporada 4. Os atalhos ficam desativados durante a digitação.",
   "Thêm: B = căn cứ, M = Marshall, A = trung tâm liên minh, T = địa hình, L = beacon. Nhấn phím rồi nhấp vào bản đồ. A và L chỉ dùng trong Mùa 4. Các phím tắt này không hoạt động khi đang nhập văn bản.",
   "추가: B = 기지, M = 마샬, A = 연맹 센터, T = 지형, L = 비콘. 키를 누른 다음 지도를 클릭하세요. A와 L은 시즌 4에서만 사용할 수 있습니다. 텍스트 입력 중에는 이 단축키가 작동하지 않습니다."
+ ],
+ "Zuverlässiger Kern": [
+  "Reliable core",
+  "Noyau fiable",
+  "Núcleo fiable",
+  "Núcleo confiável",
+  "Nòng cốt đáng tin cậy",
+  "믿음직한 핵심 멤버"
+ ],
+ "Aktiv": [
+  "Active",
+  "Actif",
+  "Activo",
+  "Ativo",
+  "Năng động",
+  "활동적"
+ ],
+ "Casual": [
+  "Casual",
+  "Occasionnel",
+  "Ocasional",
+  "Casual",
+  "Chơi thư giãn",
+  "라이트 유저"
+ ],
+ "Priority": [
+  "Priority",
+  "Priorité",
+  "Prioridad",
+  "Prioridade",
+  "Ưu tiên",
+  "우선순위"
+ ],
+ "Priority & Gruppen": [
+  "Priority & groups",
+  "Priorité et groupes",
+  "Prioridad y grupos",
+  "Prioridade e grupos",
+  "Ưu tiên & nhóm",
+  "우선순위 및 그룹"
+ ],
+ "Freundesgruppen": [
+  "Friend groups",
+  "Groupes d’amis",
+  "Grupos de amigos",
+  "Grupos de amigos",
+  "Nhóm bạn bè",
+  "친구 그룹"
+ ],
+ "Spieler organisieren": [
+  "Organize players",
+  "Organiser les joueurs",
+  "Organizar jugadores",
+  "Organizar jogadores",
+  "Sắp xếp người chơi",
+  "플레이어 정리"
+ ],
+ "Alle sichtbaren auswählen": [
+  "Select all visible",
+  "Sélectionner tous les joueurs visibles",
+  "Seleccionar todos los visibles",
+  "Selecionar todos os visíveis",
+  "Chọn tất cả đang hiển thị",
+  "표시된 플레이어 모두 선택"
+ ],
+ "Auswahl aufheben": [
+  "Clear selection",
+  "Effacer la sélection",
+  "Quitar selección",
+  "Limpar seleção",
+  "Bỏ chọn tất cả",
+  "선택 해제"
+ ],
+ "Auswahl zuweisen zu": [
+  "Assign selection to",
+  "Affecter la sélection à",
+  "Asignar selección a",
+  "Atribuir seleção a",
+  "Gán lựa chọn vào",
+  "선택 항목 배정 대상"
+ ],
+ "Zuweisen": [
+  "Assign",
+  "Affecter",
+  "Asignar",
+  "Atribuir",
+  "Gán",
+  "배정"
+ ],
+ "Markieren, dann gemeinsam ziehen oder unten zuweisen.": [
+  "Select players, then drag them together or assign them below.",
+  "Sélectionnez des joueurs, puis faites-les glisser ensemble ou affectez-les ci-dessous.",
+  "Selecciona jugadores y arrástralos juntos o asígnalos abajo.",
+  "Selecione jogadores e arraste-os juntos ou atribua-os abaixo.",
+  "Chọn người chơi, rồi kéo cùng lúc hoặc gán bên dưới.",
+  "플레이어를 선택한 뒤 함께 드래그하거나 아래에서 배정하세요."
+ ],
+ "P1 nach innen, P3 nach außen. Neue Spieler: P2. Eigene Namen ändern die Reihenfolge nicht.": [
+  "P1 toward the center, P3 toward the edge. New players: P2. Custom labels do not change the order.",
+  "P1 vers le centre, P3 vers le bord. Nouveaux joueurs : P2. Les noms personnalisés ne changent pas cet ordre.",
+  "P1 hacia el centro, P3 hacia el borde. Nuevos jugadores: P2. Los nombres personalizados no cambian el orden.",
+  "P1 em direção ao centro, P3 às bordas. Novos jogadores: P2. Nomes personalizados não alteram a ordem.",
+  "P1 gần tâm, P3 ra ngoài. Người chơi mới: P2. Đổi tên mức ưu tiên không đổi thứ tự.",
+  "P1은 안쪽, P3는 바깥쪽에 배치됩니다. 새 플레이어는 P2입니다. 이름을 바꿔도 순서는 유지됩니다."
+ ],
+ "Der Prioritätsdurchschnitt bestimmt die Reihenfolge der Gruppen. Feste Plätze dienen als Anker. Jede Person gehört höchstens einer Gruppe an.": [
+  "Groups are ordered by average priority. Placed members anchor their group. Each player can belong to one group.",
+  "La priorité moyenne détermine l’ordre des groupes. Les membres déjà placés servent de points d’ancrage. Chaque joueur appartient à un seul groupe au maximum.",
+  "La prioridad media determina el orden de los grupos. Los miembros ya colocados sirven de referencia. Cada jugador puede pertenecer a un solo grupo.",
+  "A prioridade média determina a ordem dos grupos. Membros já posicionados servem de referência. Cada jogador pode pertencer a apenas um grupo.",
+  "Mức ưu tiên trung bình quyết định thứ tự nhóm. Thành viên đã đặt là điểm neo cho nhóm. Mỗi người chỉ thuộc tối đa một nhóm.",
+  "그룹은 평균 우선순위에 따라 배치됩니다. 이미 배치된 멤버를 기준으로 그룹을 배치합니다. 각 플레이어는 최대 한 그룹에 속할 수 있습니다."
+ ],
+ "Durchschnitt: {value}": [
+  "Average: {value}",
+  "Moyenne : {value}",
+  "Media: {value}",
+  "Média: {value}",
+  "Trung bình: {value}",
+  "평균: {value}"
+ ],
+ "Bezeichnung bearbeiten": [
+  "Edit label",
+  "Modifier le nom",
+  "Editar nombre",
+  "Editar nome",
+  "Sửa tên",
+  "이름 편집"
+ ],
+ "Bezeichnung für P{n}": [
+  "Label for P{n}",
+  "Nom de P{n}",
+  "Nombre de P{n}",
+  "Nome de P{n}",
+  "Tên của P{n}",
+  "P{n} 이름"
+ ],
+ "Prioritätsbezeichnung": [
+  "Priority label",
+  "Nom de priorité",
+  "Nombre de prioridad",
+  "Nome da prioridade",
+  "Tên mức ưu tiên",
+  "우선순위 이름"
+ ],
+ "Spieler hier hineinziehen": [
+  "Drag players here",
+  "Glissez les joueurs ici",
+  "Arrastra jugadores aquí",
+  "Arraste jogadores aqui",
+  "Kéo người chơi vào đây",
+  "여기에 플레이어를 드래그하세요"
+ ],
+ "{name} auswählen": [
+  "Select {name}",
+  "Sélectionner {name}",
+  "Seleccionar a {name}",
+  "Selecionar {name}",
+  "Chọn {name}",
+  "{name} 선택"
+ ],
+ "{n} Spieler ausgewählt": [
+  "{n} players selected",
+  "{n} joueurs sélectionnés",
+  "{n} jugadores seleccionados",
+  "{n} jogadores selecionados",
+  "Đã chọn {n} người chơi",
+  "플레이어 {n}명 선택됨"
+ ],
+ "{n} Spieler zugewiesen.": [
+  "{n} players assigned.",
+  "{n} joueurs affectés.",
+  "{n} jugadores asignados.",
+  "{n} jogadores atribuídos.",
+  "Đã gán {n} người chơi.",
+  "플레이어 {n}명을 배정했습니다."
+ ],
+ "Mehrere Spieler bitte einer Priorität oder Gruppe zuordnen.": [
+  "Assign multiple players to a priority or a group.",
+  "Affectez les joueurs sélectionnés à une priorité ou à un groupe.",
+  "Asigna los jugadores seleccionados a una prioridad o a un grupo.",
+  "Atribua os jogadores selecionados a uma prioridade ou a um grupo.",
+  "Hãy gán nhiều người chơi vào một mức ưu tiên hoặc nhóm.",
+  "여러 플레이어는 우선순위 또는 그룹에 배정해 주세요."
+ ],
+ "Priorität muss 1, 2 oder 3 sein.": [
+  "Priority must be 1, 2 or 3.",
+  "La priorité doit être 1, 2 ou 3.",
+  "La prioridad debe ser 1, 2 o 3.",
+  "A prioridade deve ser 1, 2 ou 3.",
+  "Mức ưu tiên phải là 1, 2 hoặc 3.",
+  "우선순위는 1, 2 또는 3이어야 합니다."
+ ],
+ "Die Prioritätsbezeichnung darf höchstens 40 Zeichen haben.": [
+  "Priority labels must be 40 characters or fewer.",
+  "Le nom de priorité ne doit pas dépasser 40 caractères.",
+  "El nombre de prioridad debe tener como máximo 40 caracteres.",
+  "O nome da prioridade deve ter no máximo 40 caracteres.",
+  "Tên mức ưu tiên không được dài quá 40 ký tự.",
+  "우선순위 이름은 40자 이하여야 합니다."
+ ],
+ "Ungültige Prioritätsbezeichnungen.": [
+  "Invalid priority labels.",
+  "Noms de priorité non valides.",
+  "Nombres de prioridad no válidos.",
+  "Nomes de prioridade inválidos.",
+  "Tên mức ưu tiên không hợp lệ.",
+  "우선순위 이름이 올바르지 않습니다."
+ ],
+ "Autofill: Prioritäten und Gruppendurchschnitt, von innen nach außen.": [
+  "Autofill: player priorities and group averages, from the center outward.",
+  "Remplissage auto : priorités individuelles et moyennes des groupes, du centre vers l’extérieur.",
+  "Autofill: prioridades y medias de grupo, del centro hacia fuera.",
+  "Autofill: prioridades e médias dos grupos, do centro para fora.",
+  "Tự điền: ưu tiên cá nhân và trung bình nhóm, từ tâm ra ngoài.",
+  "자동 배치: 개인 우선순위와 그룹 평균에 따라 안쪽부터 바깥쪽으로 배치합니다."
+ ],
+ "Öffne „Priority & Gruppen“ unter der Spielerliste. Markiere mehrere Spieler und ziehe sie in P1, P2 oder P3, dann im zweiten Tab in eine der zehn Freundesgruppen. Alternativ nutze „Zuweisen“. Priorität und Gruppe sind unabhängig. Neue Spieler beginnen mit P2. Die Prioritätsnamen sind editierbar.": [
+  "Open “Priority & groups” below the roster. Select multiple players and drag them to P1, P2 or P3, then to one of ten friend groups in the second tab. You can also use “Assign”. Priority and group are independent. New players start at P2. Priority labels are editable.",
+  "Ouvrez « Priorité et groupes » sous la liste. Sélectionnez plusieurs joueurs et glissez-les dans P1, P2 ou P3, puis dans l’un des dix groupes du second onglet. Vous pouvez aussi utiliser « Affecter ». Priorité et groupe sont indépendants. Les nouveaux joueurs commencent en P2. Les noms des priorités sont modifiables.",
+  "Abre «Prioridad y grupos» bajo la lista. Selecciona varios jugadores y arrástralos a P1, P2 o P3 y luego a uno de los diez grupos de amigos en la segunda pestaña. También puedes usar «Asignar». Prioridad y grupo son independientes. Los nuevos jugadores empiezan en P2. Los nombres de prioridad se pueden editar.",
+  "Abra “Prioridade e grupos” abaixo da lista. Selecione vários jogadores e arraste-os para P1, P2 ou P3 e depois para um dos dez grupos de amigos na segunda aba. Você também pode usar “Atribuir”. Prioridade e grupo são independentes. Novos jogadores começam em P2. Os nomes das prioridades são editáveis.",
+  "Mở “Ưu tiên & nhóm” dưới danh sách. Chọn nhiều người chơi, kéo vào P1, P2 hoặc P3, rồi vào một trong mười nhóm bạn bè ở thẻ thứ hai. Bạn cũng có thể dùng “Gán”. Ưu tiên và nhóm độc lập với nhau. Người chơi mới bắt đầu ở P2. Có thể sửa tên mức ưu tiên.",
+  "목록 아래에서 “우선순위 및 그룹”을 여세요. 여러 플레이어를 선택해 P1, P2, P3으로 드래그한 다음 두 번째 탭의 친구 그룹 10개 중 하나로 드래그하세요. “배정” 버튼도 사용할 수 있습니다. 우선순위와 그룹은 서로 독립적입니다. 새 플레이어는 P2로 시작하며 우선순위 이름은 편집할 수 있습니다."
+ ],
+ "Autofill ordnet einzelne Spieler nach Priorität und Gruppen nach ihrem Prioritätsdurchschnitt von innen nach außen. Gruppen bleiben möglichst zusammen. Manuell gesetzte Mitglieder bleiben fest und dienen als Anker für ihre Gruppe. Bei einem Feld Abstand gelten benachbarte Plätze als zusammenhängend.": [
+  "Autofill places individuals by priority and groups by average priority, from the center outward. Groups stay together where possible. Manually placed members stay fixed and anchor their group. In a one-tile-gap layout, neighboring seats across the gap count as connected.",
+  "Le remplissage auto place les joueurs selon leur priorité et les groupes selon leur moyenne, du centre vers l’extérieur. Les groupes restent ensemble si possible. Les membres placés manuellement restent fixes et servent d’ancrage. Avec un espacement d’une case, les places voisines sont considérées comme reliées.",
+  "Autofill coloca a los jugadores según su prioridad y a los grupos según su media, del centro hacia fuera. Mantiene los grupos juntos cuando es posible. Los miembros colocados manualmente quedan fijos y sirven de referencia. Con un espacio de una casilla, los puestos vecinos se consideran conectados.",
+  "Autofill posiciona jogadores pela prioridade e grupos pela média, do centro para fora. Mantém os grupos juntos quando possível. Membros posicionados manualmente ficam fixos e servem de referência. Com um espaço de uma célula, posições vizinhas são consideradas conectadas.",
+  "Tự điền xếp cá nhân theo ưu tiên và nhóm theo mức trung bình, từ tâm ra ngoài. Nhóm ở cạnh nhau khi có thể. Thành viên đặt thủ công được giữ nguyên và làm điểm neo cho nhóm. Khi cách nhau một ô, các vị trí liền kề vẫn được tính là kết nối.",
+  "자동 배치는 개인의 우선순위와 그룹의 평균 우선순위에 따라 안쪽부터 배치하며, 가능한 한 그룹을 모아 둡니다. 수동 배치된 멤버는 고정되며 그룹 배치의 기준이 됩니다. 한 칸 간격 배치에서는 간격을 사이에 둔 이웃 자리도 연결된 것으로 봅니다."
+ ],
+ "Plan-Dateien speichern Season, Gruppen, Prioritäten und eigene Prioritätsnamen. PNG/SVG zeigen Namen und Koordinaten, CSV zusätzlich Gruppe und Priorität.": [
+  "Plan files save season, groups, priorities and custom priority labels. PNG/SVG show names and coordinates; CSV also includes group and priority.",
+  "Les fichiers de plan enregistrent saison, groupes, priorités et noms personnalisés. Les PNG/SVG affichent noms et coordonnées ; le CSV ajoute groupe et priorité.",
+  "Los planes guardan temporada, grupos, prioridades y nombres personalizados. PNG/SVG muestran nombres y coordenadas; CSV incluye también grupo y prioridad.",
+  "Os planos salvam temporada, grupos, prioridades e nomes personalizados. PNG/SVG mostram nomes e coordenadas; CSV inclui também grupo e prioridade.",
+  "Tệp kế hoạch lưu mùa, nhóm, ưu tiên và tên ưu tiên tùy chỉnh. PNG/SVG hiển thị tên và tọa độ; CSV còn có nhóm và ưu tiên.",
+  "계획 파일에는 시즌, 그룹, 우선순위와 사용자 지정 우선순위 이름이 저장됩니다. PNG/SVG에는 이름과 좌표가, CSV에는 그룹과 우선순위도 포함됩니다."
  ]
 };
 let language='de';
@@ -2418,9 +2687,12 @@ root.HiveI18n={languages,columns,messages,t,setLanguage,apply,get language(){ret
 /* Pure map model. One unit is one map tile; coordinates identify building centers. */
 (function(root){
 'use strict';
-const SCHEMA='nova-hive-planner',VERSION=2;
+const SCHEMA='nova-hive-planner',VERSION=3;
 const t=(key,params={})=>globalThis.HiveI18n?.t(key,params)??key.replace(/\{(\w+)\}/g,(_,k)=>String(params[k]??'{'+k+'}'));
 const DEFAULT_NAMES={center:'Allianzzentrum',marshall:'Marshall’s Guard',terrain:'Terrain'};
+const PRIORITY_DEFAULTS=['Zuverlässiger Kern','Aktiv','Casual'];
+const priorityOf=player=>player?.priority??2;
+const priorityLabel=(state,level)=>state.priorityLabels?.[level-1]||t(PRIORITY_DEFAULTS[level-1]);
 const SEASONS=['off','1','2','3','4','5','6'];
 const emptyGroups=()=>Array.from({length:10},(_,i)=>({id:i+1,playerIds:[]}));
 const isSeason4=state=>(state.season??'4')==='4';
@@ -2446,7 +2718,7 @@ function objectLabel(state,o){
 function makeLayout(kind='spaced',existing=null){
  const season=existing?.season??'4';
  if(!SEASONS.includes(season))throw new Error(t('Ungültige Season.'));
- const state={schema:SCHEMA,version:VERSION,season,groups:clone(existing?.groups??emptyGroups()),title:existing?.title??'NOVA FAMILY',origin:clone(existing?.origin??{x:500,y:500,mapX:0,mapY:0}),showLight:season==='4'?(existing?.showLight??true):false,layout:kind,players:clone(existing?.players??[]),objects:[]};
+ const state={schema:SCHEMA,version:VERSION,season,groups:clone(existing?.groups??emptyGroups()),priorityLabels:clone(existing?.priorityLabels??['','','']),title:existing?.title??'NOVA FAMILY',origin:clone(existing?.origin??{x:500,y:500,mapX:0,mapY:0}),showLight:season==='4'?(existing?.showLight??true):false,layout:kind,players:clone(existing?.players??[]).map(p=>({...p,priority:priorityOf(p)})),objects:[]};
  const ox=state.origin.mapX,oy=state.origin.mapY;
  if(kind==='empty')return state;
  if(!['spaced','compact'].includes(kind))throw new Error(t('Unbekannte Vorlage.'));
@@ -2542,7 +2814,7 @@ function addPlayerNames(state,names){
  const raw=names.map(normalizeName).filter(Boolean);
  if(raw.some(name=>name.length>80))throw new Error(t('Ein Name darf höchstens 80 Zeichen lang sein.'));
  const next=clone(state),seen=new Set(next.players.map(p=>nameKey(p.name)));let added=0;
- for(const name of raw){if(seen.has(nameKey(name)))continue;seen.add(nameKey(name));next.players.push({id:uid('player'),name});added++;}
+ for(const name of raw){if(seen.has(nameKey(name)))continue;seen.add(nameKey(name));next.players.push({id:uid('player'),name,priority:2});added++;}
  if(next.players.length>300)throw new Error(t('Die Liste kann höchstens 300 Spieler enthalten.'));
  return {state:next,added,skipped:raw.length-added};
 }
@@ -2557,15 +2829,31 @@ function autofillOptions(state,includeBeacons=false){
  return {players,seats,reserved:includeBeacons?0:empty.filter(o=>o.beacon).length};
 }
 function groupForPlayer(state,id){return (state.groups??[]).find(g=>g.playerIds.includes(id))??null;}
-function setPlayerGroup(state,playerId,groupId){
- if(!state.players.some(p=>p.id===playerId))throw new Error(t('Spieler nicht gefunden.'));
+function requirePlayerIds(state,playerIds){
+ if(!Array.isArray(playerIds)||!playerIds.length||playerIds.length>300||playerIds.some(id=>!state.players.some(p=>p.id===id)))throw new Error(t('Spieler nicht gefunden.'));
+ return new Set(playerIds);
+}
+function setPlayerGroups(state,playerIds,groupId){
+ const ids=requirePlayerIds(state,playerIds);
  if(groupId!==null&&(!Number.isInteger(groupId)||groupId<1||groupId>10))throw new Error(t('Bitte eine Gruppe von 1 bis 10 wählen.'));
- if((groupForPlayer(state,playerId)?.id??null)===groupId)return state;
+ if([...ids].every(id=>(groupForPlayer(state,id)?.id??null)===groupId))return state;
  const next=clone(state);next.groups=clone(next.groups??emptyGroups());
- for(const g of next.groups)g.playerIds=g.playerIds.filter(id=>id!==playerId);
- if(groupId!==null){let group=next.groups.find(g=>g.id===groupId);if(!group){group={id:groupId,playerIds:[]};next.groups.push(group);}group.playerIds.push(playerId);}
+ for(const g of next.groups)g.playerIds=g.playerIds.filter(id=>!ids.has(id));
+ if(groupId!==null){let group=next.groups.find(g=>g.id===groupId);if(!group){group={id:groupId,playerIds:[]};next.groups.push(group);}group.playerIds.push(...state.players.filter(p=>ids.has(p.id)).map(p=>p.id));}
  return next;
 }
+function setPlayerGroup(state,playerId,groupId){return setPlayerGroups(state,[playerId],groupId);}
+function setPlayerPriorities(state,playerIds,priority){
+ const ids=requirePlayerIds(state,playerIds);
+ if(!Number.isInteger(priority)||priority<1||priority>3)throw new Error(t('Priorität muss 1, 2 oder 3 sein.'));
+ if(state.players.filter(p=>ids.has(p.id)).every(p=>priorityOf(p)===priority))return state;
+ const next=clone(state);for(const p of next.players)if(ids.has(p.id))p.priority=priority;return next;
+}
+function setPriorityLabel(state,level,label){
+ if(!Number.isInteger(level)||level<1||level>3||typeof label!=='string'||label.length>40)throw new Error(t('Die Prioritätsbezeichnung darf höchstens 40 Zeichen haben.'));
+ const next=clone(state);next.priorityLabels=clone(next.priorityLabels??['','','']);next.priorityLabels[level-1]=normalizeName(label);return next;
+}
+function groupPriority(state,group){const members=state.players.filter(p=>group.playerIds.includes(p.id));return members.length?members.reduce((sum,p)=>sum+priorityOf(p),0)/members.length:2;}
 function clearPlayers(state){const next=clone(state);next.players=[];next.groups=emptyGroups();for(const o of next.objects)if(o.type==='base')o.playerId=null;return next;}
 function areNeighbors(a,b,gap=1){return a.id!==b.id&&Math.abs(a.x-b.x)<=(a.w+b.w)/2+gap+1e-8&&Math.abs(a.y-b.y)<=(a.h+b.h)/2+gap+1e-8;}
 function groupComponents(objects,gap=1){
@@ -2608,17 +2896,27 @@ function autofill(state,includeBeacons=false){
  const {players,seats,reserved}=autofillOptions(state,includeBeacons),assigned=Math.min(players.length,seats.length);
  if(!assigned)return {state,assigned:0,remaining:players.length,freeSeats:seats.length,reserved,splitGroups:[]};
  const next=clone(state),unassigned=new Set(players.map(p=>p.id)),available=new Map(seats.map(o=>[o.id,o])),placements=new Map();
- const activeGroups=(state.groups??[]).filter(g=>g.playerIds.some(id=>unassigned.has(id))).map(g=>({...g,anchors:state.objects.filter(o=>g.playerIds.includes(o.playerId))}));
- activeGroups.sort((a,b)=>Number(!!b.anchors.length)-Number(!!a.anchors.length)||a.id-b.id);
- for(const group of activeGroups){
-  const members=group.playerIds.filter(id=>unassigned.has(id)),chosen=groupSeats(state,[...available.values()],group.anchors,Math.min(members.length,available.size));
-  chosen.forEach((seat,i)=>{placements.set(seat.id,members[i]);available.delete(seat.id);unassigned.delete(members[i]);});
+ const order=new Map(state.players.map((p,i)=>[p.id,i])),byId=new Map(state.players.map(p=>[p.id,p]));
+ const distance=o=>(o.x-state.origin.mapX)**2+(o.y-state.origin.mapY)**2;
+ const seatOrder=(a,b)=>distance(a)-distance(b)||a.slot-b.slot||a.id.localeCompare(b.id);
+ const units=[],grouped=new Set();
+ for(const group of state.groups??[]){
+  const members=group.playerIds.filter(id=>unassigned.has(id));if(!members.length)continue;
+  for(const id of members)grouped.add(id);
+  units.push({members,anchors:state.objects.filter(o=>group.playerIds.includes(o.playerId)),score:groupPriority(state,group),order:Math.min(...group.playerIds.map(id=>order.get(id)))});
  }
- // Ungrouped or still-unassigned members use the remaining central seats.
- const rest=players.filter(p=>unassigned.has(p.id));
- [...available.values()].slice(0,rest.length).forEach((seat,i)=>{placements.set(seat.id,rest[i].id);unassigned.delete(rest[i].id);});
+ for(const player of players)if(!grouped.has(player.id))units.push({members:[player.id],anchors:[],score:priorityOf(player),order:order.get(player.id)});
+ // Fixed placements constrain nearby group seats. All other groups and individuals share one priority ranking.
+ units.sort((a,b)=>Number(!!b.anchors.length)-Number(!!a.anchors.length)||a.score-b.score||a.order-b.order);
+ for(const unit of units){
+  const members=[...unit.members].sort((a,b)=>priorityOf(byId.get(a))-priorityOf(byId.get(b))||order.get(a)-order.get(b));
+  const count=Math.min(members.length,available.size),free=[...available.values()];
+  const chosen=unit.members.length===1&&!unit.anchors.length?free.slice(0,count):groupSeats(state,free,unit.anchors,count);
+  // Higher-priority members occupy the inner side of their selected cluster; existing members remain fixed.
+  chosen.sort(seatOrder).forEach((seat,i)=>{placements.set(seat.id,members[i]);available.delete(seat.id);});
+ }
  for(const o of next.objects)if(placements.has(o.id))o.playerId=placements.get(o.id);
- const splitGroups=(next.groups??[]).filter(g=>g.playerIds.length>1&&g.playerIds.some(id=>players.some(p=>p.id===id))).filter(g=>{
+ const splitGroups=(next.groups??[]).filter(g=>g.playerIds.length>1&&g.playerIds.some(id=>unassigned.has(id))).filter(g=>{
   const objects=next.objects.filter(o=>g.playerIds.includes(o.playerId));return objects.length<g.playerIds.length||groupComponents(objects,state.layout==='compact'?0:1)>1;
  }).map(g=>g.id);
  return {state:next,assigned:placements.size,remaining:players.length-placements.size,freeSeats:seats.length-placements.size,reserved,splitGroups};
@@ -2681,17 +2979,18 @@ function bounds(state,includeLight=state.showLight){
  const rs=all.map(rect);return {left:Math.min(...rs.map(r=>r.left)),right:Math.max(...rs.map(r=>r.right)),bottom:Math.min(...rs.map(r=>r.bottom)),top:Math.max(...rs.map(r=>r.top))};
 }
 function validate(raw){
- if(!raw||raw.schema!==SCHEMA||![1,VERSION].includes(raw.version))throw new Error(t('Das ist keine unterstützte Hive-Plan-Datei.'));
+ if(!raw||raw.schema!==SCHEMA||![1,2,VERSION].includes(raw.version))throw new Error(t('Das ist keine unterstützte Hive-Plan-Datei.'));
  if(typeof raw.title!=='string'||raw.title.length>80)throw new Error(t('Ungültiger Planname.'));
  if(!raw.origin||!['x','y','mapX','mapY'].every(k=>Number.isInteger(raw.origin[k])))throw new Error(t('Ungültiger Koordinatenursprung.'));
  if(!finite(raw.origin.x,0,999999)||!finite(raw.origin.y,0,999999)||!finite(raw.origin.mapX,-5000,5000)||!finite(raw.origin.mapY,-5000,5000))throw new Error(t('Ungültiger Koordinatenursprung.'));
  if(!Array.isArray(raw.players)||raw.players.length>300||!Array.isArray(raw.objects)||raw.objects.length>800)throw new Error(t('Die Datei enthält zu viele oder ungültige Elemente.'));
  const season=raw.version===1?'4':raw.season;
  if(!SEASONS.includes(season))throw new Error(t('Ungültige Season.'));
- const state={schema:SCHEMA,version:VERSION,season,groups:[],title:raw.title,origin:{x:raw.origin.x,y:raw.origin.y,mapX:raw.origin.mapX,mapY:raw.origin.mapY},showLight:raw.showLight!==false,layout:['spaced','compact','empty'].includes(raw.layout)?raw.layout:'empty',players:[],objects:[]};
+ const state={schema:SCHEMA,version:VERSION,season,groups:[],priorityLabels:['','',''],title:raw.title,origin:{x:raw.origin.x,y:raw.origin.y,mapX:raw.origin.mapX,mapY:raw.origin.mapY},showLight:raw.showLight!==false,layout:['spaced','compact','empty'].includes(raw.layout)?raw.layout:'empty',players:[],objects:[]};
+ if(raw.version===VERSION){if(!Array.isArray(raw.priorityLabels)||raw.priorityLabels.length!==3||raw.priorityLabels.some(v=>typeof v!=='string'||v.length>40))throw new Error(t('Ungültige Prioritätsbezeichnungen.'));state.priorityLabels=raw.priorityLabels.map(normalizeName);}
  const ids=new Set(),names=new Set(),assigned=new Set(),beacons=new Set();
  const validId=id=>typeof id==='string'&&id.length>0&&id.length<=100&&/^[A-Za-z0-9_-]+$/.test(id);
- for(const p of raw.players){if(!p||!validId(p.id)||ids.has(p.id)||typeof p.name!=='string'||!normalizeName(p.name)||p.name.length>80||names.has(nameKey(p.name)))throw new Error(t('Ungültige oder doppelte Spieler.'));ids.add(p.id);names.add(nameKey(p.name));state.players.push({id:p.id,name:normalizeName(p.name)});}
+ for(const p of raw.players){if(!p||!validId(p.id)||ids.has(p.id)||typeof p.name!=='string'||!normalizeName(p.name)||p.name.length>80||names.has(nameKey(p.name)))throw new Error(t('Ungültige oder doppelte Spieler.'));ids.add(p.id);names.add(nameKey(p.name));const priority=raw.version===VERSION?p.priority:2;if(!Number.isInteger(priority)||priority<1||priority>3)throw new Error(t('Priorität muss 1, 2 oder 3 sein.'));state.players.push({id:p.id,name:normalizeName(p.name),priority});}
  const groups=raw.version===1?emptyGroups():raw.groups,groupIds=new Set(),groupedPlayers=new Set();
  if(!Array.isArray(groups)||groups.length>10)throw new Error(t('Ungültige Gruppenliste.'));
  for(const g of groups){
@@ -2723,7 +3022,7 @@ function validate(raw){
  }
  return state;
 }
-root.HiveModel={SCHEMA,VERSION,SEASONS,emptyGroups,isSeason4,isDeveloping,anchorType,setSeason,groupForPlayer,setPlayerGroup,clearPlayers,areNeighbors,groupComponents,terrainResizeCandidate,resizeTerrain,COLORS,clone,uid,normalizeName,snap,rect,overlaps,coords,positionFromCoords,playerFor,objectForPlayer,objectLabel,makeLayout,collision,assertPlacement,moveObject,nextBeacon,makeObject,addObject,removeObject,parsePlayerFile,decodePlayerFile,importPlayers,addPlayers,autofillOptions,autofill,assign,unassign,unassignAll,removePlayer,setOrigin,updateObject,coverage,bounds,validate};
+root.HiveModel={SCHEMA,VERSION,PRIORITY_DEFAULTS,priorityOf,priorityLabel,setPlayerPriorities,setPriorityLabel,setPlayerGroups,groupPriority,SEASONS,emptyGroups,isSeason4,isDeveloping,anchorType,setSeason,groupForPlayer,setPlayerGroup,clearPlayers,areNeighbors,groupComponents,terrainResizeCandidate,resizeTerrain,COLORS,clone,uid,normalizeName,snap,rect,overlaps,coords,positionFromCoords,playerFor,objectForPlayer,objectLabel,makeLayout,collision,assertPlacement,moveObject,nextBeacon,makeObject,addObject,removeObject,parsePlayerFile,decodePlayerFile,importPlayers,addPlayers,autofillOptions,autofill,assign,unassign,unassignAll,removePlayer,setOrigin,updateObject,coverage,bounds,validate};
 })(globalThis);
 
 </script>
@@ -2733,11 +3032,11 @@ root.HiveModel={SCHEMA,VERSION,SEASONS,emptyGroups,isSeason4,isDeveloping,anchor
 const I=globalThis.HiveI18n,t=(key,params)=>I.t(key,params);
 const M=globalThis.HiveModel,$=id=>document.getElementById(id),svg=$('map'),stage=$('stage');
 // User-facing release: increment the final number for each later delivered update.
-const APP_VERSION='1.1.2';
+const APP_VERSION='1.1.3';
 const TOOL_SHORTCUTS={b:'base',m:'marshall',a:'center',t:'terrain',l:'beacon'};
 const shortcutFor=type=>Object.keys(TOOL_SHORTCUTS).find(key=>TOOL_SHORTCUTS[key]===type)?.toUpperCase();
 let state=M.makeLayout(),selectedId=null,pending=null,filter='all',dirty=false,undoStack=[],redoStack=[],drag=null,suppressClick=false,confirmAction=null,toastTimer=null;
-let selectedGroup=null,lastAutofillResult=null;
+let organizerOpen=false,organizationTab='priority',selectedPlayers=new Set(),lastAutofillResult=null;
 const groupName=id=>t('Gruppe {n}',{n:id});
 const seasonName=()=>state.season==='off'?t('Off Season'):t('Season {n}',{n:state.season});
 const referenceName=()=>t(M.isSeason4(state)?'Allianzzentrum':'Marshall');
@@ -2757,11 +3056,11 @@ function commit(next,message){
  if(selectedId&&!state.objects.some(o=>o.id===selectedId))selectedId=null;
  render();if(message)toast(message);return true;
 }
-function restoreHistory(direction){lastAutofillResult=null;const source=direction==='undo'?undoStack:redoStack,target=direction==='undo'?redoStack:undoStack;if(!source.length)return;target.push(M.clone(state));state=source.pop();dirty=true;pending=null;ghost=null;drag=null;selectedId=null;$('drag-ghost').hidden=true;$('group-drop-zone').classList.remove('drop-active');render();}
+function restoreHistory(direction){lastAutofillResult=null;const source=direction==='undo'?undoStack:redoStack,target=direction==='undo'?redoStack:undoStack;if(!source.length)return;target.push(M.clone(state));state=source.pop();dirty=true;pending=null;ghost=null;drag=null;selectedId=null;$('drag-ghost').hidden=true;clearOrganizationDrop();render();}
 function confirm(title,message,action){confirmAction=action;$('confirm-title').textContent=title;$('confirm-message').textContent=message;$('confirm-dialog').showModal();}
 function closeDialog(id){$(id).close();if(id==='confirm-dialog')confirmAction=null;}
 function pointFromClient(clientX,clientY){const matrix=svg.getScreenCTM();if(!matrix)return {x:0,y:0};const p=new DOMPoint(clientX,clientY).matrixTransform(matrix.inverse());return {x:p.x,y:-p.y};}
-function onStage(clientX,clientY){const r=svg.getBoundingClientRect();return clientX>=r.left&&clientX<=r.right&&clientY>=r.top&&clientY<=r.bottom;}
+function onStage(clientX,clientY){if(organizerOpen){const d=$('organizer').getBoundingClientRect();if(clientX>=d.left&&clientX<=d.right&&clientY>=d.top&&clientY<=d.bottom)return false;}const r=svg.getBoundingClientRect();return clientX>=r.left&&clientX<=r.right&&clientY>=r.top&&clientY<=r.bottom;}
 function hitAt(point){return [...state.objects].reverse().find(o=>{const r=M.rect(o);return point.x>=r.left&&point.x<=r.right&&point.y>=r.bottom&&point.y<=r.top;})??null;}
 function viewBox(){const r=stage.getBoundingClientRect(),w=Math.max(r.width,200)/camera.scale,h=Math.max(r.height,200)/camera.scale;return {x:camera.x-w/2,y:camera.y-h/2,w,h};}
 function updateView(){const b=viewBox();svg.setAttribute('viewBox',`${b.x} ${b.y} ${b.w} ${b.h}`);$('zoom-label').textContent=`${Math.round(camera.scale/fitScale*100)}%`;}
@@ -2826,33 +3125,47 @@ function renderMap(){
  const b=viewBox();svg.innerHTML=definitions()+`<rect x="${b.x-5}" y="${b.y-5}" width="${b.w+10}" height="${b.h+10}" fill="url(#big-grid)" pointer-events="none"/>`+scene();
  svg.classList.toggle('adding',!!pending);svg.classList.toggle('moving',!!drag&&drag.kind!=='roster');updateView();
 }
+function priorityText(level){return `P${level} · ${M.priorityLabel(state,level)}`;}
+function playerBadges(p){const g=M.groupForPlayer(state,p.id),level=M.priorityOf(p);return `<span class="player-badges"><span class="priority-pill priority-${level}" title="${esc(priorityText(level))}">P${level}</span>${g?`<span class="group-pill">${esc(groupName(g.id))}</span>`:''}</span>`;}
+function visiblePlayers(){const search=$('player-search').value.trim().toLocaleLowerCase();return state.players.filter(p=>(filter==='all'||!M.objectForPlayer(state,p.id))&&p.name.toLocaleLowerCase().includes(search));}
+function selectionCheckbox(p){return `<input type="checkbox" class="player-check" data-select-player="${esc(p.id)}" aria-label="${h('{name} auswählen',{name:p.name})}" ${selectedPlayers.has(p.id)?'checked':''}>`;}
 function renderRoster(){
- const search=$('player-search').value.trim().toLocaleLowerCase(),assigned=new Map(state.objects.filter(o=>o.playerId).map(o=>[o.playerId,o]));
- const players=state.players.filter(p=>(filter==='all'||!assigned.has(p.id))&&p.name.toLocaleLowerCase().includes(search));
+ const assigned=new Map(state.objects.filter(o=>o.playerId).map(o=>[o.playerId,o])),players=visiblePlayers();
  $('roster-count').textContent=state.players.length;$('unplaced-count').textContent=state.players.length-assigned.size;
  $('filter-all').classList.toggle('active',filter==='all');$('filter-free').classList.toggle('active',filter==='free');$('filter-all').setAttribute('aria-pressed',String(filter==='all'));$('filter-free').setAttribute('aria-pressed',String(filter==='free'));
- if(!state.players.length){$('player-list').innerHTML=`<div class="empty-roster"><span class="empty-mark" aria-hidden="true">⠿</span><strong>${h('Wer sitzt wo?')}</strong>${h(M.isSeason4(state)?'Füge deine Spielerliste ein und verteile die Namen auf der Karte. A–D sind als Beacon-Plätze markiert.':'Füge Spieler hinzu und verteile sie rund um den Marshall.')}</div>`;return;}
- if(!players.length){$('player-list').innerHTML=`<div class="empty-roster">${h(search?'Kein Spieler mit diesem Namen.':'Alle Spieler haben einen Platz.')}</div>`;return;}
- $('player-list').innerHTML=players.map(p=>{const o=assigned.get(p.id),q=o?M.coords(state,o):null;return `<div class="player-row ${o?'assigned ':''}${pending?.playerId===p.id?'active':''}" data-player="${esc(p.id)}" role="button" tabindex="0" aria-label="${esc(p.name)}, ${o?h('platziert auf X {x}, Y {y}',q):h('noch ohne Platz')}"><span class="grip" aria-hidden="true">${o?'✓':'⠿'}</span><span class="player-info"><span class="player-name">${esc(p.name)}</span><span class="player-position">${o?`X ${num(q.x)} · Y ${num(q.y)}${o.beacon?' · '+h('Beacon {letter}',{letter:o.beacon}):''}`:h('Auf einen Platz ziehen')}${M.groupForPlayer(state,p.id)?` <span class="group-pill">${esc(groupName(M.groupForPlayer(state,p.id).id))}</span>`:''}</span></span><button class="remove-player" data-remove-player="${esc(p.id)}" aria-label="${h('{name} aus der Liste entfernen',{name:p.name})}" title="${h('Aus der Liste entfernen')}">×</button></div>`;}).join('');
+ if(!state.players.length)$('player-list').innerHTML=`<div class="empty-roster"><span class="empty-mark" aria-hidden="true">⠿</span><strong>${h('Wer sitzt wo?')}</strong>${h(M.isSeason4(state)?'Füge deine Spielerliste ein und verteile die Namen auf der Karte. A–D sind als Beacon-Plätze markiert.':'Füge Spieler hinzu und verteile sie rund um den Marshall.')}</div>`;
+ else if(!players.length)$('player-list').innerHTML=`<div class="empty-roster">${h($('player-search').value.trim()?'Kein Spieler mit diesem Namen.':'Alle Spieler haben einen Platz.')}</div>`;
+ else $('player-list').innerHTML=players.map(p=>{const o=assigned.get(p.id),q=o?M.coords(state,o):null;return `<div class="player-row ${o?'assigned ':''}${pending?.playerId===p.id?'active':''}" data-player="${esc(p.id)}" role="button" tabindex="0" aria-label="${esc(p.name)}, ${esc(priorityText(M.priorityOf(p)))}, ${o?h('platziert auf X {x}, Y {y}',q):h('noch ohne Platz')}">${organizerOpen?selectionCheckbox(p):'<span class="grip" aria-hidden="true">'+(o?'✓':'⠿')+'</span>'}<span class="player-info"><span class="player-name">${esc(p.name)}</span><span class="player-position">${o?`X ${num(q.x)} · Y ${num(q.y)}${o.beacon?' · '+h('Beacon {letter}',{letter:o.beacon}):''}`:h('Auf einen Platz ziehen')}</span>${playerBadges(p)}</span><button class="remove-player" data-remove-player="${esc(p.id)}" aria-label="${h('{name} aus der Liste entfernen',{name:p.name})}" title="${h('Aus der Liste entfernen')}">×</button></div>`;}).join('');
+ renderSelection();
 }
-function renderGroups(){
- const groups=state.groups??[];
- $('groups-count').textContent=`${groups.filter(g=>g.playerIds.length).length} / 10`;
- $('group-select').innerHTML=`<option value="">${h('Gruppe auswählen')}</option>`+Array.from({length:10},(_,i)=>{const id=i+1,g=groups.find(g=>g.id===id);return `<option value="${id}">${esc(groupName(id))} (${g?.playerIds.length??0})</option>`;}).join('');
- $('group-select').value=selectedGroup??'';$('group-panel').hidden=selectedGroup===null;
- if(selectedGroup===null)return;
- const group=groups.find(g=>g.id===selectedGroup)??{playerIds:[]},members=group.playerIds.map(id=>state.players.find(p=>p.id===id)).filter(Boolean);
- $('group-active-title').textContent=groupName(selectedGroup);
- $('group-members').innerHTML=members.length?members.map(p=>`<div class="group-member" data-player="${esc(p.id)}" role="button" tabindex="0" aria-label="${esc(p.name)}"><span class="grip" aria-hidden="true">⠿</span><span class="group-member-name">${esc(p.name)}</span><button data-ungroup="${esc(p.id)}" title="${h('Aus der Gruppe entfernen')}" aria-label="${h('{name} aus der Gruppe entfernen',{name:p.name})}">×</button></div>`).join(''):`<p class="field-help">${h('Noch keine Gruppenmitglieder.')}</p>`;
- const options=state.players.filter(p=>!group.playerIds.includes(p.id));
- $('group-player-select').innerHTML=`<option value="">${h('Spieler auswählen')}</option>`+options.map(p=>{const g=M.groupForPlayer(state,p.id);return `<option value="${esc(p.id)}">${esc(p.name)}${g?' · '+esc(groupName(g.id)):''}</option>`;}).join('');
- $('group-add-player').disabled=!options.length;
- const placed=state.objects.filter(o=>group.playerIds.includes(o.playerId)),split=placed.length>1&&M.groupComponents(placed,state.layout==='compact'?0:1)>1;
- $('group-status').textContent=t('{placed} / {total} Gruppenmitglieder platziert.',{placed:placed.length,total:members.length})+(split?' '+t('Die Gruppe steht noch nicht zusammenhängend.'):'');
- $('group-status').classList.toggle('group-warning',split);
+function organizationMember(p,group=false){return `<div class="org-member" data-player="${esc(p.id)}" role="button" tabindex="0" aria-label="${esc(p.name)}, ${esc(priorityText(M.priorityOf(p)))}">${selectionCheckbox(p)}<span class="org-member-name">${esc(p.name)}${playerBadges(p)}</span>${group?`<button data-ungroup="${esc(p.id)}" title="${h('Aus der Gruppe entfernen')}" aria-label="${h('{name} aus der Gruppe entfernen',{name:p.name})}">×</button>`:''}</div>`;}
+function renderSelection(){
+ const valid=new Set(state.players.map(p=>p.id));selectedPlayers=new Set([...selectedPlayers].filter(id=>valid.has(id)));
+ document.querySelectorAll('[data-player]').forEach(row=>{const checked=organizerOpen&&selectedPlayers.has(row.dataset.player);row.classList.toggle('is-selected',checked);if(organizerOpen)row.setAttribute('aria-pressed',String(checked));else row.removeAttribute('aria-pressed');});
+ document.querySelectorAll('[data-select-player]').forEach(input=>input.checked=selectedPlayers.has(input.dataset.selectPlayer));
+ $('selection-count').textContent=t('{n} Spieler ausgewählt',{n:selectedPlayers.size});$('apply-organization').disabled=!selectedPlayers.size;$('clear-selection').disabled=!selectedPlayers.size;$('select-visible').disabled=!visiblePlayers().length;
 }
-function inGroupDrop(x,y){if(selectedGroup===null||$('group-panel').hidden)return false;const r=$('group-drop-zone').getBoundingClientRect();return x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom;}
-function addToSelectedGroup(playerId){if(selectedGroup!==null)commit(M.setPlayerGroup(state,playerId,selectedGroup),t('Spieler zur Gruppe hinzugefügt.'));}
+function renderOrganizer(){
+ $('organizer').hidden=!organizerOpen;$('selection-tools').hidden=!organizerOpen;$('toggle-organizer').setAttribute('aria-expanded',String(organizerOpen));document.body.classList.toggle('organizer-open',organizerOpen);
+ if(!organizerOpen)return;
+ const scrolls=new Map([...$('organizer').querySelectorAll('[data-org-list]')].map(el=>[el.dataset.orgList,el.scrollTop])),friendScroll=$('friends-panel').scrollTop,priorityScroll=$('priority-panel').scrollTop;
+ const priority=organizationTab==='priority';
+ for(const tab of $('organizer').querySelectorAll('[data-tab]')){const active=tab.dataset.tab===organizationTab;tab.setAttribute('aria-selected',String(active));tab.tabIndex=active?0:-1;}
+ $('priority-panel').hidden=!priority;$('friends-panel').hidden=priority;
+ $('organizer-help').textContent=priority?t('P1 nach innen, P3 nach außen. Neue Spieler: P2. Eigene Namen ändern die Reihenfolge nicht.'):t('Der Prioritätsdurchschnitt bestimmt die Reihenfolge der Gruppen. Feste Plätze dienen als Anker. Jede Person gehört höchstens einer Gruppe an.');
+ const destination=$('organizer-target').value;
+ $('organizer-target').innerHTML=priority?[1,2,3].map(level=>`<option value="priority:${level}">${esc(priorityText(level))}</option>`).join(''):`<option value="group:0">${h('Keine Gruppe')}</option>`+Array.from({length:10},(_,i)=>`<option value="group:${i+1}">${esc(groupName(i+1))}</option>`).join('');
+ if([...$('organizer-target').options].some(o=>o.value===destination))$('organizer-target').value=destination;
+ $('priority-panel').innerHTML=[1,2,3].map(level=>{const players=state.players.filter(p=>M.priorityOf(p)===level);return `<section class="org-card" data-org-drop="priority" data-level="${level}" aria-label="${esc(priorityText(level))}"><div class="org-card-head"><div class="org-card-title"><h3><span class="priority-pill priority-${level}">P${level}</span></h3><span class="count">${players.length}</span></div><label class="sr-only" for="priority-label-${level}">${h('Bezeichnung für P{n}',{n:level})}</label><input id="priority-label-${level}" data-priority-label="${level}" value="${esc(state.priorityLabels[level-1])}" placeholder="${h(M.PRIORITY_DEFAULTS[level-1])}" maxlength="40" title="${h('Bezeichnung bearbeiten')}"></div><div class="org-members" data-org-list="priority-${level}">${players.length?players.map(p=>organizationMember(p)).join(''):`<p class="org-empty">${h('Spieler hier hineinziehen')}</p>`}</div></section>`;}).join('');
+ $('friends-panel').innerHTML=Array.from({length:10},(_,i)=>{const id=i+1,group=state.groups.find(g=>g.id===id)??{id,playerIds:[]},members=group.playerIds.map(id=>state.players.find(p=>p.id===id)).filter(Boolean),placed=state.objects.filter(o=>group.playerIds.includes(o.playerId)),split=placed.length>1&&M.groupComponents(placed,state.layout==='compact'?0:1)>1;return `<section class="org-card" data-org-drop="group" data-group="${id}" aria-label="${esc(groupName(id))}"><div class="org-card-head"><div class="org-card-title"><h3>${esc(groupName(id))}</h3><span class="count">${members.length}</span></div><p class="group-score">${members.length?h('Durchschnitt: {value}',{value:M.groupPriority(state,group).toLocaleString(I.language,{minimumFractionDigits:2,maximumFractionDigits:2})}):h('Noch keine Gruppenmitglieder.')}</p><p class="org-card-status ${split?'group-warning':''}">${h('{placed} / {total} Gruppenmitglieder platziert.',{placed:placed.length,total:members.length})}${split?' '+h('Die Gruppe steht noch nicht zusammenhängend.'):''}</p></div><div class="org-members" data-org-list="group-${id}">${members.length?members.map(p=>organizationMember(p,true)).join(''):`<p class="org-empty">${h('Spieler hier hineinziehen')}</p>`}</div></section>`;}).join('');
+ for(const el of $('organizer').querySelectorAll('[data-org-list]'))el.scrollTop=scrolls.get(el.dataset.orgList)??0;
+ $('friends-panel').scrollTop=friendScroll;$('priority-panel').scrollTop=priorityScroll;renderSelection();
+}
+function setOrganizer(open){organizerOpen=open;pending=null;ghost=null;drag=null;$('drag-ghost').hidden=true;clearOrganizationDrop();render();(open?$(organizationTab==='priority'?'priority-tab':'friends-tab'):$('toggle-organizer')).focus({preventScroll:true});}
+function togglePlayerSelection(id){if(selectedPlayers.has(id))selectedPlayers.delete(id);else selectedPlayers.add(id);renderSelection();}
+function clearOrganizationDrop(){document.querySelectorAll('[data-org-drop].drop-active').forEach(el=>el.classList.remove('drop-active'));}
+function organizationDropAt(x,y){if(!organizerOpen)return null;const target=document.elementFromPoint(x,y)?.closest('[data-org-drop]');return target&&$('organizer').contains(target)?target:null;}
+function organizePlayers(ids,type,value){const next=type==='priority'?M.setPlayerPriorities(state,ids,value):M.setPlayerGroups(state,ids,value||null);commit(next,t('{n} Spieler zugewiesen.',{n:ids.length}));renderSelection();}
 function renderInspector(){
  const o=selected();$('selection-type').hidden=!o;
  if(!o){$('inspector').innerHTML=`<div class="selection-empty"><span aria-hidden="true">⌖</span><p>${h('Wähle eine Basis, den Marshall oder ein anderes Element auf der Karte.')}</p></div>`;return;}
@@ -2860,7 +3173,7 @@ function renderInspector(){
  const q=M.coords(state,o),player=M.playerFor(state,o);let s='<div class="selection-form">';
  if(o.type==='base'){
   s+=`<label>${h('Spieler')}<select id="assign-select"><option value="">${h('Platz freihalten')}</option>${state.players.map(p=>`<option value="${esc(p.id)}" ${p.id===o.playerId?'selected':''}>${esc(p.name)}${M.objectForPlayer(state,p.id)&&p.id!==o.playerId?' ('+h('bereits platziert')+')':''}</option>`).join('')}</select></label>`;
-  if(player){s+=`<label>${h('Name bearbeiten')}<input id="player-name-edit" value="${esc(player.name)}" maxlength="80"></label><label>${h('Gruppe')}<select id="inspector-group"><option value="">${h('Keine Gruppe')}</option>${Array.from({length:10},(_,i)=>`<option value="${i+1}" ${M.groupForPlayer(state,player.id)?.id===i+1?'selected':''}>${esc(groupName(i+1))}</option>`).join('')}</select></label>`;}
+  if(player){s+=`<label>${h('Priority')}<select id="inspector-priority">${[1,2,3].map(level=>`<option value="${level}" ${M.priorityOf(player)===level?'selected':''}>${esc(priorityText(level))}</option>`).join('')}</select></label><label>${h('Name bearbeiten')}<input id="player-name-edit" value="${esc(player.name)}" maxlength="80"></label><label>${h('Gruppe')}<select id="inspector-group"><option value="">${h('Keine Gruppe')}</option>${Array.from({length:10},(_,i)=>`<option value="${i+1}" ${M.groupForPlayer(state,player.id)?.id===i+1?'selected':''}>${esc(groupName(i+1))}</option>`).join('')}</select></label>`;}
  }else s+=`<label>${h('Bezeichnung')}<input id="object-name-edit" value="${esc(M.objectLabel(state,o))}" maxlength="80"></label>`;
  if(o.type==='terrain'){
   s+=`<p class="field-help resize-hint">${h('Zum Ändern der Größe an den Eckpfeilen auf der Karte ziehen.')}</p>`;
@@ -2884,7 +3197,7 @@ function renderControls(){
  $('season-warning').hidden=!M.isDeveloping(state);
  $('season-help').textContent=t('Beim Wechsel wird die Aufstellung neu erstellt. Spieler und Gruppen bleiben erhalten.');
  $('anchor-title').textContent=ref;$('anchor-size-key').textContent=t(s4?'Zentrum 9 × 9':'Marshall 3 × 3');
- $('autofill-direction').textContent=t('Autofill: Gruppen zusammenhalten, vom Mittelpunkt nach außen.');
+ $('autofill-direction').textContent=t('Autofill: Prioritäten und Gruppendurchschnitt, von innen nach außen.');
  $('mode-help-note').textContent=s4?t('Ohne Zentrum bleibt der Koordinatenursprung erhalten. Beim Verschieben des Zentrums werden die Spielerkoordinaten neu berechnet. L4 zeigt geometrisch 25 × 25 Felder je Beacon. Buffs am Rand im Spiel prüfen.'):t('Der Marshall ist der Bezugspunkt für Koordinaten und Autofill. Ohne Marshall bleibt der markierte Ursprung erhalten.');
  document.querySelectorAll('[data-s4-only]').forEach(el=>el.hidden=!s4);
  $('clear-players').disabled=!state.players.length;
@@ -2913,7 +3226,7 @@ function renderAutofill(){
  $('autofill').disabled=!players.length||!seats.length;
  $('autofill-summary').textContent=!state.players.length?t('Füge zuerst Spieler hinzu.'):!players.length?t('Alle Spieler haben bereits einen Platz.'):t('{players} ohne Platz · {seats} freie Plätze.',{players:players.length,seats:seats.length})+(reserved?' '+t('{n} Beacon-Plätze bleiben frei.',{n:reserved}):'');
 }
-function render(){renderControls();renderRoster();renderGroups();renderInspector();renderMap();}
+function render(){renderControls();renderRoster();renderOrganizer();renderInspector();renderMap();}
 function clearPending(){pending=null;ghost=null;renderControls();renderRoster();renderMap();}
 function selectObject(id,focus=false){selectedId=id;renderInspector();renderMap();if(focus)svg.focus({preventScroll:true});}
 function armPlayer(id){pending={kind:'player',playerId:id};ghost=null;renderControls();renderRoster();renderMap();}
@@ -2976,36 +3289,47 @@ svg.addEventListener('pointercancel',()=>{drag=null;ghost=null;renderMap();});
 svg.addEventListener('pointerleave',()=>{if(!drag){ghost=null;renderMap();}});
 svg.addEventListener('wheel',e=>{e.preventDefault();if(drag)return;zoom(Math.exp(-e.deltaY*.0014),e.clientX,e.clientY);},{passive:false});
 function startPlayerDrag(e){
- if(e.button!==0||e.pointerType==='touch'||e.target.closest('[data-remove-player],[data-ungroup]'))return;const row=e.target.closest('[data-player]');if(!row)return;
- pending=null;ghost=null;renderControls();drag={kind:'roster',playerId:row.dataset.player,clientX:e.clientX,clientY:e.clientY,moved:false,pointerId:e.pointerId};row.setPointerCapture(e.pointerId);
+ if(e.button!==0||e.pointerType==='touch'||e.target.closest('button,input,select'))return;const row=e.target.closest('[data-player]');if(!row)return;
+ const id=row.dataset.player,ids=organizerOpen&&selectedPlayers.has(id)?[...selectedPlayers]:[id];
+ pending=null;ghost=null;renderControls();drag={kind:'roster',playerId:id,playerIds:ids,clientX:e.clientX,clientY:e.clientY,moved:false,pointerId:e.pointerId};row.setPointerCapture(e.pointerId);
 }
-$('player-list').addEventListener('pointerdown',startPlayerDrag);$('group-members').addEventListener('pointerdown',startPlayerDrag);
+$('player-list').addEventListener('pointerdown',startPlayerDrag);$('organizer').addEventListener('pointerdown',startPlayerDrag);
 document.addEventListener('pointermove',e=>{
  if(drag?.kind!=='roster')return;
- if(Math.hypot(e.clientX-drag.clientX,e.clientY-drag.clientY)>5)drag.moved=true;
+ if(Math.hypot(e.clientX-drag.clientX,e.clientY-drag.clientY)>5){if(!drag.moved&&organizerOpen){selectedPlayers=new Set(drag.playerIds);renderSelection();}drag.moved=true;}
  if(!drag.moved)return;
- const el=$('drag-ghost');el.hidden=false;el.textContent=state.players.find(p=>p.id===drag.playerId)?.name??'';el.style.left=e.clientX+14+'px';el.style.top=e.clientY+12+'px';
- const overGroup=inGroupDrop(e.clientX,e.clientY);$('group-drop-zone').classList.toggle('drop-active',overGroup);
- if(overGroup){if(ghost){ghost=null;renderMap();}return;}
- if(onStage(e.clientX,e.clientY)){const point=pointFromClient(e.clientX,e.clientY),target=hitAt(point),o=target??M.makeObject(state,'base',point.x,point.y);ghost={o,invalid:target?(target.type!=='base'||!!target.playerId&&target.playerId!==drag.playerId):!!M.collision(state,o)};renderMap();}else if(ghost){ghost=null;renderMap();}
+ const el=$('drag-ghost');el.hidden=false;el.textContent=drag.playerIds.length>1?t('{n} Spieler ausgewählt',{n:drag.playerIds.length}):state.players.find(p=>p.id===drag.playerId)?.name??'';el.style.left=e.clientX+14+'px';el.style.top=e.clientY+12+'px';
+ const target=organizationDropAt(e.clientX,e.clientY);clearOrganizationDrop();target?.classList.add('drop-active');
+ if(target){if(ghost){ghost=null;renderMap();}return;}
+ if(onStage(e.clientX,e.clientY)&&drag.playerIds.length===1){const point=pointFromClient(e.clientX,e.clientY),hit=hitAt(point),o=hit??M.makeObject(state,'base',point.x,point.y);ghost={o,invalid:hit?(hit.type!=='base'||!!hit.playerId&&hit.playerId!==drag.playerId):!!M.collision(state,o)};renderMap();}else if(ghost){ghost=null;renderMap();}
 });
 document.addEventListener('pointerup',e=>{
- if(drag?.kind!=='roster')return;const d=drag;drag=null;$('drag-ghost').hidden=true;$('group-drop-zone').classList.remove('drop-active');ghost=null;
- if(d.moved){suppressClick=true;if(inGroupDrop(e.clientX,e.clientY))safely(()=>addToSelectedGroup(d.playerId));else if(onStage(e.clientX,e.clientY))safely(()=>placePlayer(d.playerId,pointFromClient(e.clientX,e.clientY)));setTimeout(()=>suppressClick=false,0);}
+ if(drag?.kind!=='roster')return;const d=drag;drag=null;$('drag-ghost').hidden=true;clearOrganizationDrop();ghost=null;
+ if(d.moved){suppressClick=true;const target=organizationDropAt(e.clientX,e.clientY);if(target)safely(()=>organizePlayers(d.playerIds,target.dataset.orgDrop,Number(target.dataset.level??target.dataset.group)));else if(onStage(e.clientX,e.clientY)){if(d.playerIds.length===1)safely(()=>placePlayer(d.playerId,pointFromClient(e.clientX,e.clientY)));else toast(t('Mehrere Spieler bitte einer Priorität oder Gruppe zuordnen.'),true);}setTimeout(()=>suppressClick=false,0);}
  renderMap();
 });
-document.addEventListener('pointercancel',()=>{$('group-drop-zone').classList.remove('drop-active');if(drag?.kind==='roster'){drag=null;ghost=null;$('drag-ghost').hidden=true;renderMap();}});
-$('player-list').addEventListener('click',e=>{
+document.addEventListener('pointercancel',()=>{clearOrganizationDrop();if(drag?.kind==='roster'){drag=null;ghost=null;$('drag-ghost').hidden=true;renderMap();}});
+function playerListClick(e){
+ if(suppressClick||e.target.closest('input'))return;
  const remove=e.target.closest('[data-remove-player]');if(remove){const p=state.players.find(p=>p.id===remove.dataset.removePlayer);confirm(t('Spieler entfernen?'),t('{name} wird aus der Liste entfernt. Sein Platz wird wieder frei.',{name:p.name}),()=>commit(M.removePlayer(state,p.id),t('Spieler entfernt.')));return;}
- if(suppressClick)return;const row=e.target.closest('[data-player]');if(row)focusPlayer(row.dataset.player);
-});
-$('player-list').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){const row=e.target.closest('[data-player]');if(row&&!e.target.closest('button')){e.preventDefault();focusPlayer(row.dataset.player);}}});
-$('group-select').addEventListener('change',e=>{selectedGroup=e.target.value?Number(e.target.value):null;renderGroups();if(selectedGroup!==null)$('group-panel').scrollIntoView({block:'nearest'});});
-$('group-add-player').addEventListener('click',()=>{const id=$('group-player-select').value;if(id)safely(()=>addToSelectedGroup(id));});
-$('group-members').addEventListener('click',e=>{if(suppressClick)return;const remove=e.target.closest('[data-ungroup]');if(remove){safely(()=>commit(M.setPlayerGroup(state,remove.dataset.ungroup,null),t('Spieler aus der Gruppe entfernt.')));return;}const row=e.target.closest('[data-player]');if(row)focusPlayer(row.dataset.player);});
-$('group-members').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&!e.target.closest('button')){const row=e.target.closest('[data-player]');if(row){e.preventDefault();focusPlayer(row.dataset.player);}}});
+ const ungroup=e.target.closest('[data-ungroup]');if(ungroup){safely(()=>commit(M.setPlayerGroup(state,ungroup.dataset.ungroup,null),t('Spieler aus der Gruppe entfernt.')));return;}
+ const row=e.target.closest('[data-player]');if(row){if(organizerOpen)togglePlayerSelection(row.dataset.player);else focusPlayer(row.dataset.player);}
+}
+for(const container of [$('player-list'),$('organizer')]){
+ container.addEventListener('click',playerListClick);
+ container.addEventListener('change',e=>{const id=e.target.dataset.selectPlayer;if(id){if(e.target.checked)selectedPlayers.add(id);else selectedPlayers.delete(id);renderSelection();}});
+ container.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&!e.target.closest('button,input,select')){const row=e.target.closest('[data-player]');if(row){e.preventDefault();if(organizerOpen)togglePlayerSelection(row.dataset.player);else focusPlayer(row.dataset.player);}}});
+}
+$('toggle-organizer').addEventListener('click',()=>setOrganizer(!organizerOpen));$('close-organizer').addEventListener('click',()=>setOrganizer(false));
+$('select-visible').addEventListener('click',()=>{for(const p of visiblePlayers())selectedPlayers.add(p.id);renderSelection();});$('clear-selection').addEventListener('click',()=>{selectedPlayers.clear();renderSelection();});
+$('apply-organization').addEventListener('click',()=>{if(!selectedPlayers.size)return;const [type,value]=$('organizer-target').value.split(':');safely(()=>organizePlayers([...selectedPlayers],type,Number(value)));});
+$('organizer').addEventListener('change',e=>{if(e.target.dataset.priorityLabel){const result=safely(()=>commit(M.setPriorityLabel(state,Number(e.target.dataset.priorityLabel),e.target.value)));if(result===null)renderOrganizer();}});
+for(const tab of $('organizer').querySelectorAll('[data-tab]')){
+ tab.addEventListener('click',()=>{organizationTab=tab.dataset.tab;renderOrganizer();});
+ tab.addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();organizationTab=e.key==='Home'?'priority':e.key==='End'?'friends':organizationTab==='priority'?'friends':'priority';renderOrganizer();$(organizationTab==='priority'?'priority-tab':'friends-tab').focus();});
+}
 $('clear-players').addEventListener('click',()=>{pending=null;ghost=null;drag=null;$('drag-ghost').hidden=true;commit(M.clearPlayers(state),t('Alle Spieler entfernt. Strg+Z stellt Spieler, Gruppen und Zuweisungen wieder her.'));});
-$('unassign-all').addEventListener('click',()=>{pending=null;ghost=null;drag=null;$('drag-ghost').hidden=true;$('group-drop-zone').classList.remove('drop-active');commit(M.unassignAll(state),t('Alle Plätze freigegeben. Spielerliste und Gruppen bleiben erhalten. Strg+Z macht die Änderung rückgängig.'));});
+$('unassign-all').addEventListener('click',()=>{pending=null;ghost=null;drag=null;$('drag-ghost').hidden=true;clearOrganizationDrop();commit(M.unassignAll(state),t('Alle Plätze freigegeben. Spielerliste und Gruppen bleiben erhalten. Strg+Z macht die Änderung rückgängig.'));});
 $('season-select').addEventListener('change',e=>{
  const value=e.target.value;e.target.value=state.season;if(value===state.season)return;
  const apply=()=>{pending=null;ghost=null;drag=null;selectedId=null;commit(M.setSeason(state,value),t('Season geändert.'));fitMap();};
@@ -3026,6 +3350,7 @@ $('inspector').addEventListener('change',e=>{
   if(id==='player-name-edit'){
    const name=M.normalizeName(e.target.value),p=M.playerFor(state,o);if(!name)throw new Error(t('Der Name darf nicht leer sein.'));if(state.players.some(q=>q.id!==p.id&&q.name.toLocaleLowerCase()===name.toLocaleLowerCase()))throw new Error(t('Dieser Name steht bereits in der Liste.'));const next=M.clone(state);next.players.find(q=>q.id===p.id).name=name;return commit(next);
   }
+  if(id==='inspector-priority'&&o.playerId)return commit(M.setPlayerPriorities(state,[o.playerId],Number(e.target.value)));
   if(id==='inspector-group'&&o.playerId)return commit(M.setPlayerGroup(state,o.playerId,e.target.value?Number(e.target.value):null));
   if(id==='object-name-edit')return commit(M.updateObject(state,o.id,{name:e.target.value}));
   if(id==='beacon-enabled')return commit(M.updateObject(state,o.id,{beacon:e.target.checked?M.nextBeacon(state):null}));
@@ -3087,8 +3412,8 @@ function savePlan(){const valid=M.validate(state);download(new Blob([JSON.string
 $('save-plan').addEventListener('click',()=>safely(savePlan));
 function csvExport(){
  const protect=value=>{let s=String(value??'');if(/^[=+@\-\t\r]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';};
- const s4=M.isSeason4(state),rows=[[t('Spieler / Element'),t('Typ'),t('Platz'),'X','Y',t('Gruppe'),...(s4?[t('Beacon'),t('Elektriker')]:[])]];
- for(const o of state.objects.filter(o=>o.type!=='terrain').sort((a,b)=>(a.slot??1e6)-(b.slot??1e6))){const q=M.coords(state,o);const g=M.groupForPlayer(state,o.playerId);rows.push([M.objectLabel(state,o),typeName(o),o.slot??'',q.x,q.y,g?groupName(g.id):'',...(s4?[o.beacon??'',o.beacon?o.electricians:'']:[])]);}
+ const s4=M.isSeason4(state),rows=[[t('Spieler / Element'),t('Typ'),t('Platz'),'X','Y',t('Gruppe'),t('Priority'),t('Prioritätsbezeichnung'),...(s4?[t('Beacon'),t('Elektriker')]:[])]];
+ for(const o of state.objects.filter(o=>o.type!=='terrain').sort((a,b)=>(a.slot??1e6)-(b.slot??1e6))){const q=M.coords(state,o);const g=M.groupForPlayer(state,o.playerId);rows.push([M.objectLabel(state,o),typeName(o),o.slot??'',q.x,q.y,g?groupName(g.id):'',o.playerId?M.priorityOf(M.playerFor(state,o)):'',o.playerId?M.priorityLabel(state,M.priorityOf(M.playerFor(state,o))):'',...(s4?[o.beacon??'',o.beacon?o.electricians:'']:[])]);}
  return '\uFEFF'+rows.map(r=>r.map(protect).join(';')).join('\r\n');
 }
 function exportTextSize(text,width,size){metrics.font='100px system-ui, sans-serif';return Math.min(size,width/Math.max(.01,metrics.measureText(text).width/100));}
@@ -3115,16 +3440,17 @@ async function exportFile(format){
 document.querySelectorAll('[data-export]').forEach(b=>b.addEventListener('click',()=>exportFile(b.dataset.export)));
 document.addEventListener('keydown',e=>{
  const editing=!!e.target.closest('input,textarea,select,[contenteditable]:not([contenteditable=false])'),inDialog=!!e.target.closest('dialog[open]');
- if(e.key==='Escape'&&!inDialog){pending=null;ghost=null;drag=null;$('drag-ghost').hidden=true;render();return;}
+ if(e.key==='Escape'&&!inDialog){if(organizerOpen){setOrganizer(false);return;}pending=null;ghost=null;drag=null;$('drag-ghost').hidden=true;render();return;}
  if(inDialog)return;
  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();document.activeElement.blur();safely(savePlan);return;}
- if(editing)return;
- if(!drag&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!e.repeat&&!e.isComposing&&!e.defaultPrevented){
+ if(editing||e.defaultPrevented)return;
+ if(!organizerOpen&&!drag&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!e.repeat&&!e.isComposing&&!e.defaultPrevented){
   const type=TOOL_SHORTCUTS[e.key.toLowerCase()];
   if(type){e.preventDefault();armObject(type);if(pending?.kind==='object')previewAt(lastPoint);return;}
  }
  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();restoreHistory(e.shiftKey?'redo':'undo');return;}
  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y'){e.preventDefault();restoreHistory('redo');return;}
+ if(organizerOpen)return;
  if((e.key==='Delete'||e.key==='Backspace')&&selected()){e.preventDefault();commit(M.removeObject(state,selectedId));return;}
  const directions={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,1],ArrowDown:[0,-1]};
  if(directions[e.key]&&selected()){
@@ -3150,7 +3476,7 @@ const context=document.modelContext;
 if(context?.registerTool){
  const life=new AbortController();window.addEventListener('pagehide',()=>life.abort(),{once:true});
  const register=tool=>{try{void Promise.resolve(context.registerTool(tool,{signal:life.signal})).catch(()=>{});}catch{}};
- register({name:'read_hive_plan',title:'Hive-Plan lesen',description:'Returns the current players, placements and calculated coordinates.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true,untrustedContentHint:true},execute(){return {title:state.title,season:state.season,groups:state.groups,origin:state.origin,players:state.players,objects:state.objects.map(o=>({...o,name:M.objectLabel(state,o),coordinates:M.coords(state,o)}))};}});
+ register({name:'read_hive_plan',title:'Hive-Plan lesen',description:'Returns the current players, placements and calculated coordinates.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true,untrustedContentHint:true},execute(){return {title:state.title,season:state.season,groups:state.groups,priorityLabels:state.priorityLabels,origin:state.origin,players:state.players,objects:state.objects.map(o=>({...o,name:M.objectLabel(state,o),coordinates:M.coords(state,o)}))};}});
  register({name:'add_hive_players',title:'Spieler hinzufügen',description:'Adds names to the player list. Existing names are preserved and duplicates skipped.',inputSchema:{type:'object',properties:{names:{type:'array',items:{type:'string',minLength:1,maxLength:80},minItems:1,maxItems:300}},required:['names'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:true},execute(input){if(!input||!Array.isArray(input.names)||!input.names.length||input.names.length>300||input.names.some(n=>typeof n!=='string'||!n.trim()||n.includes('\n')||n.length>80))throw new Error(t('Ungültige oder doppelte Spieler.'));const r=M.addPlayers(state,input.names.join('\n'));commit(r.state);return {added:r.added,skipped:r.skipped,total:state.players.length};}});
  register({name:'set_hive_center_coordinates',title:'Zentrumskoordinaten setzen',description:'Sets the world coordinates of the active reference (Alliance Center in Season 4, Marshall in other modes). Recalculates all player coordinates without moving the drawn layout.',inputSchema:{type:'object',properties:{x:{type:'integer',minimum:0,maximum:999999},y:{type:'integer',minimum:0,maximum:999999}},required:['x','y'],additionalProperties:false},annotations:{readOnlyHint:false},execute(input){if(!input)throw new Error(t('Bitte gültige Koordinaten eingeben.'));commit(M.setOrigin(state,input.x,input.y));return {origin:state.origin};}});
  register({name:'assign_hive_players',title:'Spieler auf freie Plätze setzen',description:'Assigns existing players to existing empty bases in one batch. Fails atomically if any assignment is invalid.',inputSchema:{type:'object',properties:{assignments:{type:'array',items:{type:'object',properties:{playerId:{type:'string'},baseId:{type:'string'}},required:['playerId','baseId'],additionalProperties:false},minItems:1,maxItems:300}},required:['assignments'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:true},execute(input){if(!input||!Array.isArray(input.assignments)||!input.assignments.length||input.assignments.length>300)throw new Error(t('Eine Spielerzuweisung ist ungültig oder doppelt.'));let next=state;const ids=new Set();for(const a of input.assignments){if(!a||ids.has(a.playerId))throw new Error(t('Eine Spielerzuweisung ist ungültig oder doppelt.'));ids.add(a.playerId);next=M.assign(next,a.playerId,a.baseId);}commit(next);return {assigned:input.assignments.length};}});

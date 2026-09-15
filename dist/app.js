@@ -3,11 +3,11 @@
 const I=globalThis.HiveI18n,t=(key,params)=>I.t(key,params);
 const M=globalThis.HiveModel,$=id=>document.getElementById(id),svg=$('map'),stage=$('stage');
 // User-facing release: increment the final number for each later delivered update.
-const APP_VERSION='1.1.2';
+const APP_VERSION='1.1.3';
 const TOOL_SHORTCUTS={b:'base',m:'marshall',a:'center',t:'terrain',l:'beacon'};
 const shortcutFor=type=>Object.keys(TOOL_SHORTCUTS).find(key=>TOOL_SHORTCUTS[key]===type)?.toUpperCase();
 let state=M.makeLayout(),selectedId=null,pending=null,filter='all',dirty=false,undoStack=[],redoStack=[],drag=null,suppressClick=false,confirmAction=null,toastTimer=null;
-let selectedGroup=null,lastAutofillResult=null;
+let organizerOpen=false,organizationTab='priority',selectedPlayers=new Set(),lastAutofillResult=null;
 const groupName=id=>t('Gruppe {n}',{n:id});
 const seasonName=()=>state.season==='off'?t('Off Season'):t('Season {n}',{n:state.season});
 const referenceName=()=>t(M.isSeason4(state)?'Allianzzentrum':'Marshall');
@@ -27,11 +27,11 @@ function commit(next,message){
  if(selectedId&&!state.objects.some(o=>o.id===selectedId))selectedId=null;
  render();if(message)toast(message);return true;
 }
-function restoreHistory(direction){lastAutofillResult=null;const source=direction==='undo'?undoStack:redoStack,target=direction==='undo'?redoStack:undoStack;if(!source.length)return;target.push(M.clone(state));state=source.pop();dirty=true;pending=null;ghost=null;drag=null;selectedId=null;$('drag-ghost').hidden=true;$('group-drop-zone').classList.remove('drop-active');render();}
+function restoreHistory(direction){lastAutofillResult=null;const source=direction==='undo'?undoStack:redoStack,target=direction==='undo'?redoStack:undoStack;if(!source.length)return;target.push(M.clone(state));state=source.pop();dirty=true;pending=null;ghost=null;drag=null;selectedId=null;$('drag-ghost').hidden=true;clearOrganizationDrop();render();}
 function confirm(title,message,action){confirmAction=action;$('confirm-title').textContent=title;$('confirm-message').textContent=message;$('confirm-dialog').showModal();}
 function closeDialog(id){$(id).close();if(id==='confirm-dialog')confirmAction=null;}
 function pointFromClient(clientX,clientY){const matrix=svg.getScreenCTM();if(!matrix)return {x:0,y:0};const p=new DOMPoint(clientX,clientY).matrixTransform(matrix.inverse());return {x:p.x,y:-p.y};}
-function onStage(clientX,clientY){const r=svg.getBoundingClientRect();return clientX>=r.left&&clientX<=r.right&&clientY>=r.top&&clientY<=r.bottom;}
+function onStage(clientX,clientY){if(organizerOpen){const d=$('organizer').getBoundingClientRect();if(clientX>=d.left&&clientX<=d.right&&clientY>=d.top&&clientY<=d.bottom)return false;}const r=svg.getBoundingClientRect();return clientX>=r.left&&clientX<=r.right&&clientY>=r.top&&clientY<=r.bottom;}
 function hitAt(point){return [...state.objects].reverse().find(o=>{const r=M.rect(o);return point.x>=r.left&&point.x<=r.right&&point.y>=r.bottom&&point.y<=r.top;})??null;}
 function viewBox(){const r=stage.getBoundingClientRect(),w=Math.max(r.width,200)/camera.scale,h=Math.max(r.height,200)/camera.scale;return {x:camera.x-w/2,y:camera.y-h/2,w,h};}
 function updateView(){const b=viewBox();svg.setAttribute('viewBox',`${b.x} ${b.y} ${b.w} ${b.h}`);$('zoom-label').textContent=`${Math.round(camera.scale/fitScale*100)}%`;}
@@ -96,33 +96,47 @@ function renderMap(){
  const b=viewBox();svg.innerHTML=definitions()+`<rect x="${b.x-5}" y="${b.y-5}" width="${b.w+10}" height="${b.h+10}" fill="url(#big-grid)" pointer-events="none"/>`+scene();
  svg.classList.toggle('adding',!!pending);svg.classList.toggle('moving',!!drag&&drag.kind!=='roster');updateView();
 }
+function priorityText(level){return `P${level} · ${M.priorityLabel(state,level)}`;}
+function playerBadges(p){const g=M.groupForPlayer(state,p.id),level=M.priorityOf(p);return `<span class="player-badges"><span class="priority-pill priority-${level}" title="${esc(priorityText(level))}">P${level}</span>${g?`<span class="group-pill">${esc(groupName(g.id))}</span>`:''}</span>`;}
+function visiblePlayers(){const search=$('player-search').value.trim().toLocaleLowerCase();return state.players.filter(p=>(filter==='all'||!M.objectForPlayer(state,p.id))&&p.name.toLocaleLowerCase().includes(search));}
+function selectionCheckbox(p){return `<input type="checkbox" class="player-check" data-select-player="${esc(p.id)}" aria-label="${h('{name} auswählen',{name:p.name})}" ${selectedPlayers.has(p.id)?'checked':''}>`;}
 function renderRoster(){
- const search=$('player-search').value.trim().toLocaleLowerCase(),assigned=new Map(state.objects.filter(o=>o.playerId).map(o=>[o.playerId,o]));
- const players=state.players.filter(p=>(filter==='all'||!assigned.has(p.id))&&p.name.toLocaleLowerCase().includes(search));
+ const assigned=new Map(state.objects.filter(o=>o.playerId).map(o=>[o.playerId,o])),players=visiblePlayers();
  $('roster-count').textContent=state.players.length;$('unplaced-count').textContent=state.players.length-assigned.size;
  $('filter-all').classList.toggle('active',filter==='all');$('filter-free').classList.toggle('active',filter==='free');$('filter-all').setAttribute('aria-pressed',String(filter==='all'));$('filter-free').setAttribute('aria-pressed',String(filter==='free'));
- if(!state.players.length){$('player-list').innerHTML=`<div class="empty-roster"><span class="empty-mark" aria-hidden="true">⠿</span><strong>${h('Wer sitzt wo?')}</strong>${h(M.isSeason4(state)?'Füge deine Spielerliste ein und verteile die Namen auf der Karte. A–D sind als Beacon-Plätze markiert.':'Füge Spieler hinzu und verteile sie rund um den Marshall.')}</div>`;return;}
- if(!players.length){$('player-list').innerHTML=`<div class="empty-roster">${h(search?'Kein Spieler mit diesem Namen.':'Alle Spieler haben einen Platz.')}</div>`;return;}
- $('player-list').innerHTML=players.map(p=>{const o=assigned.get(p.id),q=o?M.coords(state,o):null;return `<div class="player-row ${o?'assigned ':''}${pending?.playerId===p.id?'active':''}" data-player="${esc(p.id)}" role="button" tabindex="0" aria-label="${esc(p.name)}, ${o?h('platziert auf X {x}, Y {y}',q):h('noch ohne Platz')}"><span class="grip" aria-hidden="true">${o?'✓':'⠿'}</span><span class="player-info"><span class="player-name">${esc(p.name)}</span><span class="player-position">${o?`X ${num(q.x)} · Y ${num(q.y)}${o.beacon?' · '+h('Beacon {letter}',{letter:o.beacon}):''}`:h('Auf einen Platz ziehen')}${M.groupForPlayer(state,p.id)?` <span class="group-pill">${esc(groupName(M.groupForPlayer(state,p.id).id))}</span>`:''}</span></span><button class="remove-player" data-remove-player="${esc(p.id)}" aria-label="${h('{name} aus der Liste entfernen',{name:p.name})}" title="${h('Aus der Liste entfernen')}">×</button></div>`;}).join('');
+ if(!state.players.length)$('player-list').innerHTML=`<div class="empty-roster"><span class="empty-mark" aria-hidden="true">⠿</span><strong>${h('Wer sitzt wo?')}</strong>${h(M.isSeason4(state)?'Füge deine Spielerliste ein und verteile die Namen auf der Karte. A–D sind als Beacon-Plätze markiert.':'Füge Spieler hinzu und verteile sie rund um den Marshall.')}</div>`;
+ else if(!players.length)$('player-list').innerHTML=`<div class="empty-roster">${h($('player-search').value.trim()?'Kein Spieler mit diesem Namen.':'Alle Spieler haben einen Platz.')}</div>`;
+ else $('player-list').innerHTML=players.map(p=>{const o=assigned.get(p.id),q=o?M.coords(state,o):null;return `<div class="player-row ${o?'assigned ':''}${pending?.playerId===p.id?'active':''}" data-player="${esc(p.id)}" role="button" tabindex="0" aria-label="${esc(p.name)}, ${esc(priorityText(M.priorityOf(p)))}, ${o?h('platziert auf X {x}, Y {y}',q):h('noch ohne Platz')}">${organizerOpen?selectionCheckbox(p):'<span class="grip" aria-hidden="true">'+(o?'✓':'⠿')+'</span>'}<span class="player-info"><span class="player-name">${esc(p.name)}</span><span class="player-position">${o?`X ${num(q.x)} · Y ${num(q.y)}${o.beacon?' · '+h('Beacon {letter}',{letter:o.beacon}):''}`:h('Auf einen Platz ziehen')}</span>${playerBadges(p)}</span><button class="remove-player" data-remove-player="${esc(p.id)}" aria-label="${h('{name} aus der Liste entfernen',{name:p.name})}" title="${h('Aus der Liste entfernen')}">×</button></div>`;}).join('');
+ renderSelection();
 }
-function renderGroups(){
- const groups=state.groups??[];
- $('groups-count').textContent=`${groups.filter(g=>g.playerIds.length).length} / 10`;
- $('group-select').innerHTML=`<option value="">${h('Gruppe auswählen')}</option>`+Array.from({length:10},(_,i)=>{const id=i+1,g=groups.find(g=>g.id===id);return `<option value="${id}">${esc(groupName(id))} (${g?.playerIds.length??0})</option>`;}).join('');
- $('group-select').value=selectedGroup??'';$('group-panel').hidden=selectedGroup===null;
- if(selectedGroup===null)return;
- const group=groups.find(g=>g.id===selectedGroup)??{playerIds:[]},members=group.playerIds.map(id=>state.players.find(p=>p.id===id)).filter(Boolean);
- $('group-active-title').textContent=groupName(selectedGroup);
- $('group-members').innerHTML=members.length?members.map(p=>`<div class="group-member" data-player="${esc(p.id)}" role="button" tabindex="0" aria-label="${esc(p.name)}"><span class="grip" aria-hidden="true">⠿</span><span class="group-member-name">${esc(p.name)}</span><button data-ungroup="${esc(p.id)}" title="${h('Aus der Gruppe entfernen')}" aria-label="${h('{name} aus der Gruppe entfernen',{name:p.name})}">×</button></div>`).join(''):`<p class="field-help">${h('Noch keine Gruppenmitglieder.')}</p>`;
- const options=state.players.filter(p=>!group.playerIds.includes(p.id));
- $('group-player-select').innerHTML=`<option value="">${h('Spieler auswählen')}</option>`+options.map(p=>{const g=M.groupForPlayer(state,p.id);return `<option value="${esc(p.id)}">${esc(p.name)}${g?' · '+esc(groupName(g.id)):''}</option>`;}).join('');
- $('group-add-player').disabled=!options.length;
- const placed=state.objects.filter(o=>group.playerIds.includes(o.playerId)),split=placed.length>1&&M.groupComponents(placed,state.layout==='compact'?0:1)>1;
- $('group-status').textContent=t('{placed} / {total} Gruppenmitglieder platziert.',{placed:placed.length,total:members.length})+(split?' '+t('Die Gruppe steht noch nicht zusammenhängend.'):'');
- $('group-status').classList.toggle('group-warning',split);
+function organizationMember(p,group=false){return `<div class="org-member" data-player="${esc(p.id)}" role="button" tabindex="0" aria-label="${esc(p.name)}, ${esc(priorityText(M.priorityOf(p)))}">${selectionCheckbox(p)}<span class="org-member-name">${esc(p.name)}${playerBadges(p)}</span>${group?`<button data-ungroup="${esc(p.id)}" title="${h('Aus der Gruppe entfernen')}" aria-label="${h('{name} aus der Gruppe entfernen',{name:p.name})}">×</button>`:''}</div>`;}
+function renderSelection(){
+ const valid=new Set(state.players.map(p=>p.id));selectedPlayers=new Set([...selectedPlayers].filter(id=>valid.has(id)));
+ document.querySelectorAll('[data-player]').forEach(row=>{const checked=organizerOpen&&selectedPlayers.has(row.dataset.player);row.classList.toggle('is-selected',checked);if(organizerOpen)row.setAttribute('aria-pressed',String(checked));else row.removeAttribute('aria-pressed');});
+ document.querySelectorAll('[data-select-player]').forEach(input=>input.checked=selectedPlayers.has(input.dataset.selectPlayer));
+ $('selection-count').textContent=t('{n} Spieler ausgewählt',{n:selectedPlayers.size});$('apply-organization').disabled=!selectedPlayers.size;$('clear-selection').disabled=!selectedPlayers.size;$('select-visible').disabled=!visiblePlayers().length;
 }
-function inGroupDrop(x,y){if(selectedGroup===null||$('group-panel').hidden)return false;const r=$('group-drop-zone').getBoundingClientRect();return x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom;}
-function addToSelectedGroup(playerId){if(selectedGroup!==null)commit(M.setPlayerGroup(state,playerId,selectedGroup),t('Spieler zur Gruppe hinzugefügt.'));}
+function renderOrganizer(){
+ $('organizer').hidden=!organizerOpen;$('selection-tools').hidden=!organizerOpen;$('toggle-organizer').setAttribute('aria-expanded',String(organizerOpen));document.body.classList.toggle('organizer-open',organizerOpen);
+ if(!organizerOpen)return;
+ const scrolls=new Map([...$('organizer').querySelectorAll('[data-org-list]')].map(el=>[el.dataset.orgList,el.scrollTop])),friendScroll=$('friends-panel').scrollTop,priorityScroll=$('priority-panel').scrollTop;
+ const priority=organizationTab==='priority';
+ for(const tab of $('organizer').querySelectorAll('[data-tab]')){const active=tab.dataset.tab===organizationTab;tab.setAttribute('aria-selected',String(active));tab.tabIndex=active?0:-1;}
+ $('priority-panel').hidden=!priority;$('friends-panel').hidden=priority;
+ $('organizer-help').textContent=priority?t('P1 nach innen, P3 nach außen. Neue Spieler: P2. Eigene Namen ändern die Reihenfolge nicht.'):t('Der Prioritätsdurchschnitt bestimmt die Reihenfolge der Gruppen. Feste Plätze dienen als Anker. Jede Person gehört höchstens einer Gruppe an.');
+ const destination=$('organizer-target').value;
+ $('organizer-target').innerHTML=priority?[1,2,3].map(level=>`<option value="priority:${level}">${esc(priorityText(level))}</option>`).join(''):`<option value="group:0">${h('Keine Gruppe')}</option>`+Array.from({length:10},(_,i)=>`<option value="group:${i+1}">${esc(groupName(i+1))}</option>`).join('');
+ if([...$('organizer-target').options].some(o=>o.value===destination))$('organizer-target').value=destination;
+ $('priority-panel').innerHTML=[1,2,3].map(level=>{const players=state.players.filter(p=>M.priorityOf(p)===level);return `<section class="org-card" data-org-drop="priority" data-level="${level}" aria-label="${esc(priorityText(level))}"><div class="org-card-head"><div class="org-card-title"><h3><span class="priority-pill priority-${level}">P${level}</span></h3><span class="count">${players.length}</span></div><label class="sr-only" for="priority-label-${level}">${h('Bezeichnung für P{n}',{n:level})}</label><input id="priority-label-${level}" data-priority-label="${level}" value="${esc(state.priorityLabels[level-1])}" placeholder="${h(M.PRIORITY_DEFAULTS[level-1])}" maxlength="40" title="${h('Bezeichnung bearbeiten')}"></div><div class="org-members" data-org-list="priority-${level}">${players.length?players.map(p=>organizationMember(p)).join(''):`<p class="org-empty">${h('Spieler hier hineinziehen')}</p>`}</div></section>`;}).join('');
+ $('friends-panel').innerHTML=Array.from({length:10},(_,i)=>{const id=i+1,group=state.groups.find(g=>g.id===id)??{id,playerIds:[]},members=group.playerIds.map(id=>state.players.find(p=>p.id===id)).filter(Boolean),placed=state.objects.filter(o=>group.playerIds.includes(o.playerId)),split=placed.length>1&&M.groupComponents(placed,state.layout==='compact'?0:1)>1;return `<section class="org-card" data-org-drop="group" data-group="${id}" aria-label="${esc(groupName(id))}"><div class="org-card-head"><div class="org-card-title"><h3>${esc(groupName(id))}</h3><span class="count">${members.length}</span></div><p class="group-score">${members.length?h('Durchschnitt: {value}',{value:M.groupPriority(state,group).toLocaleString(I.language,{minimumFractionDigits:2,maximumFractionDigits:2})}):h('Noch keine Gruppenmitglieder.')}</p><p class="org-card-status ${split?'group-warning':''}">${h('{placed} / {total} Gruppenmitglieder platziert.',{placed:placed.length,total:members.length})}${split?' '+h('Die Gruppe steht noch nicht zusammenhängend.'):''}</p></div><div class="org-members" data-org-list="group-${id}">${members.length?members.map(p=>organizationMember(p,true)).join(''):`<p class="org-empty">${h('Spieler hier hineinziehen')}</p>`}</div></section>`;}).join('');
+ for(const el of $('organizer').querySelectorAll('[data-org-list]'))el.scrollTop=scrolls.get(el.dataset.orgList)??0;
+ $('friends-panel').scrollTop=friendScroll;$('priority-panel').scrollTop=priorityScroll;renderSelection();
+}
+function setOrganizer(open){organizerOpen=open;pending=null;ghost=null;drag=null;$('drag-ghost').hidden=true;clearOrganizationDrop();render();(open?$(organizationTab==='priority'?'priority-tab':'friends-tab'):$('toggle-organizer')).focus({preventScroll:true});}
+function togglePlayerSelection(id){if(selectedPlayers.has(id))selectedPlayers.delete(id);else selectedPlayers.add(id);renderSelection();}
+function clearOrganizationDrop(){document.querySelectorAll('[data-org-drop].drop-active').forEach(el=>el.classList.remove('drop-active'));}
+function organizationDropAt(x,y){if(!organizerOpen)return null;const target=document.elementFromPoint(x,y)?.closest('[data-org-drop]');return target&&$('organizer').contains(target)?target:null;}
+function organizePlayers(ids,type,value){const next=type==='priority'?M.setPlayerPriorities(state,ids,value):M.setPlayerGroups(state,ids,value||null);commit(next,t('{n} Spieler zugewiesen.',{n:ids.length}));renderSelection();}
 function renderInspector(){
  const o=selected();$('selection-type').hidden=!o;
  if(!o){$('inspector').innerHTML=`<div class="selection-empty"><span aria-hidden="true">⌖</span><p>${h('Wähle eine Basis, den Marshall oder ein anderes Element auf der Karte.')}</p></div>`;return;}
@@ -130,7 +144,7 @@ function renderInspector(){
  const q=M.coords(state,o),player=M.playerFor(state,o);let s='<div class="selection-form">';
  if(o.type==='base'){
   s+=`<label>${h('Spieler')}<select id="assign-select"><option value="">${h('Platz freihalten')}</option>${state.players.map(p=>`<option value="${esc(p.id)}" ${p.id===o.playerId?'selected':''}>${esc(p.name)}${M.objectForPlayer(state,p.id)&&p.id!==o.playerId?' ('+h('bereits platziert')+')':''}</option>`).join('')}</select></label>`;
-  if(player){s+=`<label>${h('Name bearbeiten')}<input id="player-name-edit" value="${esc(player.name)}" maxlength="80"></label><label>${h('Gruppe')}<select id="inspector-group"><option value="">${h('Keine Gruppe')}</option>${Array.from({length:10},(_,i)=>`<option value="${i+1}" ${M.groupForPlayer(state,player.id)?.id===i+1?'selected':''}>${esc(groupName(i+1))}</option>`).join('')}</select></label>`;}
+  if(player){s+=`<label>${h('Priority')}<select id="inspector-priority">${[1,2,3].map(level=>`<option value="${level}" ${M.priorityOf(player)===level?'selected':''}>${esc(priorityText(level))}</option>`).join('')}</select></label><label>${h('Name bearbeiten')}<input id="player-name-edit" value="${esc(player.name)}" maxlength="80"></label><label>${h('Gruppe')}<select id="inspector-group"><option value="">${h('Keine Gruppe')}</option>${Array.from({length:10},(_,i)=>`<option value="${i+1}" ${M.groupForPlayer(state,player.id)?.id===i+1?'selected':''}>${esc(groupName(i+1))}</option>`).join('')}</select></label>`;}
  }else s+=`<label>${h('Bezeichnung')}<input id="object-name-edit" value="${esc(M.objectLabel(state,o))}" maxlength="80"></label>`;
  if(o.type==='terrain'){
   s+=`<p class="field-help resize-hint">${h('Zum Ändern der Größe an den Eckpfeilen auf der Karte ziehen.')}</p>`;
@@ -154,7 +168,7 @@ function renderControls(){
  $('season-warning').hidden=!M.isDeveloping(state);
  $('season-help').textContent=t('Beim Wechsel wird die Aufstellung neu erstellt. Spieler und Gruppen bleiben erhalten.');
  $('anchor-title').textContent=ref;$('anchor-size-key').textContent=t(s4?'Zentrum 9 × 9':'Marshall 3 × 3');
- $('autofill-direction').textContent=t('Autofill: Gruppen zusammenhalten, vom Mittelpunkt nach außen.');
+ $('autofill-direction').textContent=t('Autofill: Prioritäten und Gruppendurchschnitt, von innen nach außen.');
  $('mode-help-note').textContent=s4?t('Ohne Zentrum bleibt der Koordinatenursprung erhalten. Beim Verschieben des Zentrums werden die Spielerkoordinaten neu berechnet. L4 zeigt geometrisch 25 × 25 Felder je Beacon. Buffs am Rand im Spiel prüfen.'):t('Der Marshall ist der Bezugspunkt für Koordinaten und Autofill. Ohne Marshall bleibt der markierte Ursprung erhalten.');
  document.querySelectorAll('[data-s4-only]').forEach(el=>el.hidden=!s4);
  $('clear-players').disabled=!state.players.length;
@@ -183,7 +197,7 @@ function renderAutofill(){
  $('autofill').disabled=!players.length||!seats.length;
  $('autofill-summary').textContent=!state.players.length?t('Füge zuerst Spieler hinzu.'):!players.length?t('Alle Spieler haben bereits einen Platz.'):t('{players} ohne Platz · {seats} freie Plätze.',{players:players.length,seats:seats.length})+(reserved?' '+t('{n} Beacon-Plätze bleiben frei.',{n:reserved}):'');
 }
-function render(){renderControls();renderRoster();renderGroups();renderInspector();renderMap();}
+function render(){renderControls();renderRoster();renderOrganizer();renderInspector();renderMap();}
 function clearPending(){pending=null;ghost=null;renderControls();renderRoster();renderMap();}
 function selectObject(id,focus=false){selectedId=id;renderInspector();renderMap();if(focus)svg.focus({preventScroll:true});}
 function armPlayer(id){pending={kind:'player',playerId:id};ghost=null;renderControls();renderRoster();renderMap();}
@@ -246,36 +260,47 @@ svg.addEventListener('pointercancel',()=>{drag=null;ghost=null;renderMap();});
 svg.addEventListener('pointerleave',()=>{if(!drag){ghost=null;renderMap();}});
 svg.addEventListener('wheel',e=>{e.preventDefault();if(drag)return;zoom(Math.exp(-e.deltaY*.0014),e.clientX,e.clientY);},{passive:false});
 function startPlayerDrag(e){
- if(e.button!==0||e.pointerType==='touch'||e.target.closest('[data-remove-player],[data-ungroup]'))return;const row=e.target.closest('[data-player]');if(!row)return;
- pending=null;ghost=null;renderControls();drag={kind:'roster',playerId:row.dataset.player,clientX:e.clientX,clientY:e.clientY,moved:false,pointerId:e.pointerId};row.setPointerCapture(e.pointerId);
+ if(e.button!==0||e.pointerType==='touch'||e.target.closest('button,input,select'))return;const row=e.target.closest('[data-player]');if(!row)return;
+ const id=row.dataset.player,ids=organizerOpen&&selectedPlayers.has(id)?[...selectedPlayers]:[id];
+ pending=null;ghost=null;renderControls();drag={kind:'roster',playerId:id,playerIds:ids,clientX:e.clientX,clientY:e.clientY,moved:false,pointerId:e.pointerId};row.setPointerCapture(e.pointerId);
 }
-$('player-list').addEventListener('pointerdown',startPlayerDrag);$('group-members').addEventListener('pointerdown',startPlayerDrag);
+$('player-list').addEventListener('pointerdown',startPlayerDrag);$('organizer').addEventListener('pointerdown',startPlayerDrag);
 document.addEventListener('pointermove',e=>{
  if(drag?.kind!=='roster')return;
- if(Math.hypot(e.clientX-drag.clientX,e.clientY-drag.clientY)>5)drag.moved=true;
+ if(Math.hypot(e.clientX-drag.clientX,e.clientY-drag.clientY)>5){if(!drag.moved&&organizerOpen){selectedPlayers=new Set(drag.playerIds);renderSelection();}drag.moved=true;}
  if(!drag.moved)return;
- const el=$('drag-ghost');el.hidden=false;el.textContent=state.players.find(p=>p.id===drag.playerId)?.name??'';el.style.left=e.clientX+14+'px';el.style.top=e.clientY+12+'px';
- const overGroup=inGroupDrop(e.clientX,e.clientY);$('group-drop-zone').classList.toggle('drop-active',overGroup);
- if(overGroup){if(ghost){ghost=null;renderMap();}return;}
- if(onStage(e.clientX,e.clientY)){const point=pointFromClient(e.clientX,e.clientY),target=hitAt(point),o=target??M.makeObject(state,'base',point.x,point.y);ghost={o,invalid:target?(target.type!=='base'||!!target.playerId&&target.playerId!==drag.playerId):!!M.collision(state,o)};renderMap();}else if(ghost){ghost=null;renderMap();}
+ const el=$('drag-ghost');el.hidden=false;el.textContent=drag.playerIds.length>1?t('{n} Spieler ausgewählt',{n:drag.playerIds.length}):state.players.find(p=>p.id===drag.playerId)?.name??'';el.style.left=e.clientX+14+'px';el.style.top=e.clientY+12+'px';
+ const target=organizationDropAt(e.clientX,e.clientY);clearOrganizationDrop();target?.classList.add('drop-active');
+ if(target){if(ghost){ghost=null;renderMap();}return;}
+ if(onStage(e.clientX,e.clientY)&&drag.playerIds.length===1){const point=pointFromClient(e.clientX,e.clientY),hit=hitAt(point),o=hit??M.makeObject(state,'base',point.x,point.y);ghost={o,invalid:hit?(hit.type!=='base'||!!hit.playerId&&hit.playerId!==drag.playerId):!!M.collision(state,o)};renderMap();}else if(ghost){ghost=null;renderMap();}
 });
 document.addEventListener('pointerup',e=>{
- if(drag?.kind!=='roster')return;const d=drag;drag=null;$('drag-ghost').hidden=true;$('group-drop-zone').classList.remove('drop-active');ghost=null;
- if(d.moved){suppressClick=true;if(inGroupDrop(e.clientX,e.clientY))safely(()=>addToSelectedGroup(d.playerId));else if(onStage(e.clientX,e.clientY))safely(()=>placePlayer(d.playerId,pointFromClient(e.clientX,e.clientY)));setTimeout(()=>suppressClick=false,0);}
+ if(drag?.kind!=='roster')return;const d=drag;drag=null;$('drag-ghost').hidden=true;clearOrganizationDrop();ghost=null;
+ if(d.moved){suppressClick=true;const target=organizationDropAt(e.clientX,e.clientY);if(target)safely(()=>organizePlayers(d.playerIds,target.dataset.orgDrop,Number(target.dataset.level??target.dataset.group)));else if(onStage(e.clientX,e.clientY)){if(d.playerIds.length===1)safely(()=>placePlayer(d.playerId,pointFromClient(e.clientX,e.clientY)));else toast(t('Mehrere Spieler bitte einer Priorität oder Gruppe zuordnen.'),true);}setTimeout(()=>suppressClick=false,0);}
  renderMap();
 });
-document.addEventListener('pointercancel',()=>{$('group-drop-zone').classList.remove('drop-active');if(drag?.kind==='roster'){drag=null;ghost=null;$('drag-ghost').hidden=true;renderMap();}});
-$('player-list').addEventListener('click',e=>{
+document.addEventListener('pointercancel',()=>{clearOrganizationDrop();if(drag?.kind==='roster'){drag=null;ghost=null;$('drag-ghost').hidden=true;renderMap();}});
+function playerListClick(e){
+ if(suppressClick||e.target.closest('input'))return;
  const remove=e.target.closest('[data-remove-player]');if(remove){const p=state.players.find(p=>p.id===remove.dataset.removePlayer);confirm(t('Spieler entfernen?'),t('{name} wird aus der Liste entfernt. Sein Platz wird wieder frei.',{name:p.name}),()=>commit(M.removePlayer(state,p.id),t('Spieler entfernt.')));return;}
- if(suppressClick)return;const row=e.target.closest('[data-player]');if(row)focusPlayer(row.dataset.player);
-});
-$('player-list').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){const row=e.target.closest('[data-player]');if(row&&!e.target.closest('button')){e.preventDefault();focusPlayer(row.dataset.player);}}});
-$('group-select').addEventListener('change',e=>{selectedGroup=e.target.value?Number(e.target.value):null;renderGroups();if(selectedGroup!==null)$('group-panel').scrollIntoView({block:'nearest'});});
-$('group-add-player').addEventListener('click',()=>{const id=$('group-player-select').value;if(id)safely(()=>addToSelectedGroup(id));});
-$('group-members').addEventListener('click',e=>{if(suppressClick)return;const remove=e.target.closest('[data-ungroup]');if(remove){safely(()=>commit(M.setPlayerGroup(state,remove.dataset.ungroup,null),t('Spieler aus der Gruppe entfernt.')));return;}const row=e.target.closest('[data-player]');if(row)focusPlayer(row.dataset.player);});
-$('group-members').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&!e.target.closest('button')){const row=e.target.closest('[data-player]');if(row){e.preventDefault();focusPlayer(row.dataset.player);}}});
+ const ungroup=e.target.closest('[data-ungroup]');if(ungroup){safely(()=>commit(M.setPlayerGroup(state,ungroup.dataset.ungroup,null),t('Spieler aus der Gruppe entfernt.')));return;}
+ const row=e.target.closest('[data-player]');if(row){if(organizerOpen)togglePlayerSelection(row.dataset.player);else focusPlayer(row.dataset.player);}
+}
+for(const container of [$('player-list'),$('organizer')]){
+ container.addEventListener('click',playerListClick);
+ container.addEventListener('change',e=>{const id=e.target.dataset.selectPlayer;if(id){if(e.target.checked)selectedPlayers.add(id);else selectedPlayers.delete(id);renderSelection();}});
+ container.addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&!e.target.closest('button,input,select')){const row=e.target.closest('[data-player]');if(row){e.preventDefault();if(organizerOpen)togglePlayerSelection(row.dataset.player);else focusPlayer(row.dataset.player);}}});
+}
+$('toggle-organizer').addEventListener('click',()=>setOrganizer(!organizerOpen));$('close-organizer').addEventListener('click',()=>setOrganizer(false));
+$('select-visible').addEventListener('click',()=>{for(const p of visiblePlayers())selectedPlayers.add(p.id);renderSelection();});$('clear-selection').addEventListener('click',()=>{selectedPlayers.clear();renderSelection();});
+$('apply-organization').addEventListener('click',()=>{if(!selectedPlayers.size)return;const [type,value]=$('organizer-target').value.split(':');safely(()=>organizePlayers([...selectedPlayers],type,Number(value)));});
+$('organizer').addEventListener('change',e=>{if(e.target.dataset.priorityLabel){const result=safely(()=>commit(M.setPriorityLabel(state,Number(e.target.dataset.priorityLabel),e.target.value)));if(result===null)renderOrganizer();}});
+for(const tab of $('organizer').querySelectorAll('[data-tab]')){
+ tab.addEventListener('click',()=>{organizationTab=tab.dataset.tab;renderOrganizer();});
+ tab.addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();organizationTab=e.key==='Home'?'priority':e.key==='End'?'friends':organizationTab==='priority'?'friends':'priority';renderOrganizer();$(organizationTab==='priority'?'priority-tab':'friends-tab').focus();});
+}
 $('clear-players').addEventListener('click',()=>{pending=null;ghost=null;drag=null;$('drag-ghost').hidden=true;commit(M.clearPlayers(state),t('Alle Spieler entfernt. Strg+Z stellt Spieler, Gruppen und Zuweisungen wieder her.'));});
-$('unassign-all').addEventListener('click',()=>{pending=null;ghost=null;drag=null;$('drag-ghost').hidden=true;$('group-drop-zone').classList.remove('drop-active');commit(M.unassignAll(state),t('Alle Plätze freigegeben. Spielerliste und Gruppen bleiben erhalten. Strg+Z macht die Änderung rückgängig.'));});
+$('unassign-all').addEventListener('click',()=>{pending=null;ghost=null;drag=null;$('drag-ghost').hidden=true;clearOrganizationDrop();commit(M.unassignAll(state),t('Alle Plätze freigegeben. Spielerliste und Gruppen bleiben erhalten. Strg+Z macht die Änderung rückgängig.'));});
 $('season-select').addEventListener('change',e=>{
  const value=e.target.value;e.target.value=state.season;if(value===state.season)return;
  const apply=()=>{pending=null;ghost=null;drag=null;selectedId=null;commit(M.setSeason(state,value),t('Season geändert.'));fitMap();};
@@ -296,6 +321,7 @@ $('inspector').addEventListener('change',e=>{
   if(id==='player-name-edit'){
    const name=M.normalizeName(e.target.value),p=M.playerFor(state,o);if(!name)throw new Error(t('Der Name darf nicht leer sein.'));if(state.players.some(q=>q.id!==p.id&&q.name.toLocaleLowerCase()===name.toLocaleLowerCase()))throw new Error(t('Dieser Name steht bereits in der Liste.'));const next=M.clone(state);next.players.find(q=>q.id===p.id).name=name;return commit(next);
   }
+  if(id==='inspector-priority'&&o.playerId)return commit(M.setPlayerPriorities(state,[o.playerId],Number(e.target.value)));
   if(id==='inspector-group'&&o.playerId)return commit(M.setPlayerGroup(state,o.playerId,e.target.value?Number(e.target.value):null));
   if(id==='object-name-edit')return commit(M.updateObject(state,o.id,{name:e.target.value}));
   if(id==='beacon-enabled')return commit(M.updateObject(state,o.id,{beacon:e.target.checked?M.nextBeacon(state):null}));
@@ -357,8 +383,8 @@ function savePlan(){const valid=M.validate(state);download(new Blob([JSON.string
 $('save-plan').addEventListener('click',()=>safely(savePlan));
 function csvExport(){
  const protect=value=>{let s=String(value??'');if(/^[=+@\-\t\r]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';};
- const s4=M.isSeason4(state),rows=[[t('Spieler / Element'),t('Typ'),t('Platz'),'X','Y',t('Gruppe'),...(s4?[t('Beacon'),t('Elektriker')]:[])]];
- for(const o of state.objects.filter(o=>o.type!=='terrain').sort((a,b)=>(a.slot??1e6)-(b.slot??1e6))){const q=M.coords(state,o);const g=M.groupForPlayer(state,o.playerId);rows.push([M.objectLabel(state,o),typeName(o),o.slot??'',q.x,q.y,g?groupName(g.id):'',...(s4?[o.beacon??'',o.beacon?o.electricians:'']:[])]);}
+ const s4=M.isSeason4(state),rows=[[t('Spieler / Element'),t('Typ'),t('Platz'),'X','Y',t('Gruppe'),t('Priority'),t('Prioritätsbezeichnung'),...(s4?[t('Beacon'),t('Elektriker')]:[])]];
+ for(const o of state.objects.filter(o=>o.type!=='terrain').sort((a,b)=>(a.slot??1e6)-(b.slot??1e6))){const q=M.coords(state,o);const g=M.groupForPlayer(state,o.playerId);rows.push([M.objectLabel(state,o),typeName(o),o.slot??'',q.x,q.y,g?groupName(g.id):'',o.playerId?M.priorityOf(M.playerFor(state,o)):'',o.playerId?M.priorityLabel(state,M.priorityOf(M.playerFor(state,o))):'',...(s4?[o.beacon??'',o.beacon?o.electricians:'']:[])]);}
  return '\uFEFF'+rows.map(r=>r.map(protect).join(';')).join('\r\n');
 }
 function exportTextSize(text,width,size){metrics.font='100px system-ui, sans-serif';return Math.min(size,width/Math.max(.01,metrics.measureText(text).width/100));}
@@ -385,16 +411,17 @@ async function exportFile(format){
 document.querySelectorAll('[data-export]').forEach(b=>b.addEventListener('click',()=>exportFile(b.dataset.export)));
 document.addEventListener('keydown',e=>{
  const editing=!!e.target.closest('input,textarea,select,[contenteditable]:not([contenteditable=false])'),inDialog=!!e.target.closest('dialog[open]');
- if(e.key==='Escape'&&!inDialog){pending=null;ghost=null;drag=null;$('drag-ghost').hidden=true;render();return;}
+ if(e.key==='Escape'&&!inDialog){if(organizerOpen){setOrganizer(false);return;}pending=null;ghost=null;drag=null;$('drag-ghost').hidden=true;render();return;}
  if(inDialog)return;
  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();document.activeElement.blur();safely(savePlan);return;}
- if(editing)return;
- if(!drag&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!e.repeat&&!e.isComposing&&!e.defaultPrevented){
+ if(editing||e.defaultPrevented)return;
+ if(!organizerOpen&&!drag&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!e.repeat&&!e.isComposing&&!e.defaultPrevented){
   const type=TOOL_SHORTCUTS[e.key.toLowerCase()];
   if(type){e.preventDefault();armObject(type);if(pending?.kind==='object')previewAt(lastPoint);return;}
  }
  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();restoreHistory(e.shiftKey?'redo':'undo');return;}
  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y'){e.preventDefault();restoreHistory('redo');return;}
+ if(organizerOpen)return;
  if((e.key==='Delete'||e.key==='Backspace')&&selected()){e.preventDefault();commit(M.removeObject(state,selectedId));return;}
  const directions={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,1],ArrowDown:[0,-1]};
  if(directions[e.key]&&selected()){
@@ -420,7 +447,7 @@ const context=document.modelContext;
 if(context?.registerTool){
  const life=new AbortController();window.addEventListener('pagehide',()=>life.abort(),{once:true});
  const register=tool=>{try{void Promise.resolve(context.registerTool(tool,{signal:life.signal})).catch(()=>{});}catch{}};
- register({name:'read_hive_plan',title:'Hive-Plan lesen',description:'Returns the current players, placements and calculated coordinates.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true,untrustedContentHint:true},execute(){return {title:state.title,season:state.season,groups:state.groups,origin:state.origin,players:state.players,objects:state.objects.map(o=>({...o,name:M.objectLabel(state,o),coordinates:M.coords(state,o)}))};}});
+ register({name:'read_hive_plan',title:'Hive-Plan lesen',description:'Returns the current players, placements and calculated coordinates.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true,untrustedContentHint:true},execute(){return {title:state.title,season:state.season,groups:state.groups,priorityLabels:state.priorityLabels,origin:state.origin,players:state.players,objects:state.objects.map(o=>({...o,name:M.objectLabel(state,o),coordinates:M.coords(state,o)}))};}});
  register({name:'add_hive_players',title:'Spieler hinzufügen',description:'Adds names to the player list. Existing names are preserved and duplicates skipped.',inputSchema:{type:'object',properties:{names:{type:'array',items:{type:'string',minLength:1,maxLength:80},minItems:1,maxItems:300}},required:['names'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:true},execute(input){if(!input||!Array.isArray(input.names)||!input.names.length||input.names.length>300||input.names.some(n=>typeof n!=='string'||!n.trim()||n.includes('\n')||n.length>80))throw new Error(t('Ungültige oder doppelte Spieler.'));const r=M.addPlayers(state,input.names.join('\n'));commit(r.state);return {added:r.added,skipped:r.skipped,total:state.players.length};}});
  register({name:'set_hive_center_coordinates',title:'Zentrumskoordinaten setzen',description:'Sets the world coordinates of the active reference (Alliance Center in Season 4, Marshall in other modes). Recalculates all player coordinates without moving the drawn layout.',inputSchema:{type:'object',properties:{x:{type:'integer',minimum:0,maximum:999999},y:{type:'integer',minimum:0,maximum:999999}},required:['x','y'],additionalProperties:false},annotations:{readOnlyHint:false},execute(input){if(!input)throw new Error(t('Bitte gültige Koordinaten eingeben.'));commit(M.setOrigin(state,input.x,input.y));return {origin:state.origin};}});
  register({name:'assign_hive_players',title:'Spieler auf freie Plätze setzen',description:'Assigns existing players to existing empty bases in one batch. Fails atomically if any assignment is invalid.',inputSchema:{type:'object',properties:{assignments:{type:'array',items:{type:'object',properties:{playerId:{type:'string'},baseId:{type:'string'}},required:['playerId','baseId'],additionalProperties:false},minItems:1,maxItems:300}},required:['assignments'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:true},execute(input){if(!input||!Array.isArray(input.assignments)||!input.assignments.length||input.assignments.length>300)throw new Error(t('Eine Spielerzuweisung ist ungültig oder doppelt.'));let next=state;const ids=new Set();for(const a of input.assignments){if(!a||ids.has(a.playerId))throw new Error(t('Eine Spielerzuweisung ist ungültig oder doppelt.'));ids.add(a.playerId);next=M.assign(next,a.playerId,a.baseId);}commit(next);return {assigned:input.assignments.length};}});
