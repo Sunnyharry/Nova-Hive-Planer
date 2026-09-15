@@ -1,0 +1,428 @@
+(function(){
+'use strict';
+const I=globalThis.HiveI18n,t=(key,params)=>I.t(key,params);
+const M=globalThis.HiveModel,$=id=>document.getElementById(id),svg=$('map'),stage=$('stage');
+// User-facing release: increment the final number for each later delivered update.
+const APP_VERSION='1.1.2';
+const TOOL_SHORTCUTS={b:'base',m:'marshall',a:'center',t:'terrain',l:'beacon'};
+const shortcutFor=type=>Object.keys(TOOL_SHORTCUTS).find(key=>TOOL_SHORTCUTS[key]===type)?.toUpperCase();
+let state=M.makeLayout(),selectedId=null,pending=null,filter='all',dirty=false,undoStack=[],redoStack=[],drag=null,suppressClick=false,confirmAction=null,toastTimer=null;
+let selectedGroup=null,lastAutofillResult=null;
+const groupName=id=>t('Gruppe {n}',{n:id});
+const seasonName=()=>state.season==='off'?t('Off Season'):t('Season {n}',{n:state.season});
+const referenceName=()=>t(M.isSeason4(state)?'Allianzzentrum':'Marshall');
+let camera={x:0,y:0,scale:12},fitScale=12,lastPoint={x:0,y:0},ghost=null;
+const metrics=document.createElement('canvas').getContext('2d');
+const esc=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const h=(key,params)=>esc(t(key,params));
+const num=n=>Number.isInteger(n)?String(n):String(Math.round(n*10)/10);
+const color=o=>M.COLORS[((o.beacon?.charCodeAt(0)??65)-65)%M.COLORS.length];
+const typeName=o=>t({base:o?.beacon?'Beacon':'Basis',center:'Zentrum',marshall:'Marshall',terrain:'Terrain'}[o?.type]??'');
+const selected=()=>state.objects.find(o=>o.id===selectedId)??null;
+function toast(message,error=false){clearTimeout(toastTimer);$('toast').textContent=message;$('toast').classList.toggle('error',error);$('toast').hidden=false;toastTimer=setTimeout(()=>$('toast').hidden=true,error?6500:4200);}
+function safely(action){try{return action();}catch(error){toast(error.message||t('Die Änderung konnte nicht übernommen werden.'),true);return null;}}
+function commit(next,message){
+ if(JSON.stringify(next)===JSON.stringify(state))return false;
+ lastAutofillResult=null;undoStack.push(M.clone(state));if(undoStack.length>70)undoStack.shift();redoStack=[];state=next;dirty=true;
+ if(selectedId&&!state.objects.some(o=>o.id===selectedId))selectedId=null;
+ render();if(message)toast(message);return true;
+}
+function restoreHistory(direction){lastAutofillResult=null;const source=direction==='undo'?undoStack:redoStack,target=direction==='undo'?redoStack:undoStack;if(!source.length)return;target.push(M.clone(state));state=source.pop();dirty=true;pending=null;ghost=null;drag=null;selectedId=null;$('drag-ghost').hidden=true;$('group-drop-zone').classList.remove('drop-active');render();}
+function confirm(title,message,action){confirmAction=action;$('confirm-title').textContent=title;$('confirm-message').textContent=message;$('confirm-dialog').showModal();}
+function closeDialog(id){$(id).close();if(id==='confirm-dialog')confirmAction=null;}
+function pointFromClient(clientX,clientY){const matrix=svg.getScreenCTM();if(!matrix)return {x:0,y:0};const p=new DOMPoint(clientX,clientY).matrixTransform(matrix.inverse());return {x:p.x,y:-p.y};}
+function onStage(clientX,clientY){const r=svg.getBoundingClientRect();return clientX>=r.left&&clientX<=r.right&&clientY>=r.top&&clientY<=r.bottom;}
+function hitAt(point){return [...state.objects].reverse().find(o=>{const r=M.rect(o);return point.x>=r.left&&point.x<=r.right&&point.y>=r.bottom&&point.y<=r.top;})??null;}
+function viewBox(){const r=stage.getBoundingClientRect(),w=Math.max(r.width,200)/camera.scale,h=Math.max(r.height,200)/camera.scale;return {x:camera.x-w/2,y:camera.y-h/2,w,h};}
+function updateView(){const b=viewBox();svg.setAttribute('viewBox',`${b.x} ${b.y} ${b.w} ${b.h}`);$('zoom-label').textContent=`${Math.round(camera.scale/fitScale*100)}%`;}
+function fitMap(){const r=stage.getBoundingClientRect(),b=M.bounds(state);camera.x=(b.left+b.right)/2;camera.y=-(b.bottom+b.top)/2;camera.scale=Math.max(2,Math.min((r.width-50)/(b.right-b.left+5),(r.height-70)/(b.top-b.bottom+5),36));fitScale=camera.scale;updateView();renderMap();}
+function zoom(factor,clientX,clientY){const r=svg.getBoundingClientRect(),x=clientX??r.left+r.width/2,y=clientY??r.top+r.height/2,before=pointFromClient(x,y);camera.scale=Math.max(1.25,Math.min(115,camera.scale*factor));updateView();const after=pointFromClient(x,y);camera.x+=before.x-after.x;camera.y-=before.y-after.y;updateView();renderMap();}
+function wrapName(value,width,size){
+ const fontPx=size*100;metrics.font=`550 ${fontPx}px system-ui, sans-serif`;
+ const fits=s=>metrics.measureText(s).width<=width*100;
+ const result=[];let line='';
+ for(const word of String(value).split(/\s+/)){
+  const joined=line?line+' '+word:word;
+  if(fits(joined)){line=joined;continue;}
+  if(line){result.push(line);line='';}
+  if(fits(word)){line=word;continue;}
+  for(const character of Array.from(word)){if(line&&!fits(line+character)){result.push(line);line='';}line+=character;}
+ }
+ if(line)result.push(line);return result;
+}
+function nameSvg(name,width,height,y,fill='#e0edf8',initial=.56){
+ let size=initial,lines=wrapName(name,width,size);
+ while(lines.length*size*1.18>height&&size>.13){size-=.02;lines=wrapName(name,width,size);}
+ const start=y-(lines.length-1)*size*1.18/2;
+ return `<text class="map-name" fill="${fill}" font-size="${size.toFixed(3)}" font-weight="550" text-anchor="middle">${lines.map((s,i)=>`<tspan x="0" y="${(start+i*size*1.18).toFixed(3)}">${esc(s)}</tspan>`).join('')}</text>`;
+}
+function definitions(){return `<defs><pattern id="small-grid" x="-.5" y="-.5" width="1" height="1" patternUnits="userSpaceOnUse"><path d="M1 0H0V1" fill="none" stroke="#263b50" stroke-width=".025"/></pattern><pattern id="big-grid" x="-.5" y="-.5" width="5" height="5" patternUnits="userSpaceOnUse"><rect width="5" height="5" fill="url(#small-grid)"/><path d="M5 0H0V5" fill="none" stroke="#345169" stroke-width=".04"/></pattern><pattern id="terrain-hatch" width=".55" height=".55" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width=".55" height=".55" fill="#342d36"/><path d="M0 0V.55" stroke="#714e54" stroke-width=".1"/></pattern></defs>`;}
+function objectSvg(o,exporting=false){
+ const q=M.coords(state,o),name=M.objectLabel(state,o),active=!exporting&&o.id===selectedId,classes=`object-${o.type}${active?' map-object-selected':''}`;
+ const attr=`data-object="${esc(o.id)}" class="${classes}" transform="translate(${o.x} ${-o.y})" role="button" aria-label="${esc(name)}, X ${q.x}, Y ${q.y}"`;
+ let content='';
+ if(o.type==='center'){
+  content=`<rect x="-4.5" y="-4.5" width="9" height="9" fill="#27374b" stroke="#b1c5d7" stroke-width=".12"/><text y="-1.05" text-anchor="middle" fill="#edf5fc" font-size="1.55" font-weight="750">AC</text>${nameSvg(name,8,1,.55,'#d7e5f1',.65)}<text x="0" y="1.8" text-anchor="middle" fill="#afc7d7" font-size=".53">X ${num(q.x)}   Y ${num(q.y)}</text><text y="3.2" text-anchor="middle" fill="#8ca7bd" font-size=".48">${h('9 × 9 Felder')}</text>`;
+ }else if(o.type==='terrain'){
+  content=`<rect x="${-o.w/2}" y="${-o.h/2}" width="${o.w}" height="${o.h}" fill="url(#terrain-hatch)" stroke="#a8787d" stroke-width=".09"/>${nameSvg(name,o.w-.25,Math.max(.3,o.h-.8),-.05,'#f0c4c4',.6)}<text y="${o.h/2-.2}" text-anchor="middle" fill="#d29fa6" font-size=".35">${o.w} × ${o.h}</text>`;
+ }else{
+  const beacon=o.type==='base'&&o.beacon,guard=o.type==='marshall',stroke=guard?'#f3cd6a':beacon?color(o):'#5b829f',fill=guard?'#51432b':beacon?'#173540':o.playerId?'#223f57':'#152c40';
+  content=`<rect x="-1.5" y="-1.5" width="3" height="3" fill="${fill}" stroke="${stroke}" stroke-width="${(beacon||guard) ? .09 : .055}"/>`;
+  if(beacon)content+=`<circle cx="-1.06" cy="-1.07" r=".28" fill="${color(o)}"/><text x="-1.06" y="-.95" text-anchor="middle" font-size=".35" font-weight="800" fill="#0a1824">${o.beacon}</text><circle cx="1.14" cy="-1.19" r=".4" fill="#f7ce66" stroke="#0b1926" stroke-width=".065"/><text x="1.14" y="-1.09" text-anchor="middle" font-size=".29" font-weight="750" fill="#252618">+${o.electricians}</text>`;
+  content+=nameSvg(name,2.63,beacon?1.12:1.55,beacon?-.12:-.25,guard?'#ffe3a0':o.playerId?'#ecf7ff':beacon?'#bcf4f0':'#80a1bc',beacon?.49:.55);
+  content+=`<text text-anchor="middle" fill="${guard?'#e0c282':'#8fb4ca'}" font-size=".36" font-weight="450"><tspan x="0" y=".89">X ${num(q.x)}</tspan><tspan x="0" y="1.29">Y ${num(q.y)}</tspan></text>`;
+ }
+ const key=shortcutFor(o.beacon?'beacon':o.type),shortcut=!exporting&&key?' · '+h('Tastenkürzel: {key}',{key}):'';
+ return `<g ${attr}><title>${esc(name)} — X ${num(q.x)}, Y ${num(q.y)}${shortcut}</title>${content}</g>`;
+}
+function terrainHandles(o){
+ const r=M.rect(o),offset=11/camera.scale,size=20/camera.scale,stroke=1.4/camera.scale;
+ return ['nw','ne','sw','se'].map(c=>{const east=c.endsWith('e'),north=c.startsWith('n'),x=east?r.right:r.left,y=north?r.top:r.bottom,hx=x+(east?offset:-offset),hy=y+(north?offset:-offset),label={nw:'Oben links ziehen',ne:'Oben rechts ziehen',sw:'Unten links ziehen',se:'Unten rechts ziehen'}[c];
+  return `<g class="terrain-handle" data-resize="${c}" data-object="${esc(o.id)}" role="button" tabindex="0" aria-label="${h(label)}"><title>${h(label)}</title><path d="M${x} ${-y}L${hx} ${-hy}" stroke="#9de8d3" stroke-width="${stroke}"/><rect x="${hx-size/2}" y="${-hy-size/2}" width="${size}" height="${size}" rx="${3/camera.scale}" fill="#d4fff0" stroke="#238269" stroke-width="${stroke}"/><text x="${hx}" y="${-hy+5/camera.scale}" text-anchor="middle" font-size="${16/camera.scale}" font-weight="800" fill="#124437">${{nw:'↖',ne:'↗',sw:'↙',se:'↘'}[c]}</text></g>`;
+ }).join('');
+}
+function scene(exporting=false){
+ let s='';
+ if(M.isSeason4(state)&&state.showLight)for(const o of state.objects)if(o.type==='base'&&o.beacon)s+=`<rect x="${o.x-o.lightSize/2}" y="${-o.y-o.lightSize/2}" width="${o.lightSize}" height="${o.lightSize}" fill="${color(o)}" fill-opacity=".045" stroke="${color(o)}" stroke-opacity=".8" stroke-width=".09" pointer-events="none"/>`;
+ for(const o of state.objects)s+=objectSvg(!exporting&&drag?.kind==='resize'&&ghost?.o.id===o.id?ghost.o:o,exporting);
+ const terrainSelection=!exporting&&(drag?.kind==='resize'&&ghost?ghost.o:selected());
+ if(terrainSelection?.type==='terrain'){const o=terrainSelection;s+=`<rect x="${o.x-o.w/2}" y="${-o.y-o.h/2}" width="${o.w}" height="${o.h}" fill="none" stroke="#adffe8" stroke-width=".15" stroke-dasharray=".3 .13" pointer-events="none"/>`;}
+ if(!state.objects.some(o=>o.type===M.anchorType(state)))s+=`<g transform="translate(${state.origin.mapX} ${-state.origin.mapY})" pointer-events="none"><path d="M-1 0H1M0-1V1" stroke="#c6d9e7" stroke-width=".07" stroke-dasharray=".2 .15"/><text x="1.3" y=".15" font-size=".55" fill="#91adbf">${h('Ursprung X {x} / Y {y}',{x:state.origin.x,y:state.origin.y})}</text></g>`;
+ if(!exporting&&ghost){const g=ghost.o,stroke=ghost.invalid?'#ff9691':'#adffe8';s+=`<rect x="${g.x-g.w/2}" y="${-g.y-g.h/2}" width="${g.w}" height="${g.h}" fill="${stroke}" fill-opacity=".15" stroke="${stroke}" stroke-width=".12" stroke-dasharray=".25 .12" pointer-events="none"/>`;const q=M.coords(state,g);s+=`<text x="${g.x}" y="${-g.y-g.h/2-.45}" text-anchor="middle" font-size=".6" fill="${stroke}" pointer-events="none">${drag?.kind==='resize'?`${g.w} × ${g.h} · `:''}X ${num(q.x)} / Y ${num(q.y)}</text>`;}
+ if(terrainSelection?.type==='terrain'&&!pending)s+=terrainHandles(terrainSelection);
+ return s;
+}
+function renderMap(){
+ const b=viewBox();svg.innerHTML=definitions()+`<rect x="${b.x-5}" y="${b.y-5}" width="${b.w+10}" height="${b.h+10}" fill="url(#big-grid)" pointer-events="none"/>`+scene();
+ svg.classList.toggle('adding',!!pending);svg.classList.toggle('moving',!!drag&&drag.kind!=='roster');updateView();
+}
+function renderRoster(){
+ const search=$('player-search').value.trim().toLocaleLowerCase(),assigned=new Map(state.objects.filter(o=>o.playerId).map(o=>[o.playerId,o]));
+ const players=state.players.filter(p=>(filter==='all'||!assigned.has(p.id))&&p.name.toLocaleLowerCase().includes(search));
+ $('roster-count').textContent=state.players.length;$('unplaced-count').textContent=state.players.length-assigned.size;
+ $('filter-all').classList.toggle('active',filter==='all');$('filter-free').classList.toggle('active',filter==='free');$('filter-all').setAttribute('aria-pressed',String(filter==='all'));$('filter-free').setAttribute('aria-pressed',String(filter==='free'));
+ if(!state.players.length){$('player-list').innerHTML=`<div class="empty-roster"><span class="empty-mark" aria-hidden="true">⠿</span><strong>${h('Wer sitzt wo?')}</strong>${h(M.isSeason4(state)?'Füge deine Spielerliste ein und verteile die Namen auf der Karte. A–D sind als Beacon-Plätze markiert.':'Füge Spieler hinzu und verteile sie rund um den Marshall.')}</div>`;return;}
+ if(!players.length){$('player-list').innerHTML=`<div class="empty-roster">${h(search?'Kein Spieler mit diesem Namen.':'Alle Spieler haben einen Platz.')}</div>`;return;}
+ $('player-list').innerHTML=players.map(p=>{const o=assigned.get(p.id),q=o?M.coords(state,o):null;return `<div class="player-row ${o?'assigned ':''}${pending?.playerId===p.id?'active':''}" data-player="${esc(p.id)}" role="button" tabindex="0" aria-label="${esc(p.name)}, ${o?h('platziert auf X {x}, Y {y}',q):h('noch ohne Platz')}"><span class="grip" aria-hidden="true">${o?'✓':'⠿'}</span><span class="player-info"><span class="player-name">${esc(p.name)}</span><span class="player-position">${o?`X ${num(q.x)} · Y ${num(q.y)}${o.beacon?' · '+h('Beacon {letter}',{letter:o.beacon}):''}`:h('Auf einen Platz ziehen')}${M.groupForPlayer(state,p.id)?` <span class="group-pill">${esc(groupName(M.groupForPlayer(state,p.id).id))}</span>`:''}</span></span><button class="remove-player" data-remove-player="${esc(p.id)}" aria-label="${h('{name} aus der Liste entfernen',{name:p.name})}" title="${h('Aus der Liste entfernen')}">×</button></div>`;}).join('');
+}
+function renderGroups(){
+ const groups=state.groups??[];
+ $('groups-count').textContent=`${groups.filter(g=>g.playerIds.length).length} / 10`;
+ $('group-select').innerHTML=`<option value="">${h('Gruppe auswählen')}</option>`+Array.from({length:10},(_,i)=>{const id=i+1,g=groups.find(g=>g.id===id);return `<option value="${id}">${esc(groupName(id))} (${g?.playerIds.length??0})</option>`;}).join('');
+ $('group-select').value=selectedGroup??'';$('group-panel').hidden=selectedGroup===null;
+ if(selectedGroup===null)return;
+ const group=groups.find(g=>g.id===selectedGroup)??{playerIds:[]},members=group.playerIds.map(id=>state.players.find(p=>p.id===id)).filter(Boolean);
+ $('group-active-title').textContent=groupName(selectedGroup);
+ $('group-members').innerHTML=members.length?members.map(p=>`<div class="group-member" data-player="${esc(p.id)}" role="button" tabindex="0" aria-label="${esc(p.name)}"><span class="grip" aria-hidden="true">⠿</span><span class="group-member-name">${esc(p.name)}</span><button data-ungroup="${esc(p.id)}" title="${h('Aus der Gruppe entfernen')}" aria-label="${h('{name} aus der Gruppe entfernen',{name:p.name})}">×</button></div>`).join(''):`<p class="field-help">${h('Noch keine Gruppenmitglieder.')}</p>`;
+ const options=state.players.filter(p=>!group.playerIds.includes(p.id));
+ $('group-player-select').innerHTML=`<option value="">${h('Spieler auswählen')}</option>`+options.map(p=>{const g=M.groupForPlayer(state,p.id);return `<option value="${esc(p.id)}">${esc(p.name)}${g?' · '+esc(groupName(g.id)):''}</option>`;}).join('');
+ $('group-add-player').disabled=!options.length;
+ const placed=state.objects.filter(o=>group.playerIds.includes(o.playerId)),split=placed.length>1&&M.groupComponents(placed,state.layout==='compact'?0:1)>1;
+ $('group-status').textContent=t('{placed} / {total} Gruppenmitglieder platziert.',{placed:placed.length,total:members.length})+(split?' '+t('Die Gruppe steht noch nicht zusammenhängend.'):'');
+ $('group-status').classList.toggle('group-warning',split);
+}
+function inGroupDrop(x,y){if(selectedGroup===null||$('group-panel').hidden)return false;const r=$('group-drop-zone').getBoundingClientRect();return x>=r.left&&x<=r.right&&y>=r.top&&y<=r.bottom;}
+function addToSelectedGroup(playerId){if(selectedGroup!==null)commit(M.setPlayerGroup(state,playerId,selectedGroup),t('Spieler zur Gruppe hinzugefügt.'));}
+function renderInspector(){
+ const o=selected();$('selection-type').hidden=!o;
+ if(!o){$('inspector').innerHTML=`<div class="selection-empty"><span aria-hidden="true">⌖</span><p>${h('Wähle eine Basis, den Marshall oder ein anderes Element auf der Karte.')}</p></div>`;return;}
+ $('selection-type').textContent=typeName(o);
+ const q=M.coords(state,o),player=M.playerFor(state,o);let s='<div class="selection-form">';
+ if(o.type==='base'){
+  s+=`<label>${h('Spieler')}<select id="assign-select"><option value="">${h('Platz freihalten')}</option>${state.players.map(p=>`<option value="${esc(p.id)}" ${p.id===o.playerId?'selected':''}>${esc(p.name)}${M.objectForPlayer(state,p.id)&&p.id!==o.playerId?' ('+h('bereits platziert')+')':''}</option>`).join('')}</select></label>`;
+  if(player){s+=`<label>${h('Name bearbeiten')}<input id="player-name-edit" value="${esc(player.name)}" maxlength="80"></label><label>${h('Gruppe')}<select id="inspector-group"><option value="">${h('Keine Gruppe')}</option>${Array.from({length:10},(_,i)=>`<option value="${i+1}" ${M.groupForPlayer(state,player.id)?.id===i+1?'selected':''}>${esc(groupName(i+1))}</option>`).join('')}</select></label>`;}
+ }else s+=`<label>${h('Bezeichnung')}<input id="object-name-edit" value="${esc(M.objectLabel(state,o))}" maxlength="80"></label>`;
+ if(o.type==='terrain'){
+  s+=`<p class="field-help resize-hint">${h('Zum Ändern der Größe an den Eckpfeilen auf der Karte ziehen.')}</p>`;
+  const terrains=state.objects.filter(t=>t.type==='terrain');
+  if(terrains.length>1)s+=`<label>${h('Terrainfläche auswählen')}<select id="terrain-select">${terrains.map((t,i)=>`<option value="${esc(t.id)}" ${t.id===o.id?'selected':''}>${i+1}. ${esc(M.objectLabel(state,t))} · ${t.w} × ${t.h}</option>`).join('')}</select></label>`;
+  s+=`<form id="terrain-size-form" class="terrain-size-form"><h3>${h('Größe ändern')}</h3><div class="inline-fields"><label>${h('Breite (Felder)')}<input id="terrain-width" type="number" min="1" max="60" step="1" value="${o.w}" required></label><label>${h('Höhe (Felder)')}<input id="terrain-height" type="number" min="1" max="60" step="1" value="${o.h}" required></label></div><button class="full" type="submit">${h('Größe übernehmen')}</button><p class="field-help">${h('Je 1–60 Felder. Die Fläche wächst um ihre Mitte und rastet am Kartenraster ein. Terrain darf anderes Terrain überlappen. Gebäude bleiben frei.')}</p></form>`;
+ }
+ s+=`<form id="position-form"><div class="inline-fields"><label>${h('Karten-X')}<input id="object-x" type="number" value="${q.x}" step="${o.type==='terrain'?.5:1}" required></label><label>${h('Karten-Y')}<input id="object-y" type="number" value="${q.y}" step="${o.type==='terrain'?.5:1}" required></label></div><p class="relative-coords">${h('Zum Mittelpunkt: X {x} / Y {y}',{x:num(o.x-state.origin.mapX),y:num(o.y-state.origin.mapY)})}</p><button class="full" type="submit">${h('Position übernehmen')}</button></form>`;
+ if(o.type==='base'&&M.isSeason4(state)){
+  s+=`<label class="check-label"><input id="beacon-enabled" type="checkbox" ${o.beacon?'checked':''}> ${h('Dieser Spieler ist ein Beacon')}</label>`;
+  if(o.beacon)s+=`<div class="inline-fields"><label>${h('Markierung')}<select id="beacon-letter">${Array.from('ABCDEFGHIJKLMNOPQRSTUVWXYZ').map(c=>`<option ${c===o.beacon?'selected':''} ${state.objects.some(a=>a.id!==o.id&&a.beacon===c)?'disabled':''}>${c}</option>`).join('')}</select></label><label>${h('Elektriker')}<input id="electricians" type="number" min="0" max="100" step="1" value="${o.electricians}"></label></div><label>${h('L4-Lichtbreite in Feldern')}<input id="light-size" type="number" min="1" max="101" step="1" value="${o.lightSize}"></label>`;
+ }
+ if(M.isSeason4(state)&&(o.type==='base'||o.type==='marshall')){const c=M.coverage(state,o);s+=`<p class="coverage-note ${c.singleFull?'':'edge'}">${h(c.singleFull?'Vollständige Fläche in einem L4-Lichtbereich.':c.unionFull?'Die Fläche verteilt sich auf benachbarte Lichtbereiche. Buff-Symbol im Spiel prüfen.':c.center?'Mittelpunkt im Licht, Teile der Fläche außerhalb.':'Außerhalb der L4-Lichtbereiche.')}</p>`;}
+ s+=`<div class="actions">${o.type==='base'&&o.playerId?`<button id="unassign-player">${h('Name lösen')}</button>`:''}<button id="delete-object" class="danger">${h('Element entfernen')}</button></div></div>`;
+ $('inspector').innerHTML=s;
+}
+function renderControls(){
+ const s4=M.isSeason4(state),ref=referenceName();
+ $('season-select').value=state.season;$('season-badge').textContent=state.season==='off'?'OFF':`S0${state.season}`;
+ for(const option of $('season-select').options)option.textContent=option.value==='off'?t('Off Season'):t('Season {n}',{n:option.value});
+ $('season-warning').hidden=!M.isDeveloping(state);
+ $('season-help').textContent=t('Beim Wechsel wird die Aufstellung neu erstellt. Spieler und Gruppen bleiben erhalten.');
+ $('anchor-title').textContent=ref;$('anchor-size-key').textContent=t(s4?'Zentrum 9 × 9':'Marshall 3 × 3');
+ $('autofill-direction').textContent=t('Autofill: Gruppen zusammenhalten, vom Mittelpunkt nach außen.');
+ $('mode-help-note').textContent=s4?t('Ohne Zentrum bleibt der Koordinatenursprung erhalten. Beim Verschieben des Zentrums werden die Spielerkoordinaten neu berechnet. L4 zeigt geometrisch 25 × 25 Felder je Beacon. Buffs am Rand im Spiel prüfen.'):t('Der Marshall ist der Bezugspunkt für Koordinaten und Autofill. Ohne Marshall bleibt der markierte Ursprung erhalten.');
+ document.querySelectorAll('[data-s4-only]').forEach(el=>el.hidden=!s4);
+ $('clear-players').disabled=!state.players.length;
+ $('plan-title').value=state.title;$('anchor-x').value=state.origin.x;$('anchor-y').value=state.origin.y;$('show-light').checked=state.showLight;$('layout-select').value=state.layout;
+ const bases=state.objects.filter(o=>o.type==='base'),assigned=bases.filter(o=>o.playerId).length,beacons=bases.filter(o=>o.beacon).length;
+ $('unassign-all').disabled=!assigned;
+ $('app-version').textContent=t('Version {version}',{version:APP_VERSION});
+ $('map-summary').textContent=t(s4?'{assigned} / {total} Plätze vergeben · {beacons} Beacons':'{assigned} / {total} Plätze vergeben',{assigned,total:bases.length,beacons});
+ const sizes=[...new Set(bases.filter(o=>o.beacon).map(o=>o.lightSize))];$('light-legend').textContent=sizes.length>1?t('L4 individuell'):`L4 ${sizes[0]??25} × ${sizes[0]??25}`;
+ $('save-status').textContent=t(dirty?'Ungespeicherte Änderungen':'Plan bereit');$('save-status').style.color=dirty?'#e6c97d':'';
+ $('undo').disabled=!undoStack.length;$('redo').disabled=!redoStack.length;
+ renderAutofill();
+ $('anchor-help').textContent=t('Alle Koordinaten beziehen sich auf {name}. X steigt nach rechts, Y nach oben.',{name:ref});
+ document.querySelectorAll('[data-tool]').forEach(b=>{
+  b.classList.toggle('active',pending?.kind==='object'&&pending.tool===b.dataset.tool);
+  const key=shortcutFor(b.dataset.tool),name=t({base:'Basis',marshall:'Marshall',center:'Allianzzentrum',terrain:'Terrain',beacon:'Beacon'}[b.dataset.tool]);
+  b.title=t('{name} hinzufügen ({key})',{name,key});b.setAttribute('aria-keyshortcuts',key);
+ });
+ const ph=$('placement-hint');ph.hidden=!pending;
+ if(pending)ph.querySelector('span').textContent=pending.kind==='player'?t('{name}: gewünschten Platz anklicken',{name:state.players.find(p=>p.id===pending.playerId)?.name??t('Spieler')}):t('{name}: auf die Karte klicken',{name:typeName(pending.o)});
+}
+function renderAutofill(){
+ $('autofill-result').hidden=!lastAutofillResult?.splitGroups?.length;
+ $('autofill-result').textContent=lastAutofillResult?.splitGroups?.length?t('Nicht vollständig zusammenhängend: {groups}. Freie Nachbarplätze oder feste Zuweisungen prüfen.',{groups:lastAutofillResult.splitGroups.map(groupName).join(', ')}):'';
+ const {players,seats,reserved}=M.autofillOptions(state,$('autofill-beacons').checked);
+ $('autofill').disabled=!players.length||!seats.length;
+ $('autofill-summary').textContent=!state.players.length?t('Füge zuerst Spieler hinzu.'):!players.length?t('Alle Spieler haben bereits einen Platz.'):t('{players} ohne Platz · {seats} freie Plätze.',{players:players.length,seats:seats.length})+(reserved?' '+t('{n} Beacon-Plätze bleiben frei.',{n:reserved}):'');
+}
+function render(){renderControls();renderRoster();renderGroups();renderInspector();renderMap();}
+function clearPending(){pending=null;ghost=null;renderControls();renderRoster();renderMap();}
+function selectObject(id,focus=false){selectedId=id;renderInspector();renderMap();if(focus)svg.focus({preventScroll:true});}
+function armPlayer(id){pending={kind:'player',playerId:id};ghost=null;renderControls();renderRoster();renderMap();}
+function focusPlayer(id){const o=M.objectForPlayer(state,id);if(o){selectedId=o.id;camera.x=o.x;camera.y=-o.y;camera.scale=Math.max(camera.scale,fitScale*1.8);render();}else armPlayer(id);}
+function armObject(type){
+ pending=null;ghost=null;
+ const existing=['center','marshall'].includes(type)?state.objects.find(o=>o.type===type):null;
+ if(existing){pending=null;ghost=null;selectedId=existing.id;camera.x=existing.x;camera.y=-existing.y;render();toast(t('{name} ist bereits vorhanden. Du kannst das Element jetzt verschieben.',{name:typeName(existing)}));return;}
+ safely(()=>{pending={kind:'object',tool:type,o:M.makeObject(state,type)};});render();
+}
+function placePlayer(id,point){
+ const target=hitAt(point);
+ if(target){const next=M.assign(state,id,target.id);selectedId=target.id;pending=null;ghost=null;commit(next,t('Spieler zugeordnet.'));render();return;}
+ let o=M.makeObject(state,'base',point.x,point.y);const next=M.assign(M.addObject(state,o),id,o.id);selectedId=o.id;pending=null;ghost=null;commit(next,t('Neue Basis platziert und Spieler zugeordnet.'));
+}
+function placePending(point){
+ if(!pending)return;
+ if(pending.kind==='player')return placePlayer(pending.playerId,point);
+ const o={...pending.o,x:M.snap(point.x,pending.o.w),y:M.snap(point.y,pending.o.h)},next=M.addObject(state,o);selectedId=o.id;pending=null;ghost=null;commit(next,o.type==='terrain'?t('Terrain platziert. Breite und Höhe kannst du unter „Größe ändern“ anpassen.'):t('{name} platziert.',{name:typeName(o)}));
+}
+function previewAt(point){
+ if(drag?.kind==='resize'){
+  const o=drag.original,r=M.rect(o),x=(drag.corner.endsWith('e')?r.right:r.left)+point.x-drag.point.x,y=(drag.corner.startsWith('n')?r.top:r.bottom)+point.y-drag.point.y;
+  const candidate=M.terrainResizeCandidate(o,drag.corner,x,y);let invalid=false;try{M.assertPlacement(state,candidate);}catch{invalid=true;}
+  ghost={o:candidate,invalid,point:{x,y}};renderMap();return;
+ }
+ if(drag?.kind==='object'){
+  const o=state.objects.find(o=>o.id===drag.id);if(!o)return;const candidate={...o,x:M.snap(drag.startX+point.x-drag.point.x,o.w),y:M.snap(drag.startY+point.y-drag.point.y,o.h)};
+  ghost={o:candidate,invalid:!!M.collision(state,candidate)};renderMap();return;
+ }
+ if(pending?.kind==='object'){const o={...pending.o,x:M.snap(point.x,pending.o.w),y:M.snap(point.y,pending.o.h)};ghost={o,invalid:!!M.collision(state,o)};renderMap();}
+}
+svg.addEventListener('pointerdown',e=>{
+ if(e.button!==0)return;e.preventDefault();svg.focus({preventScroll:true});lastPoint=pointFromClient(e.clientX,e.clientY);
+ const handle=e.target.closest('[data-resize]');
+ if(handle&&!pending&&selected()?.type==='terrain'){drag={kind:'resize',id:selectedId,original:M.clone(selected()),corner:handle.dataset.resize,point:lastPoint,clientX:e.clientX,clientY:e.clientY,moved:false};svg.setPointerCapture(e.pointerId);renderMap();return;}
+ const id=e.target.closest('[data-object]')?.dataset.object;
+ if(pending){safely(()=>placePending(lastPoint));return;}
+ const o=id?state.objects.find(q=>q.id===id):null;
+ if(o){selectedId=id;drag={kind:'object',id,point:lastPoint,startX:o.x,startY:o.y,clientX:e.clientX,clientY:e.clientY,moved:false};renderInspector();}
+ else{selectedId=null;drag={kind:'pan',clientX:e.clientX,clientY:e.clientY,cameraX:camera.x,cameraY:camera.y,moved:false};renderInspector();}
+ svg.setPointerCapture(e.pointerId);renderMap();
+});
+svg.addEventListener('pointermove',e=>{
+ lastPoint=pointFromClient(e.clientX,e.clientY);
+ if(!drag){previewAt(lastPoint);return;}
+ if(drag.kind==='roster')return;
+ if(Math.hypot(e.clientX-drag.clientX,e.clientY-drag.clientY)>4)drag.moved=true;
+ if(!drag.moved)return;
+ if(drag.kind==='pan'){camera.x=drag.cameraX-(e.clientX-drag.clientX)/camera.scale;camera.y=drag.cameraY-(e.clientY-drag.clientY)/camera.scale;renderMap();}
+ else previewAt(lastPoint);
+});
+svg.addEventListener('pointerup',e=>{
+ if(!drag||drag.kind==='roster')return;
+ if(drag.kind==='resize'&&drag.moved&&ghost){const {id,corner}=drag,point=ghost.point;safely(()=>commit(M.resizeTerrain(state,id,corner,point.x,point.y),t('Terraingröße angepasst.')));}
+ if(drag.kind==='object'&&drag.moved&&ghost){const id=drag.id,o=ghost.o;safely(()=>commit(M.moveObject(state,id,o.x,o.y)));}
+ drag=null;ghost=null;if(svg.hasPointerCapture(e.pointerId))svg.releasePointerCapture(e.pointerId);renderMap();
+});
+svg.addEventListener('pointercancel',()=>{drag=null;ghost=null;renderMap();});
+svg.addEventListener('pointerleave',()=>{if(!drag){ghost=null;renderMap();}});
+svg.addEventListener('wheel',e=>{e.preventDefault();if(drag)return;zoom(Math.exp(-e.deltaY*.0014),e.clientX,e.clientY);},{passive:false});
+function startPlayerDrag(e){
+ if(e.button!==0||e.pointerType==='touch'||e.target.closest('[data-remove-player],[data-ungroup]'))return;const row=e.target.closest('[data-player]');if(!row)return;
+ pending=null;ghost=null;renderControls();drag={kind:'roster',playerId:row.dataset.player,clientX:e.clientX,clientY:e.clientY,moved:false,pointerId:e.pointerId};row.setPointerCapture(e.pointerId);
+}
+$('player-list').addEventListener('pointerdown',startPlayerDrag);$('group-members').addEventListener('pointerdown',startPlayerDrag);
+document.addEventListener('pointermove',e=>{
+ if(drag?.kind!=='roster')return;
+ if(Math.hypot(e.clientX-drag.clientX,e.clientY-drag.clientY)>5)drag.moved=true;
+ if(!drag.moved)return;
+ const el=$('drag-ghost');el.hidden=false;el.textContent=state.players.find(p=>p.id===drag.playerId)?.name??'';el.style.left=e.clientX+14+'px';el.style.top=e.clientY+12+'px';
+ const overGroup=inGroupDrop(e.clientX,e.clientY);$('group-drop-zone').classList.toggle('drop-active',overGroup);
+ if(overGroup){if(ghost){ghost=null;renderMap();}return;}
+ if(onStage(e.clientX,e.clientY)){const point=pointFromClient(e.clientX,e.clientY),target=hitAt(point),o=target??M.makeObject(state,'base',point.x,point.y);ghost={o,invalid:target?(target.type!=='base'||!!target.playerId&&target.playerId!==drag.playerId):!!M.collision(state,o)};renderMap();}else if(ghost){ghost=null;renderMap();}
+});
+document.addEventListener('pointerup',e=>{
+ if(drag?.kind!=='roster')return;const d=drag;drag=null;$('drag-ghost').hidden=true;$('group-drop-zone').classList.remove('drop-active');ghost=null;
+ if(d.moved){suppressClick=true;if(inGroupDrop(e.clientX,e.clientY))safely(()=>addToSelectedGroup(d.playerId));else if(onStage(e.clientX,e.clientY))safely(()=>placePlayer(d.playerId,pointFromClient(e.clientX,e.clientY)));setTimeout(()=>suppressClick=false,0);}
+ renderMap();
+});
+document.addEventListener('pointercancel',()=>{$('group-drop-zone').classList.remove('drop-active');if(drag?.kind==='roster'){drag=null;ghost=null;$('drag-ghost').hidden=true;renderMap();}});
+$('player-list').addEventListener('click',e=>{
+ const remove=e.target.closest('[data-remove-player]');if(remove){const p=state.players.find(p=>p.id===remove.dataset.removePlayer);confirm(t('Spieler entfernen?'),t('{name} wird aus der Liste entfernt. Sein Platz wird wieder frei.',{name:p.name}),()=>commit(M.removePlayer(state,p.id),t('Spieler entfernt.')));return;}
+ if(suppressClick)return;const row=e.target.closest('[data-player]');if(row)focusPlayer(row.dataset.player);
+});
+$('player-list').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){const row=e.target.closest('[data-player]');if(row&&!e.target.closest('button')){e.preventDefault();focusPlayer(row.dataset.player);}}});
+$('group-select').addEventListener('change',e=>{selectedGroup=e.target.value?Number(e.target.value):null;renderGroups();if(selectedGroup!==null)$('group-panel').scrollIntoView({block:'nearest'});});
+$('group-add-player').addEventListener('click',()=>{const id=$('group-player-select').value;if(id)safely(()=>addToSelectedGroup(id));});
+$('group-members').addEventListener('click',e=>{if(suppressClick)return;const remove=e.target.closest('[data-ungroup]');if(remove){safely(()=>commit(M.setPlayerGroup(state,remove.dataset.ungroup,null),t('Spieler aus der Gruppe entfernt.')));return;}const row=e.target.closest('[data-player]');if(row)focusPlayer(row.dataset.player);});
+$('group-members').addEventListener('keydown',e=>{if((e.key==='Enter'||e.key===' ')&&!e.target.closest('button')){const row=e.target.closest('[data-player]');if(row){e.preventDefault();focusPlayer(row.dataset.player);}}});
+$('clear-players').addEventListener('click',()=>{pending=null;ghost=null;drag=null;$('drag-ghost').hidden=true;commit(M.clearPlayers(state),t('Alle Spieler entfernt. Strg+Z stellt Spieler, Gruppen und Zuweisungen wieder her.'));});
+$('unassign-all').addEventListener('click',()=>{pending=null;ghost=null;drag=null;$('drag-ghost').hidden=true;$('group-drop-zone').classList.remove('drop-active');commit(M.unassignAll(state),t('Alle Plätze freigegeben. Spielerliste und Gruppen bleiben erhalten. Strg+Z macht die Änderung rückgängig.'));});
+$('season-select').addEventListener('change',e=>{
+ const value=e.target.value;e.target.value=state.season;if(value===state.season)return;
+ const apply=()=>{pending=null;ghost=null;drag=null;selectedId=null;commit(M.setSeason(state,value),t('Season geändert.'));fitMap();};
+ if(dirty)confirm(t('Season wechseln?'),t('Die Season-Vorlage ersetzt die aktuelle Aufstellung und das Terrain. Spieler und Gruppen bleiben erhalten. Strg+Z macht den Wechsel rückgängig.'),apply);else safely(apply);
+});
+$('inspector').addEventListener('submit',e=>{
+ if(!['position-form','terrain-size-form'].includes(e.target.id))return;e.preventDefault();const o=selected();if(!o)return;
+ safely(()=>{
+  if(e.target.id==='terrain-size-form')return commit(M.updateObject(state,o.id,{w:Number($('terrain-width').value),h:Number($('terrain-height').value)}),t('Terraingröße angepasst.'));
+  const x=Number($('object-x').value),y=Number($('object-y').value);if(!Number.isFinite(x)||!Number.isFinite(y))throw new Error(t('Bitte gültige Koordinaten eingeben.'));
+  if(o.type===M.anchorType(state))commit(M.setOrigin(state,x,y));else{const q=M.positionFromCoords(state,x,y);commit(M.moveObject(state,o.id,q.x,q.y));}
+ });
+});
+$('inspector').addEventListener('change',e=>{
+ const o=selected();if(!o)return;const id=e.target.id;
+ const result=safely(()=>{
+  if(id==='assign-select')return commit(e.target.value?M.assign(state,e.target.value,o.id,true):M.unassign(state,o.id));
+  if(id==='player-name-edit'){
+   const name=M.normalizeName(e.target.value),p=M.playerFor(state,o);if(!name)throw new Error(t('Der Name darf nicht leer sein.'));if(state.players.some(q=>q.id!==p.id&&q.name.toLocaleLowerCase()===name.toLocaleLowerCase()))throw new Error(t('Dieser Name steht bereits in der Liste.'));const next=M.clone(state);next.players.find(q=>q.id===p.id).name=name;return commit(next);
+  }
+  if(id==='inspector-group'&&o.playerId)return commit(M.setPlayerGroup(state,o.playerId,e.target.value?Number(e.target.value):null));
+  if(id==='object-name-edit')return commit(M.updateObject(state,o.id,{name:e.target.value}));
+  if(id==='beacon-enabled')return commit(M.updateObject(state,o.id,{beacon:e.target.checked?M.nextBeacon(state):null}));
+  if(id==='beacon-letter')return commit(M.updateObject(state,o.id,{beacon:e.target.value}));
+  if(id==='electricians')return commit(M.updateObject(state,o.id,{electricians:Number(e.target.value)}));
+  if(id==='light-size')return commit(M.updateObject(state,o.id,{lightSize:Number(e.target.value)}));
+  if(id==='terrain-select')return selectObject(e.target.value);
+ });
+ if(result===null)renderInspector();
+});
+$('inspector').addEventListener('click',e=>{if(e.target.id==='delete-object'&&selected())commit(M.removeObject(state,selectedId),t('Element entfernt. Strg+Z macht die Änderung rückgängig.'));if(e.target.id==='unassign-player')commit(M.unassign(state,selectedId),t('Der Spieler ist wieder ohne Platz.'));});
+$('anchor-form').addEventListener('submit',e=>{e.preventDefault();safely(()=>commit(M.setOrigin(state,Number($('anchor-x').value),Number($('anchor-y').value)),t('Koordinaten aktualisiert.')));});
+$('plan-title').addEventListener('change',e=>{const name=e.target.value.trim()||t('Mein Hive');commit({...M.clone(state),title:name});});
+$('show-light').addEventListener('change',e=>commit({...M.clone(state),showLight:e.target.checked}));
+$('player-search').addEventListener('input',renderRoster);
+$('filter-all').addEventListener('click',()=>{filter='all';renderRoster();});$('filter-free').addEventListener('click',()=>{filter='free';renderRoster();});
+$('import-names').addEventListener('click',()=>{$('names-dialog').showModal();$('names-input').focus();});
+$('import-player-file').addEventListener('click',()=>$('player-file').click());
+$('player-file').addEventListener('change',async e=>{
+ const file=e.target.files[0];e.target.value='';if(!file)return;
+ $('import-player-file').disabled=true;
+ try{
+  const format=file.name.split('.').pop().toLowerCase();
+  if(!['txt','csv'].includes(format))throw new Error(t('Bitte eine TXT- oder CSV-Datei auswählen.'));
+  if(file.size>1_000_000)throw new Error(t('Die Spielerliste ist zu groß (maximal 1 MB).'));
+  const text=M.decodePlayerFile(await file.arrayBuffer());
+  const result=M.importPlayers(state,text,format);
+  if(!result.added&&!result.skipped)throw new Error(t('Die Datei enthält keine Spielernamen.'));
+  $('player-search').value='';filter='all';commit(result.state);renderRoster();
+  toast(t('{added} Spieler hinzugefügt. {skipped} doppelte Einträge übersprungen.',result));
+ }catch(error){toast(error.message||t('Die Spielerliste konnte nicht gelesen werden.'),true);}
+ finally{$('import-player-file').disabled=false;}
+});
+$('autofill-beacons').addEventListener('change',renderAutofill);
+$('autofill').addEventListener('click',()=>safely(()=>{
+ const result=M.autofill(state,$('autofill-beacons').checked);
+ if(!result.assigned)return;
+ pending=null;ghost=null;commit(result.state,t('{assigned} Spieler von innen nach außen zugeordnet. {remaining} bleiben ohne Platz. Bestehende Zuweisungen bleiben erhalten.',result));lastAutofillResult=result;renderAutofill();
+}));
+function renderNamesPreview(){const n=$('names-input').value.split(/\r\n?|\n/).filter(x=>x.trim()).length;$('names-preview').textContent=n?t('Erkannte Namen: {n}',{n}):t('Noch keine Namen');}
+$('names-input').addEventListener('input',renderNamesPreview);
+$('names-form').addEventListener('submit',e=>{e.preventDefault();safely(()=>{const {state:next,added,skipped}=M.addPlayers(state,$('names-input').value);commit(next);$('names-input').value='';$('names-preview').textContent=t('Noch keine Namen');closeDialog('names-dialog');toast(t('{added} Spieler hinzugefügt. {skipped} doppelte Einträge übersprungen.',{added,skipped}));});});
+$('apply-layout').addEventListener('click',()=>{const kind=$('layout-select').value;confirm(t('Startaufstellung anwenden?'),kind==='empty'?t('Die Karte wird geleert. Deine Spielerliste und die Kartenkoordinaten bleiben erhalten.'):t('Die Positionen werden auf die Vorlage zurückgesetzt. Namen auf den ursprünglichen 100 Plätzen bleiben zugeordnet. Individuell ergänzte Elemente werden entfernt.'),()=>{pending=null;selectedId=null;ghost=null;commit(M.makeLayout(kind,state));fitMap();});});
+$('confirm-yes').addEventListener('click',()=>{const action=confirmAction;closeDialog('confirm-dialog');if(action)safely(action);});
+$('confirm-dialog').addEventListener('cancel',()=>confirmAction=null);
+document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>closeDialog(b.dataset.close)));
+document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',()=>armObject(b.dataset.tool)));
+$('cancel-placement').addEventListener('click',clearPending);$('show-help').addEventListener('click',()=>$('help-dialog').showModal());
+$('zoom-in').addEventListener('click',()=>zoom(1.25));$('zoom-out').addEventListener('click',()=>zoom(.8));$('fit-map').addEventListener('click',fitMap);
+$('undo').addEventListener('click',()=>restoreHistory('undo'));$('redo').addEventListener('click',()=>restoreHistory('redo'));
+$('open-plan').addEventListener('click',()=>$('plan-file').click());
+$('plan-file').addEventListener('change',async e=>{
+ const file=e.target.files[0];e.target.value='';if(!file)return;
+ try{if(file.size>2_000_000)throw new Error(t('Die Plan-Datei ist zu groß (maximal 2 MB).'));const next=M.validate(JSON.parse(await file.text()));const apply=()=>{commit(next);dirty=false;selectedId=null;pending=null;ghost=null;render();fitMap();toast(t('Plan geöffnet.'));};if(dirty)confirm(t('Plan öffnen?'),t('Die geladene Datei ersetzt den aktuellen Plan. Speichere deine Änderungen vorher, wenn du sie behalten möchtest.'),apply);else apply();}catch(error){toast(error instanceof SyntaxError?t('Die Datei enthält kein gültiges Plan-JSON.'):error.message,true);}
+});
+function fileName(extension){return (state.title.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9_-]+/g,'-').replace(/^-|-$/g,'')||'hive-plan')+'.'+extension;}
+function download(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.style.display='none';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}
+function savePlan(){const valid=M.validate(state);download(new Blob([JSON.stringify({...valid,savedAt:new Date().toISOString()},null,2)],{type:'application/json'}),fileName('json'));dirty=false;renderControls();toast(t('Plan-Datei heruntergeladen. Mit „Öffnen“ kannst du sie später weiterbearbeiten.'));}
+$('save-plan').addEventListener('click',()=>safely(savePlan));
+function csvExport(){
+ const protect=value=>{let s=String(value??'');if(/^[=+@\-\t\r]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';};
+ const s4=M.isSeason4(state),rows=[[t('Spieler / Element'),t('Typ'),t('Platz'),'X','Y',t('Gruppe'),...(s4?[t('Beacon'),t('Elektriker')]:[])]];
+ for(const o of state.objects.filter(o=>o.type!=='terrain').sort((a,b)=>(a.slot??1e6)-(b.slot??1e6))){const q=M.coords(state,o);const g=M.groupForPlayer(state,o.playerId);rows.push([M.objectLabel(state,o),typeName(o),o.slot??'',q.x,q.y,g?groupName(g.id):'',...(s4?[o.beacon??'',o.beacon?o.electricians:'']:[])]);}
+ return '\uFEFF'+rows.map(r=>r.map(protect).join(';')).join('\r\n');
+}
+function exportTextSize(text,width,size){metrics.font='100px system-ui, sans-serif';return Math.min(size,width/Math.max(.01,metrics.measureText(text).width/100));}
+function exportSvg(){
+ const b=M.bounds(state),w=Math.max(b.right-b.left+8,36),h=Math.max(b.top-b.bottom+15,36),left=(b.left+b.right-w)/2,top=-b.top-9,scale=Math.min(80,5800/Math.max(w,h));
+ const bases=state.objects.filter(o=>o.type==='base'),assigned=bases.filter(o=>o.playerId).length;
+ const summary=t('{assigned} / {total} Plätze vergeben · {name} X {x} / Y {y}',{assigned,total:bases.length,name:referenceName(),x:state.origin.x,y:state.origin.y});
+ const legend=t(M.isSeason4(state)?'Basis 3 × 3 · Zentrum 9 × 9 · Koordinaten der Gebäudemitte · X nach rechts, Y nach oben':'Basis 3 × 3 · Marshall 3 × 3 · Koordinaten der Gebäudemitte · X nach rechts, Y nach oben');
+ const footnote=(M.isSeason4(state)?t(state.showLight?'Lichtflächen gemäß eingestellter Breite. L4-Standard: 25 × 25 Kartenfelder.':'Lichtflächen ausgeblendet.')+' · ':'')+t('Erstellt {date}',{date:new Date().toLocaleDateString(I.language)});
+ const source=`<svg xmlns="http://www.w3.org/2000/svg" width="${Math.ceil(w*scale)}" height="${Math.ceil(h*scale)}" viewBox="${left} ${top} ${w} ${h}"><style>text{font-family:system-ui,-apple-system,Segoe UI,sans-serif}</style>${definitions()}<rect x="${left}" y="${top}" width="${w}" height="${h}" fill="#0b1726"/><text x="${left+2}" y="${top+2.6}" fill="#61ddcc" font-size="${exportTextSize('NOVA HIVE PLANNER · '+seasonName()+(M.isDeveloping(state)?' · '+t('Noch in Bearbeitung'):''),w-4,.65)}" font-weight="650">NOVA HIVE PLANNER · ${esc(seasonName())}${M.isDeveloping(state)?' · '+t('Noch in Bearbeitung'):''}</text><text x="${left+2}" y="${top+4.8}" fill="#eef7ff" font-size="${Math.min(1.4,(w-4)/(Math.max(1,state.title.length)*.65))}" font-weight="750">${esc(state.title)}</text><text x="${left+2}" y="${top+6.4}" fill="#9db9cc" font-size="${exportTextSize(summary,w-4,.55)}">${esc(summary)}</text><rect x="${left+1}" y="${top+8}" width="${w-2}" height="${h-12}" fill="url(#big-grid)"/>${scene(true)}<text x="${left+2}" y="${top+h-2.6}" font-size="${exportTextSize(legend,w-4,.52)}" fill="#b5ccda">${esc(legend)}</text><text x="${left+2}" y="${top+h-1.3}" font-size="${exportTextSize(footnote,w-4,.44)}" fill="#7896ac">${esc(footnote)}</text></svg>`;
+ return {source,width:Math.ceil(w*scale),height:Math.ceil(h*scale)};
+}
+async function exportFile(format){
+ try{
+  document.querySelector('.export-menu').open=false;
+  if(format==='csv'){download(new Blob([csvExport()],{type:'text/csv;charset=utf-8'}),fileName('csv'));toast(t('Koordinatenliste heruntergeladen.'));return;}
+  const data=exportSvg(),blob=new Blob([data.source],{type:'image/svg+xml;charset=utf-8'});
+  if(format==='svg'){download(blob,fileName('svg'));toast(t('Plan als SVG heruntergeladen.'));return;}
+  toast(t('PNG-Bild wird vorbereitet …'));
+  const url=URL.createObjectURL(blob),img=new Image();
+  try{await new Promise((resolve,reject)=>{img.onload=resolve;img.onerror=()=>reject(new Error(t('Das Plan-Bild konnte nicht erstellt werden. Bitte SVG verwenden.')));img.src=url;});const canvas=document.createElement('canvas');canvas.width=data.width;canvas.height=data.height;const ctx=canvas.getContext('2d');if(!ctx)throw new Error(t('PNG-Export ist in diesem Browser nicht verfügbar.'));ctx.drawImage(img,0,0);const png=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));if(!png)throw new Error(t('PNG konnte nicht erstellt werden. Bitte SVG verwenden.'));download(png,fileName('png'));toast(t('Plan als PNG heruntergeladen.'));}finally{URL.revokeObjectURL(url);}
+ }catch(error){toast(error.message,true);}
+}
+document.querySelectorAll('[data-export]').forEach(b=>b.addEventListener('click',()=>exportFile(b.dataset.export)));
+document.addEventListener('keydown',e=>{
+ const editing=!!e.target.closest('input,textarea,select,[contenteditable]:not([contenteditable=false])'),inDialog=!!e.target.closest('dialog[open]');
+ if(e.key==='Escape'&&!inDialog){pending=null;ghost=null;drag=null;$('drag-ghost').hidden=true;render();return;}
+ if(inDialog)return;
+ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();document.activeElement.blur();safely(savePlan);return;}
+ if(editing)return;
+ if(!drag&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!e.repeat&&!e.isComposing&&!e.defaultPrevented){
+  const type=TOOL_SHORTCUTS[e.key.toLowerCase()];
+  if(type){e.preventDefault();armObject(type);if(pending?.kind==='object')previewAt(lastPoint);return;}
+ }
+ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();restoreHistory(e.shiftKey?'redo':'undo');return;}
+ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='y'){e.preventDefault();restoreHistory('redo');return;}
+ if((e.key==='Delete'||e.key==='Backspace')&&selected()){e.preventDefault();commit(M.removeObject(state,selectedId));return;}
+ const directions={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,1],ArrowDown:[0,-1]};
+ if(directions[e.key]&&selected()){
+  e.preventDefault();const o=selected(),step=e.shiftKey?5:1,[dx,dy]=directions[e.key],handle=e.target.closest('[data-resize]');
+  if(handle&&o.type==='terrain'){const corner=handle.dataset.resize,r=M.rect(o),x=(corner.endsWith('e')?r.right:r.left)+dx*step,y=(corner.startsWith('n')?r.top:r.bottom)+dy*step;safely(()=>commit(M.resizeTerrain(state,o.id,corner,x,y)));svg.querySelector(`[data-resize="${corner}"]`)?.focus({preventScroll:true});}
+  else safely(()=>commit(M.moveObject(state,o.id,o.x+dx*step,o.y+dy*step)));
+ }
+});
+window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
+new ResizeObserver(()=>{updateView();renderMap();}).observe(stage);
+function applyLanguage(previousLabel){
+ const drafts=Array.from(document.querySelectorAll('#anchor-form input,#inspector input,#plan-title,#layout-select')).filter(el=>el.id!=='object-name-edit'||el.value!==previousLabel).map(el=>({id:el.id,value:el.value,checked:el.checked}));
+ I.apply(document);$('language-select').value=I.language;$('toast').hidden=true;
+ render();renderNamesPreview();
+ for(const draft of drafts){const el=$(draft.id);if(el){el.value=draft.value;el.checked=draft.checked;el.setCustomValidity?.('');}}
+}
+$('language-select').addEventListener('change',e=>{const previousLabel=selected()?M.objectLabel(state,selected()):null;if(I.setLanguage(e.target.value))applyLanguage(previousLabel);});
+document.addEventListener('invalid',e=>{const el=e.target;if(!el.setCustomValidity)return;el.setCustomValidity('');el.setCustomValidity(t(el.validity.valueMissing?'Bitte dieses Feld ausfüllen.':'Bitte einen gültigen Wert eingeben.'));},true);
+document.addEventListener('input',e=>e.target.setCustomValidity?.(''));
+I.apply(document);$('language-select').value=I.language;render();requestAnimationFrame(fitMap);
+// Optional structured tools use exactly the same state and actions as the visible planner.
+const context=document.modelContext;
+if(context?.registerTool){
+ const life=new AbortController();window.addEventListener('pagehide',()=>life.abort(),{once:true});
+ const register=tool=>{try{void Promise.resolve(context.registerTool(tool,{signal:life.signal})).catch(()=>{});}catch{}};
+ register({name:'read_hive_plan',title:'Hive-Plan lesen',description:'Returns the current players, placements and calculated coordinates.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true,untrustedContentHint:true},execute(){return {title:state.title,season:state.season,groups:state.groups,origin:state.origin,players:state.players,objects:state.objects.map(o=>({...o,name:M.objectLabel(state,o),coordinates:M.coords(state,o)}))};}});
+ register({name:'add_hive_players',title:'Spieler hinzufügen',description:'Adds names to the player list. Existing names are preserved and duplicates skipped.',inputSchema:{type:'object',properties:{names:{type:'array',items:{type:'string',minLength:1,maxLength:80},minItems:1,maxItems:300}},required:['names'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:true},execute(input){if(!input||!Array.isArray(input.names)||!input.names.length||input.names.length>300||input.names.some(n=>typeof n!=='string'||!n.trim()||n.includes('\n')||n.length>80))throw new Error(t('Ungültige oder doppelte Spieler.'));const r=M.addPlayers(state,input.names.join('\n'));commit(r.state);return {added:r.added,skipped:r.skipped,total:state.players.length};}});
+ register({name:'set_hive_center_coordinates',title:'Zentrumskoordinaten setzen',description:'Sets the world coordinates of the active reference (Alliance Center in Season 4, Marshall in other modes). Recalculates all player coordinates without moving the drawn layout.',inputSchema:{type:'object',properties:{x:{type:'integer',minimum:0,maximum:999999},y:{type:'integer',minimum:0,maximum:999999}},required:['x','y'],additionalProperties:false},annotations:{readOnlyHint:false},execute(input){if(!input)throw new Error(t('Bitte gültige Koordinaten eingeben.'));commit(M.setOrigin(state,input.x,input.y));return {origin:state.origin};}});
+ register({name:'assign_hive_players',title:'Spieler auf freie Plätze setzen',description:'Assigns existing players to existing empty bases in one batch. Fails atomically if any assignment is invalid.',inputSchema:{type:'object',properties:{assignments:{type:'array',items:{type:'object',properties:{playerId:{type:'string'},baseId:{type:'string'}},required:['playerId','baseId'],additionalProperties:false},minItems:1,maxItems:300}},required:['assignments'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:true},execute(input){if(!input||!Array.isArray(input.assignments)||!input.assignments.length||input.assignments.length>300)throw new Error(t('Eine Spielerzuweisung ist ungültig oder doppelt.'));let next=state;const ids=new Set();for(const a of input.assignments){if(!a||ids.has(a.playerId))throw new Error(t('Eine Spielerzuweisung ist ungültig oder doppelt.'));ids.add(a.playerId);next=M.assign(next,a.playerId,a.baseId);}commit(next);return {assigned:input.assignments.length};}});
+}
+})();

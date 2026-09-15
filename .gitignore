@@ -1,0 +1,4 @@
+.sites-runtime/
+.codex-*
+node_modules/
+*.log
