@@ -45,7 +45,7 @@ for(const gap of [0,1,2]){
  const empty=M.makeLayout('empty'),area={left:-1.5,right:13.5,bottom:-1.5,top:13.5},preview=M.planBaseFill(empty,area,gap),filled=M.fillBases(empty,area,gap);
  assert.equal(filled.added,{0:25,1:16,2:9}[gap]);assert.deepEqual(filled.state.objects.map(o=>({x:o.x,y:o.y})),preview.positions);assert.equal(empty.objects.length,0);roundTrip(filled.state);
  for(const o of filled.state.objects){const r=M.rect(o);assert.ok(r.left>=area.left&&r.right<=area.right&&r.bottom>=area.bottom&&r.top<=area.top);assert.equal(M.collision(filled.state,o),null);}
- const xs=[...new Set(filled.state.objects.map(o=>o.x))];assert.equal(xs[1]-xs[0],3+gap);
+ const xs=[...new Set(filled.state.objects.map(o=>o.x))].sort((a,b)=>a-b);assert.equal(xs[1]-xs[0],3+gap);
  assert.deepEqual(M.planBaseFill(empty,{left:area.right,right:area.left,bottom:area.top,top:area.bottom},gap),preview);
  const occupied=filled.state.objects[0],partial={...empty,objects:[occupied]},refill=M.fillBases(partial,area,gap);assert.deepEqual(refill.state.objects[0],occupied);assert.equal(refill.added,filled.added-1);
 }

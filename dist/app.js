@@ -3,7 +3,7 @@
 const I=globalThis.HiveI18n,t=(key,params)=>I.t(key,params);
 const M=globalThis.HiveModel,W=globalThis.HiveWorkspace,$=id=>document.getElementById(id),svg=$('map'),stage=$('stage');
 // User-facing release: increment the final number for each later delivered update.
-const APP_VERSION='1.1.6';
+const APP_VERSION='1.1.7';
 const TOOL_SHORTCUTS={b:'base',m:'marshall',a:'center',t:'terrain',l:'beacon'};
 const shortcutFor=type=>Object.keys(TOOL_SHORTCUTS).find(key=>TOOL_SHORTCUTS[key]===type)?.toUpperCase();
 let workspace=W.createWorkspace(),state=W.activePlan(workspace),selectedId=null,pending=null,filter='all',dirty=false,undoStack=[],redoStack=[],drag=null,suppressClick=false,confirmAction=null,toastTimer=null;
@@ -107,6 +107,12 @@ function terrainHandles(o){
   return `<g class="terrain-handle" data-resize="${c}" data-object="${esc(o.id)}" role="button" tabindex="0" aria-label="${h(label)}"><title>${h(label)}</title><path d="M${x} ${-y}L${hx} ${-hy}" stroke="#9de8d3" stroke-width="${stroke}"/><rect x="${hx-size/2}" y="${-hy-size/2}" width="${size}" height="${size}" rx="${3/camera.scale}" fill="#d4fff0" stroke="#238269" stroke-width="${stroke}"/><text x="${hx}" y="${-hy+5/camera.scale}" text-anchor="middle" font-size="${16/camera.scale}" font-weight="800" fill="#124437">${{nw:'↖',ne:'↗',sw:'↙',se:'↘'}[c]}</text></g>`;
  }).join('');
 }
+function fillAreaHandles(area){
+ const size=20/camera.scale,offset=Math.min(12/camera.scale,(area.right-area.left)/4,(area.top-area.bottom)/4),stroke=1.5/camera.scale;
+ return ['nw','ne','sw','se'].map(c=>{const east=c.endsWith('e'),north=c.startsWith('n'),x=(east?area.right:area.left)+(east?-offset:offset),y=(north?area.top:area.bottom)+(north?-offset:offset),label={nw:'Oben links ziehen',ne:'Oben rechts ziehen',sw:'Unten links ziehen',se:'Unten rechts ziehen'}[c];
+  return `<g class="fill-area-handle" data-fill-resize="${c}" role="button" tabindex="0" aria-label="${h('Füllbereich: {corner}',{corner:t(label)})}"><title>${h('Füllbereich: {corner}',{corner:t(label)})}</title><rect x="${x-size/2}" y="${-y-size/2}" width="${size}" height="${size}" rx="${3/camera.scale}" fill="#ffe1a0" stroke="#9e7631" stroke-width="${stroke}"/><text x="${x}" y="${-y+5/camera.scale}" text-anchor="middle" font-size="${16/camera.scale}" font-weight="800" fill="#50390e">${{nw:'↖',ne:'↗',sw:'↙',se:'↘'}[c]}</text></g>`;
+ }).join('');
+}
 function compoundTerrainSvg(parts,exporting=false){
  const primary=parts[0],geometry=M.terrainUnionGeometry(parts),active=!exporting&&parts.some(o=>selectedObjectIds.has(o.id)),stroke=active?(ghost?.invalid?'#ff9691':'#b4ffec'):'#a8787d';
  const fill=geometry.slices.map(r=>`M${r.left} ${-r.top}H${r.right}V${-r.bottom}H${r.left}Z`).join(' '),outline=geometry.edges.map(([x1,y1,x2,y2])=>`M${x1} ${-y1}L${x2} ${-y2}`).join(' '),label=parts.reduce((best,o)=>o.w*o.h>best.w*best.h?o:best),name=M.objectLabel(state,primary),r=M.objectBounds(parts),x=state.origin.x+r.left+.5-state.origin.mapX,y=state.origin.y+r.bottom+.5-state.origin.mapY;
@@ -122,9 +128,10 @@ function scene(exporting=false){
  if(!exporting&&ghost?.o){const g=ghost.o,stroke=ghost.invalid?'#ff9691':'#adffe8';s+=`<rect x="${g.x-g.w/2}" y="${-g.y-g.h/2}" width="${g.w}" height="${g.h}" fill="${stroke}" fill-opacity=".15" stroke="${stroke}" stroke-width=".12" stroke-dasharray=".25 .12" pointer-events="none"/>`;const q=g.type==='terrain'?M.terrainCornerCoords({...state,objects:state.objects.map(o=>o.id===g.id?g:o)},g):M.coords(state,g);s+=`<text x="${g.x}" y="${-g.y-g.h/2-.45}" text-anchor="middle" font-size=".6" fill="${stroke}" pointer-events="none">${drag?.kind==='resize'?`${g.w} × ${g.h} · `:''}X ${num(q.x)} / Y ${num(q.y)}</text>`;}
  if(!exporting&&ghost?.objects){const stroke=ghost.invalid?'#ff9691':'#adffe8';for(const o of ghost.objects)if(!o.terrainGroup)s+=`<rect x="${o.x-o.w/2}" y="${-o.y-o.h/2}" width="${o.w}" height="${o.h}" fill="none" stroke="${stroke}" stroke-width=".15" stroke-dasharray=".3 .15" pointer-events="none"/>`;}
  if(!exporting){
-  const box=drag?.kind==='selectbox'?selectionBox(drag.start,drag.current):fillArea;
+  const box=drag?.kind==='selectbox'&&!drag.fill?selectionBox(drag.start,drag.current):fillArea;
   if(box){const stroke=mapMode==='fill'?'#f5ce72':'#7ce7d2';s+=`<rect x="${box.left}" y="${-box.top}" width="${box.right-box.left}" height="${box.top-box.bottom}" fill="${stroke}" fill-opacity=".08" stroke="${stroke}" stroke-width=".12" stroke-dasharray=".4 .18" pointer-events="none"/>`;}
-  if(fillPreview&&drag?.kind!=='selectbox')for(const o of fillPreview.positions)s+=`<rect x="${o.x-1.5}" y="${-o.y-1.5}" width="3" height="3" fill="#78d7bf" fill-opacity=".20" stroke="#9ee6cb" stroke-width=".08" pointer-events="none"/>`;
+  if(fillPreview)for(const o of fillPreview.positions)s+=`<rect x="${o.x-1.5}" y="${-o.y-1.5}" width="3" height="3" fill="#78d7bf" fill-opacity=".20" stroke="#9ee6cb" stroke-width=".08" pointer-events="none"/>`;
+  if(fillArea&&mapMode==='fill'&&drag?.kind!=='selectbox')s+=fillAreaHandles(fillArea);
  }
  if(terrainSelection?.type==='terrain'&&!terrainSelection.terrainGroup&&!pending&&mapMode!=='fill')s+=terrainHandles(terrainSelection);
  return s;
@@ -236,11 +243,15 @@ function renderControls(){
   b.title=t('{name} hinzufügen ({key})',{name,key});b.setAttribute('aria-keyshortcuts',key);
  });
  document.querySelectorAll('[data-map-mode]').forEach(button=>{const active=mapMode===button.dataset.mapMode;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));});
- $('area-fill-options').hidden=mapMode!=='fill';$('apply-area-fill').disabled=!fillPreview?.positions.length;
- $('area-fill-summary').textContent=fillPreview?t('{n} neue Basen · {blocked} blockierte Plätze',{n:fillPreview.positions.length,blocked:fillPreview.skipped})+(fillPreview.limited?' '+t('Limit: 800 Kartenelemente.'):''):t('Ziehe auf der Karte den Bereich auf, der mit Basen gefüllt werden soll.');
+ renderFillControls();
  $('map-selection-count').textContent=selectedObjectIds.size?t('{n} Elemente',{n:selectedObjectIds.size}):'';
  const ph=$('placement-hint');ph.hidden=!pending;
  if(pending)ph.querySelector('span').textContent=pending.kind==='player'?t('{name}: gewünschten Platz anklicken',{name:state.players.find(p=>p.id===pending.playerId)?.name??t('Spieler')}):t('{name}: auf die Karte klicken',{name:typeName(pending.o)});
+}
+function renderFillControls(){
+ $('area-fill-options').hidden=mapMode!=='fill';$('apply-area-fill').disabled=!fillPreview?.positions.length||!!drag;
+ $('area-fill-summary').textContent=fillPreview?t('{w} × {h} Felder · {n} neue Basen · {blocked} blockierte Plätze',{w:fillArea.right-fillArea.left,h:fillArea.top-fillArea.bottom,n:fillPreview.positions.length,blocked:fillPreview.skipped})+(fillPreview.limited?' '+t('Limit: 800 Kartenelemente.'):''):t('Ziehe auf der Karte den Bereich auf, der mit Basen gefüllt werden soll.');
+ $('area-fill-anchor').textContent=state.objects.some(o=>o.type===M.anchorType(state))?t(M.isSeason4(state)?'Raster am Allianzzentrum: von innen nach außen, am Zentrum höchstens 1 Feld Abstand.':'Raster am Marshall: von innen nach außen.'):t('Ohne Zentrum bleibt das Raster am Kartenursprung ausgerichtet.');
 }
 function renderAutofill(){
  $('autofill-result').hidden=!lastAutofillResult?.splitGroups?.length;
@@ -277,6 +288,26 @@ function placePending(point){
  const o={...pending.o,x:M.snap(point.x,pending.o.w),y:M.snap(point.y,pending.o.h)},next=M.addObject(state,o);selectedId=o.id;selectedObjectIds=new Set([o.id]);pending=null;ghost=null;commit(next,o.type==='terrain'?t('Terrain platziert. Größe und linke untere Ecke kannst du rechts einstellen.'):t('{name} platziert.',{name:typeName(o)}));
 }
 function selectionBox(a,b){return {left:Math.min(a.x,b.x),right:Math.max(a.x,b.x),bottom:Math.min(a.y,b.y),top:Math.max(a.y,b.y)};}
+function fillGridPoint(point){const w=M.worldBounds(state),snap=value=>Math.round(value+.5)-.5;return {x:Math.max(w.left,Math.min(w.right,snap(point.x))),y:Math.max(w.bottom,Math.min(w.top,snap(point.y)))};}
+function newFillArea(start,end){
+ const area=selectionBox(fillGridPoint(start),fillGridPoint(end)),world=M.worldBounds(state);
+ if(area.left===area.right){if(area.right<world.right)area.right++;else area.left--;}
+ if(area.bottom===area.top){if(area.top<world.top)area.top++;else area.bottom--;}
+ return area;
+}
+function resizeFillArea(area,corner,point){
+ const next={...area},p=fillGridPoint(point);
+ if(corner.endsWith('e'))next.right=Math.max(area.left+1,p.x);else next.left=Math.min(area.right-1,p.x);
+ if(corner.startsWith('n'))next.top=Math.max(area.bottom+1,p.y);else next.bottom=Math.min(area.top-1,p.y);
+ return next;
+}
+function updateFillDrag(point){
+ if(drag.kind==='fill-resize'){
+  const a=drag.original,x=(drag.corner.endsWith('e')?a.right:a.left)+point.x-drag.point.x,y=(drag.corner.startsWith('n')?a.top:a.bottom)+point.y-drag.point.y;
+  fillArea=resizeFillArea(a,drag.corner,{x,y});
+ }else {drag.current=point;fillArea=newFillArea(drag.start,point);}
+ refreshFillPreview();renderFillControls();renderMap();
+}
 function moveSelection(dx,dy){if(!Number.isInteger(dx)||!Number.isInteger(dy))throw new Error(t('Die Verschiebung muss in ganzen Feldern erfolgen.'));const entries=selectedObjects().map(o=>({id:o.id,x:o.x+dx,y:o.y+dy}));if(entries.length)commit(M.moveObjects(state,entries));}
 function previewAt(point){
  if(drag?.kind==='resize'){
@@ -293,10 +324,11 @@ function previewAt(point){
 }
 svg.addEventListener('pointerdown',e=>{
  if(e.button!==0||drag)return;e.preventDefault();svg.focus({preventScroll:true});lastPoint=pointFromClient(e.clientX,e.clientY);
- const id=e.target.closest('[data-object]')?.dataset.object,handle=e.target.closest('[data-resize]');
+ const id=e.target.closest('[data-object]')?.dataset.object,handle=e.target.closest('[data-resize]'),fillHandle=e.target.closest('[data-fill-resize]');
  if(pending){safely(()=>placePending(lastPoint));return;}
  const box=mapMode==='fill'||e.shiftKey||(!id&&(mapMode==='select'||e.ctrlKey||e.metaKey));
- if(box){fillArea=null;fillPreview=null;ghost=null;drag={kind:'selectbox',fill:mapMode==='fill',start:lastPoint,current:lastPoint,clientX:e.clientX,clientY:e.clientY,moved:false,additive:e.ctrlKey||e.metaKey};renderControls();}
+ if(fillHandle&&fillArea&&mapMode==='fill'){drag={kind:'fill-resize',original:{...fillArea},corner:fillHandle.dataset.fillResize,point:lastPoint,clientX:e.clientX,clientY:e.clientY,moved:false};renderFillControls();}
+ else if(box){const previousArea=fillArea;fillArea=null;fillPreview=null;ghost=null;drag={kind:'selectbox',fill:mapMode==='fill',previousArea,start:lastPoint,current:lastPoint,clientX:e.clientX,clientY:e.clientY,moved:false,additive:e.ctrlKey||e.metaKey};renderControls();}
  else if(handle&&selected()?.type==='terrain'&&selectedObjectIds.size===1&&!selected().terrainGroup){drag={kind:'resize',id:selectedId,original:M.clone(selected()),corner:handle.dataset.resize,point:lastPoint,clientX:e.clientX,clientY:e.clientY,moved:false};}
  else if(id){
   if(e.ctrlKey||e.metaKey){selectObject(id,false,true);return;}
@@ -309,24 +341,26 @@ svg.addEventListener('pointermove',e=>{
  lastPoint=pointFromClient(e.clientX,e.clientY);
  if(!drag){previewAt(lastPoint);return;}if(drag.kind==='roster')return;
  if(Math.hypot(e.clientX-drag.clientX,e.clientY-drag.clientY)>4)drag.moved=true;
+ if(drag.kind==='fill-resize'||drag.kind==='selectbox'&&drag.fill){if(drag.moved)safely(()=>updateFillDrag(lastPoint));return;}
  if(drag.kind==='selectbox'){drag.current=lastPoint;renderMap();return;}
  if(!drag.moved)return;
  if(drag.kind==='pan'){camera.x=drag.cameraX-(e.clientX-drag.clientX)/camera.scale;camera.y=drag.cameraY-(e.clientY-drag.clientY)/camera.scale;renderMap();}else previewAt(lastPoint);
 });
 svg.addEventListener('pointerup',e=>{
  if(!drag||drag.kind==='roster')return;
+ if(drag.moved&&(drag.kind==='fill-resize'||drag.kind==='selectbox'&&drag.fill))safely(()=>updateFillDrag(pointFromClient(e.clientX,e.clientY)));
  if(drag.moved&&['resize','object'].includes(drag.kind))previewAt(pointFromClient(e.clientX,e.clientY));
  const d=drag,g=ghost;drag=null;ghost=null;if(svg.hasPointerCapture(e.pointerId))svg.releasePointerCapture(e.pointerId);
  if(d.kind==='resize'&&d.moved&&g)safely(()=>commit(M.resizeTerrain(state,d.id,d.corner,g.point.x,g.point.y),t('Terraingröße angepasst.')));
  if(d.kind==='object'&&d.moved&&g?.objects)safely(()=>commit(M.moveObjects(state,g.objects.map(o=>({id:o.id,x:o.x,y:o.y})))));
  if(d.kind==='selectbox'){
   const area=selectionBox(d.start,pointFromClient(e.clientX,e.clientY));
-  if(d.fill&&d.moved){fillArea=area;safely(refreshFillPreview);}
+  if(d.fill&&!d.moved){fillArea=d.previousArea;safely(refreshFillPreview);}
   else if(!d.fill){const picked=d.moved?state.objects.filter(o=>{const r=M.rect(o);return r.left>=area.left&&r.right<=area.right&&r.bottom>=area.bottom&&r.top<=area.top;}).map(o=>o.id):[];setMapSelection(d.additive?[...selectedObjectIds,...picked]:picked);}
  }
  render();
 });
-svg.addEventListener('pointercancel',()=>{drag=null;ghost=null;render();});
+svg.addEventListener('pointercancel',()=>{if(drag?.kind==='fill-resize')fillArea=drag.original;else if(drag?.kind==='selectbox'&&drag.fill)fillArea=drag.previousArea;drag=null;ghost=null;safely(refreshFillPreview);render();});
 svg.addEventListener('pointerleave',()=>{if(!drag){ghost=null;renderMap();}});
 svg.addEventListener('wheel',e=>{e.preventDefault();if(drag)return;zoom(Math.exp(-e.deltaY*.0014),e.clientX,e.clientY);},{passive:false});
 function startPlayerDrag(e){
@@ -511,6 +545,11 @@ document.addEventListener('keydown',e=>{
  if(organizerOpen)return;
  if((e.key==='Delete'||e.key==='Backspace')&&selected()){e.preventDefault();commit(M.removeObjects(state,[...selectedObjectIds]));return;}
  const directions={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,1],ArrowDown:[0,-1]};
+ const fillHandle=e.target.closest('[data-fill-resize]');
+ if(directions[e.key]&&fillHandle&&fillArea&&mapMode==='fill'&&!drag){
+  e.preventDefault();const corner=fillHandle.dataset.fillResize,step=e.shiftKey?5:1,[dx,dy]=directions[e.key],x=(corner.endsWith('e')?fillArea.right:fillArea.left)+dx*step,y=(corner.startsWith('n')?fillArea.top:fillArea.bottom)+dy*step;
+  fillArea=resizeFillArea(fillArea,corner,{x,y});safely(refreshFillPreview);renderFillControls();renderMap();svg.querySelector(`[data-fill-resize="${corner}"]`)?.focus({preventScroll:true});return;
+ }
  if(directions[e.key]&&selected()){
   e.preventDefault();const o=selected(),step=e.shiftKey?5:1,[dx,dy]=directions[e.key],handle=e.target.closest('[data-resize]');
   if(handle&&o.type==='terrain'&&!o.terrainGroup&&selectedObjectIds.size===1){const corner=handle.dataset.resize,r=M.rect(o),x=(corner.endsWith('e')?r.right:r.left)+dx*step,y=(corner.startsWith('n')?r.top:r.bottom)+dy*step;safely(()=>commit(M.resizeTerrain(state,o.id,corner,x,y)));svg.querySelector(`[data-resize="${corner}"]`)?.focus({preventScroll:true});}

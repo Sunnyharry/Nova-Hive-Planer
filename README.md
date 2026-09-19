@@ -1,6 +1,6 @@
 # Nova Hive Planner
 
-Current application release: **1.1.6**. Increase the final number once per subsequent delivered update (1.1.7, 1.1.8, …); see `AGENTS.md`. The JSON schema version remains independent.
+Current application release: **1.1.7**. Increase the final number once per subsequent delivered update (1.1.8, 1.1.9, …); see `AGENTS.md`. The JSON schema version remains independent.
 
 A client-side Last War hive editor with English, German, French, Spanish, Portuguese, Vietnamese and Korean interfaces. Open `dist/index.html` in a modern browser, or serve the `dist` directory as static files. No dependencies, external assets, database or application login are required. The hosted Site has its own owner access policy.
 
@@ -58,7 +58,11 @@ Select touching or overlapping terrain pieces with Ctrl/Command-click or a selec
 
 The map toolbar offers **Pan view**, **Multi-select** and **Fill area**. Ctrl/Command-click adds or removes objects from the selection. Shift-drag starts a selection box from anywhere; in Multi-select mode, drag from empty space. Only fully enclosed pieces are selected, and a connected terrain shape is always selected as a whole. Drag any selected object to move the selection together, use arrow keys (Shift for five tiles), or enter X/Y offsets in the inspector. A collision cancels the entire move. Moving a selected reference changes its world coordinate just like any other selected object, while unselected objects remain fixed.
 
-Choose **Fill area**, draw a rectangle and select **0, 1 or 2 tiles** between bases. The preview shows whole 3×3 bases that fit inside both the rectangle and the 1000×1000 world, excluding terrain, existing buildings and the requested gap around existing bases. **Create bases** inserts the preview in one undoable step, up to the existing 800-object plan limit. This creates empty seats; **Autofill** then assigns players using their existing priorities and friend groups. Escape or Cancel discards the preview.
+Choose **Fill area**, draw a rectangle and select **0, 1 or 2 tiles** between bases. The base preview and count update while drawing. After releasing, drag any of the four gold corner handles to enlarge or shrink the area; the opposite corner stays fixed. The preview reports the rectangle’s whole-tile width and height and the exact number of new bases. Focus a corner and use arrow keys (Shift for five tiles) for precise resizing. Corners snap to tile boundaries and stay inside the world; a cancelled pointer gesture restores the preceding preview. The preview shows whole 3×3 bases that fit inside both the rectangle and the 1000×1000 world, excluding terrain, existing buildings and the requested gap around existing bases. **Create bases** inserts the preview in one undoable step, up to the existing 800-object plan limit. This creates empty seats; **Autofill** then assigns players using their existing priorities and friend groups. Escape or Cancel discards the preview.
+
+The fill grid is anchored to the Alliance Center in Season 4, or the Marshall in other modes. Without that object, it uses the retained map reference. Resizing the box only clips or reveals fixed grid positions. Candidates are ordered by distance from the reference before applying the 800-object cap; new seat numbers therefore start inside and work outward. Existing buildings and terrain remain fixed. A rectangle that excludes the center or obstacles next to it naturally prevents filling those inner positions.
+
+The first row alongside the 9×9 Alliance Center touches its footprint, meeting the maximum-one-tile rule. For gaps 0 and 1, the grid is uniform throughout. With gap 2, the intervals crossing the central band are one tile wider (a 3-tile base-to-base gap); all outer intervals retain the chosen 2-tile gap. This fits the larger center tightly without undershooting the selected base spacing. No half-tile coordinates are introduced.
 
 ## Persistence and validation
 
@@ -84,9 +88,11 @@ node test/map-editing.test.cjs
 node test/world-grid.test.cjs
 node test/workspace.test.cjs
 node test/save-open-handlers.test.cjs
+node test/area-fill.test.cjs
+node test/area-fill-handlers.test.cjs
 node test/i18n.test.cjs
 ```
 
-These cover layout geometry, imports, all season modes, priority-aware grouped autofill, averages competing with individuals, fixed anchors, split-group reporting, exact bottom-left terrain placement, union outlines and holes, terrain connections and persistence, atomic multiple-object movement, all three fill spacings, obstacle avoidance and object limits, clearing with intact undo snapshots, finite-world boundaries for every object type, fixed unselected world positions when moving a reference, legacy file migration, and all 405 localized messages in seven languages. Workspace tests cover all 21 variants, independent geometry and assignments, shared organization, legacy imports and malformed-file rejection. An additional test executes the actual Save/Open, confirmation, dropdown, reset and undo/redo handlers with rendering stubbed; it checks that a custom empty map returns exactly. Interface bindings and local assets were statically audited. Visual browser checks were not run in this update.
+These cover layout geometry, imports, all season modes, priority-aware grouped autofill, averages competing with individuals, fixed anchors, split-group reporting, exact bottom-left terrain placement, union outlines and holes, terrain connections and persistence, atomic multiple-object movement, all three fill spacings, obstacle avoidance and object limits, clearing with intact undo snapshots, finite-world boundaries for every object type, fixed unselected world positions when moving a reference, legacy file migration, and all 411 localized messages in seven languages. Workspace tests cover all 21 variants, independent geometry and assignments, shared organization, legacy imports and malformed-file rejection. An additional test executes the actual Save/Open, confirmation, dropdown, reset and undo/redo handlers with rendering stubbed; it checks that a custom empty map returns exactly. Area-fill tests cover all spacing choices, anchored grid stability, center clearance, central-first truncation, preview/creation equality, live drawing and four-corner resizing, keyboard sizing, cancellation, world edges and undo through the actual event handlers with a DOM test double. Interface bindings and local assets were statically audited. Visual browser checks were not run in this update.
 
 Optional WebMCP tools register only when `document.modelContext` supports them and use the same model and state as the visible planner. Their browser registration has not been tested.

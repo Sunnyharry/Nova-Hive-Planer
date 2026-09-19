@@ -183,13 +183,35 @@ function planBaseFill(state,area,gap=0){
  if(!area||![area.left,area.right,area.bottom,area.top].every(Number.isFinite)||!Number.isInteger(gap)||gap<0||gap>2)throw new Error(t('Ungültiger Füllbereich oder Basisabstand.'));
  const world=worldBounds(state),left=Math.max(world.left,Math.min(area.left,area.right)),right=Math.min(world.right,Math.max(area.left,area.right)),bottom=Math.max(world.bottom,Math.min(area.bottom,area.top)),top=Math.min(world.top,Math.max(area.bottom,area.top)),pitch=3+gap;
  const x0=Math.ceil(left+1.5-1e-8),y0=Math.ceil(bottom+1.5-1e-8),x1=Math.floor(right-1.5+1e-8),y1=Math.floor(top-1.5+1e-8),capacity=Math.max(0,800-state.objects.length);
- const positions=[],buckets=new Map();let skipped=0,limited=false;
+ if(x0>x1||y0>y1)return {positions:[],skipped:0,limited:false,gap};
+ const anchor=state.objects.find(o=>o.type===anchorType(state)),cx=anchor?.x??state.origin.mapX,cy=anchor?.y??state.origin.mapY;
+ // A 9-tile center fits exactly into the 3- and 4-tile lattices. With a
+ // 5-tile pitch, widen only the two central intervals to 6: the first bases
+ // still touch the center, without reducing the requested gap between bases.
+ // Axis positions never depend on the selection rectangle's starting corner.
+ function axis(center,lo,hi){
+  const values=[];
+  if(anchor?.type==='center'){
+   const inner=gap===0?[-3,0,3]:gap===1?[-2,2]:[0];
+   for(const offset of inner)if(center+offset>=lo&&center+offset<=hi)values.push(center+offset);
+   for(const sign of [-1,1])for(let offset=6;offset<=Math.max(Math.abs(lo-center),Math.abs(hi-center));offset+=pitch){const value=center+sign*offset;if(value>=lo&&value<=hi)values.push(value);}
+  }else for(let k=Math.ceil((lo-center)/pitch);k<=Math.floor((hi-center)/pitch);k++)values.push(center+k*pitch);
+  return values.sort((a,b)=>(a-center)**2-(b-center)**2||a-b);
+ }
+ const xs=axis(cx,x0,x1),ys=axis(cy,y0,y1).sort((a,b)=>(a-cy)**2-(b-cy)**2||b-a),positions=[],buckets=new Map();let skipped=0,limited=false;
  // Only nearby obstacles need inspection, even for large selected areas.
- for(const o of state.objects){const r=rect(o),pad=o.type==='base'?gap:0;for(let gx=Math.floor((r.left-pad)/16);gx<=Math.floor((r.right+pad)/16);gx++)for(let gy=Math.floor((r.bottom-pad)/16);gy<=Math.floor((r.top+pad)/16);gy++){const key=gx+','+gy;if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(o);}}
- outer:for(let y=y0;y<=y1;y+=pitch)for(let x=x0;x<=x1;x+=pitch){
-  if(positions.length>=capacity){limited=true;break outer;}
+ for(const original of state.objects){const o=original.type==='base'?{...original,w:original.w+2*gap,h:original.h+2*gap}:original,r=rect(o);for(let gx=Math.floor(r.left/16);gx<=Math.floor(r.right/16);gx++)for(let gy=Math.floor(r.bottom/16);gy<=Math.floor(r.top/16);gy++){const key=gx+','+gy;if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(o);}}
+ // Merge distance-sorted columns with a small heap instead of sorting up to
+ // 110,000 world-wide candidates on every live resize. Stop at the plan limit.
+ const heap=[],compare=(a,b)=>a.distance-b.distance||b.y-a.y||a.x-b.x;
+ function push(x,i){const y=ys[i],item={x,y,i,distance:(x-cx)**2+(y-cy)**2};let n=heap.length;heap.push(item);while(n){const p=(n-1)>>1;if(compare(heap[p],item)<=0)break;heap[n]=heap[p];n=p;}heap[n]=item;}
+ function pop(){const first=heap[0],last=heap.pop();if(heap.length){let n=0;while(n*2+1<heap.length){let c=n*2+1;if(c+1<heap.length&&compare(heap[c+1],heap[c])<0)c++;if(compare(last,heap[c])<=0)break;heap[n]=heap[c];n=c;}heap[n]=last;}return first;}
+ if(ys.length)for(const x of xs)push(x,0);
+ while(heap.length){
+  const {x,y,i}=pop();if(i+1<ys.length)push(x,i+1);
   const candidate={x,y,w:3,h:3},nearby=new Set();for(let gx=Math.floor((x-1.5)/16);gx<=Math.floor((x+1.5)/16);gx++)for(let gy=Math.floor((y-1.5)/16);gy<=Math.floor((y+1.5)/16);gy++)for(const o of buckets.get(gx+','+gy)??[])nearby.add(o);
-  if([...nearby].some(o=>overlaps(candidate,o.type==='base'?{...o,w:o.w+2*gap,h:o.h+2*gap}:o))){skipped++;continue;}
+  if([...nearby].some(o=>overlaps(candidate,o))){skipped++;continue;}
+  if(positions.length>=capacity){limited=true;break;}
   positions.push({x:x||0,y:y||0});
  }
  return {positions,skipped,limited,gap};

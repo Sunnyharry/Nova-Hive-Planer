@@ -11,7 +11,7 @@ for(const [key,values] of Object.entries(I.messages)){
 // Every explicitly referenced static or dynamic translation is present.
 const source=fs.readFileSync('dist/app.js','utf8')+'\n'+fs.readFileSync('dist/model.js','utf8')+'\n'+fs.readFileSync('dist/workspace.js','utf8');
 for(const match of source.matchAll(/\b(?:t|h)\('([^']+)'/g))assert.ok(I.messages[match[1]],'Missing message: '+match[1]);
-for(const key of ['Oben links ziehen','Oben rechts ziehen','Unten links ziehen','Unten rechts ziehen','Marshall 3 × 3','Füge Spieler hinzu und verteile sie rund um den Marshall.','{assigned} / {total} Plätze vergeben','Basis 3 × 3 · Marshall 3 × 3 · Koordinaten: linkes unteres Feld · Welt 1000 × 1000'])assert.ok(I.messages[key],'Missing conditional message: '+key);
+for(const key of ['Raster am Allianzzentrum: von innen nach außen, am Zentrum höchstens 1 Feld Abstand.','Raster am Marshall: von innen nach außen.','Oben links ziehen','Oben rechts ziehen','Unten links ziehen','Unten rechts ziehen','Marshall 3 × 3','Füge Spieler hinzu und verteile sie rund um den Marshall.','{assigned} / {total} Plätze vergeben','Basis 3 × 3 · Marshall 3 × 3 · Koordinaten: linkes unteres Feld · Welt 1000 × 1000'])assert.ok(I.messages[key],'Missing conditional message: '+key);
 const decode=s=>s.replaceAll('&#x27;',"'").replaceAll('&quot;','"').replaceAll('&amp;','&').replaceAll('&lt;','<').replaceAll('&gt;','>');
 const html=fs.readFileSync('dist/index.html','utf8');
 for(const match of html.matchAll(/data-i18n(?:-[a-z-]+)?="([^"]+)"/g))assert.ok(I.messages[decode(match[1])],'Missing static message: '+decode(match[1]));

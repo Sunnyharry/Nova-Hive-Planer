@@ -60,3 +60,5 @@ button.danger-solid{background:#8c333b;border-color:#be555d;color:#fff0ef;flex-s
 
 /* Keep the finite-world controls readable on narrow screens. */
 .zoom-controls{max-width:calc(100% - 24px);flex-wrap:wrap}.map-scale{max-width:calc(100% - 24px)}@media(max-width:600px){.zoom-controls{bottom:48px}.map-scale{font-size:12px}}
+
+#area-fill-summary{font-weight:650;color:#f5dfaa}#map .fill-area-handle{cursor:nwse-resize;outline:none}#map .fill-area-handle[data-fill-resize=ne],#map .fill-area-handle[data-fill-resize=sw]{cursor:nesw-resize}.fill-area-handle:focus-visible rect{stroke:#fff;stroke-width:3px;vector-effect:non-scaling-stroke}.fill-area-handle text{user-select:none;pointer-events:none}

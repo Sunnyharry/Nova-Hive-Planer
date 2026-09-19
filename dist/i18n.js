@@ -3243,6 +3243,54 @@ const messages={
   "Variante inválida.",
   "Biến thể không hợp lệ.",
   "잘못된 변형입니다."
+ ],
+ "Füllbereich: {corner}": [
+  "Fill area: {corner}",
+  "Zone à remplir : {corner}",
+  "Área de relleno: {corner}",
+  "Área de preenchimento: {corner}",
+  "Vùng lấp đầy: {corner}",
+  "채우기 영역: {corner}"
+ ],
+ "{w} × {h} Felder · {n} neue Basen · {blocked} blockierte Plätze": [
+  "{w} × {h} tiles · {n} new bases · {blocked} blocked positions",
+  "{w} × {h} cases · {n} nouvelles bases · {blocked} emplacements bloqués",
+  "{w} × {h} casillas · {n} bases nuevas · {blocked} posiciones bloqueadas",
+  "{w} × {h} quadrados · {n} novas bases · {blocked} posições bloqueadas",
+  "{w} × {h} ô · {n} căn cứ mới · {blocked} vị trí bị chặn",
+  "{w} × {h}칸 · 새 기지 {n}개 · 막힌 자리 {blocked}개"
+ ],
+ "Raster am Allianzzentrum: von innen nach außen, am Zentrum höchstens 1 Feld Abstand.": [
+  "Grid anchored to the Alliance Center: inside out, with at most 1 tile between the center and the first bases.",
+  "Grille ancrée au centre de l’alliance : de l’intérieur vers l’extérieur, avec au plus 1 case entre le centre et les premières bases.",
+  "Cuadrícula anclada al centro de la alianza: del interior al exterior, con un máximo de 1 casilla entre el centro y las primeras bases.",
+  "Grade ancorada no centro da aliança: de dentro para fora, com no máximo 1 quadrado entre o centro e as primeiras bases.",
+  "Lưới neo tại trung tâm liên minh: từ trong ra ngoài, cách trung tâm tối đa 1 ô ở hàng căn cứ đầu tiên.",
+  "연맹 센터를 기준으로 안쪽부터 바깥쪽으로 배치합니다. 센터와 첫 기지 사이 간격은 최대 1칸입니다."
+ ],
+ "Raster am Marshall: von innen nach außen.": [
+  "Grid anchored to the Marshall: inside out.",
+  "Grille ancrée au Marshall : de l’intérieur vers l’extérieur.",
+  "Cuadrícula anclada al Marshall: del interior al exterior.",
+  "Grade ancorada no Marshall: de dentro para fora.",
+  "Lưới neo tại Marshall: từ trong ra ngoài.",
+  "Marshall을 기준으로 안쪽부터 바깥쪽으로 배치합니다."
+ ],
+ "Ohne Zentrum bleibt das Raster am Kartenursprung ausgerichtet.": [
+  "Without a center, the grid stays aligned to the map reference point.",
+  "Sans centre, la grille reste alignée sur le point de référence de la carte.",
+  "Sin centro, la cuadrícula sigue alineada con el punto de referencia del mapa.",
+  "Sem centro, a grade permanece alinhada ao ponto de referência do mapa.",
+  "Khi chưa có trung tâm, lưới vẫn căn theo điểm tham chiếu của bản đồ.",
+  "센터가 없으면 지도의 기준점에 맞춰 격자를 유지합니다."
+ ],
+ "Ecken ziehen: Größe und Anzahl werden sofort aktualisiert. Am Eckpunkt funktionieren auch die Pfeiltasten (Umschalt: 5 Felder).": [
+  "Drag the corners: size and base count update immediately. You can also use arrow keys on a focused corner (Shift: 5 tiles).",
+  "Faites glisser les coins : la taille et le nombre de bases sont actualisés immédiatement. Les flèches fonctionnent aussi sur un coin sélectionné (Maj : 5 cases).",
+  "Arrastra las esquinas: el tamaño y el número de bases se actualizan al instante. También puedes usar las flechas en una esquina enfocada (Mayús: 5 casillas).",
+  "Arraste os cantos: o tamanho e a quantidade de bases são atualizados imediatamente. Também pode usar as setas em um canto selecionado (Shift: 5 quadrados).",
+  "Kéo các góc: kích thước và số căn cứ cập nhật ngay. Cũng có thể dùng phím mũi tên khi chọn góc (Shift: 5 ô).",
+  "모서리를 드래그하면 크기와 기지 수가 즉시 갱신됩니다. 모서리에 초점을 맞춘 뒤 화살표 키도 사용할 수 있습니다(Shift: 5칸)."
  ]
 };
 let language='de';
