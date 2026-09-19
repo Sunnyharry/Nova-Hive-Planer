@@ -2,12 +2,12 @@
    Internal SVG geometry uses centers; even dimensions have half-tile centers. */
 (function(root){
 'use strict';
-const SCHEMA='nova-hive-planner',VERSION=5,WORLD_SIZE=1000;
+const SCHEMA='nova-hive-planner',VERSION=6,WORLD_SIZE=1000;
 const t=(key,params={})=>globalThis.HiveI18n?.t(key,params)??key.replace(/\{(\w+)\}/g,(_,k)=>String(params[k]??'{'+k+'}'));
 const DEFAULT_NAMES={center:'Allianzzentrum',marshall:'Marshall’s Guard',terrain:'Terrain'};
 const PRIORITY_DEFAULTS=['Zuverlässiger Kern','Aktiv','Casual'];
 const priorityOf=player=>player?.priority??2;
-const priorityLabel=(state,level)=>state.priorityLabels?.[level-1]||t(PRIORITY_DEFAULTS[level-1]);
+const priorityLabel=(state,level,alliance=activeAlliance(state))=>priorityLabelsFor(state,alliance)[level-1]||t(PRIORITY_DEFAULTS[level-1]);
 const SEASONS=['off','1','2','3','4','5','6'];
 const emptyGroups=()=>Array.from({length:10},(_,i)=>({id:i+1,playerIds:[]}));
 const isSeason4=state=>(state.season??'4')==='4';
@@ -19,11 +19,28 @@ const uid=prefix=>`${prefix}_${globalThis.crypto?.randomUUID?.()??Math.random().
 const normalizeName=name=>String(name).trim().normalize('NFC');
 const nameKey=name=>normalizeName(name).toLocaleLowerCase();
 const finite=(n,min,max)=>Number.isFinite(n)&&n>=min&&n<=max;
+const ALLIANCE_COLORS=['#5b829f','#f2c75c','#6fd18b','#c196ed','#ee9276'];
+const allianceOf=value=>value?.alliance===undefined?1:value.alliance;
+const activeAlliance=state=>state.activeAlliance??1;
+const owns=(state,value)=>allianceOf(value)===activeAlliance(state);
+const allianceObjects=state=>state.objects.filter(o=>owns(state,o));
+const alliancePlayers=state=>state.players.filter(p=>owns(state,p));
+const allianceGroups=state=>(state.groups??[]).filter(g=>owns(state,g));
+const priorityLabelsFor=(state,id=activeAlliance(state))=>id===1?state.priorityLabels??['','','']:state.alliancePriorityLabels?.[id]??['','',''];
+const referencePoint=state=>state.objects.find(o=>owns(state,o)&&o.type===anchorType(state))??{x:state.origin.mapX,y:state.origin.mapY};
+function setAlliance(state,id){if(!Number.isInteger(id)||id<1||id>5)throw new Error(t('Allianz muss zwischen 1 und 5 liegen.'));return {...state,activeAlliance:id};}
+function resetAllianceLayout(state){
+ const id=activeAlliance(state),ref=referencePoint(state),origin={...state.origin,x:state.origin.x+ref.x-state.origin.mapX,y:state.origin.y+ref.y-state.origin.mapY,mapX:ref.x,mapY:ref.y};
+ const template=makeLayout(state.layout,{...state,origin,objects:allianceObjects(state)});
+ const next={...clone(state),objects:state.objects.filter(o=>!owns(state,o)).map(clone)};
+ for(const raw of template.objects){const o=id===1?raw:{...raw,id:uid(raw.type),alliance:id};assertPlacement(next,o);next.objects.push(o);}
+ return next;
+}
 function snap(value,size=3){const offset=size%2===0?.5:0;return Math.round(value-offset)+offset;}
 function rect(o){return {left:o.x-o.w/2,right:o.x+o.w/2,bottom:o.y-o.h/2,top:o.y+o.h/2};}
 function overlaps(a,b){const A=rect(a),B=rect(b);return A.left<B.right-1e-8&&A.right>B.left+1e-8&&A.bottom<B.top-1e-8&&A.top>B.bottom+1e-8;}
 function worldBounds(state){const left=state.origin.mapX-state.origin.x-.5,bottom=state.origin.mapY-state.origin.y-.5;return {left,right:left+WORLD_SIZE,bottom,top:bottom+WORLD_SIZE};}
-function referenceCoords(state){const half=isSeason4(state)?4:1;return {x:state.origin.x-half,y:state.origin.y-half};}
+function referenceCoords(state){const half=isSeason4(state)?4:1,p=referencePoint(state);return {x:state.origin.x+p.x-state.origin.mapX-half,y:state.origin.y+p.y-state.origin.mapY-half};}
 function coords(state,o){
  const r=o.terrainGroup?objectBounds(terrainParts(state,o)):rect(o);
  return {x:state.origin.x+r.left+.5-state.origin.mapX,y:state.origin.y+r.bottom+.5-state.origin.mapY};
@@ -36,7 +53,7 @@ function assertWorldPlacement(state,o){
  if(x<0||y<0||x+o.w>WORLD_SIZE||y+o.h>WORLD_SIZE)throw new Error(t('Das gesamte Objekt muss innerhalb der Karte liegen (X/Y 0–999).'));
 }
 function followReference(state,object){
- if(object.type!==anchorType(state))return;
+ if(object.type!==anchorType(state)||allianceOf(object)!==1)return;
  state.origin.x+=object.x-state.origin.mapX;state.origin.y+=object.y-state.origin.mapY;
  state.origin.mapX=object.x;state.origin.mapY=object.y;
 }
@@ -115,6 +132,7 @@ function assertPlacement(state,o,ignoreId=o.id){
 }
 function moveObject(state,id,x,y){
  const old=state.objects.find(o=>o.id===id);if(!old)throw new Error(t('Element nicht gefunden.'));
+ if(!owns(state,old))throw new Error(t('Wähle zuerst die passende Allianz.'));
  const candidate={...old,x:snap(x,old.w),y:snap(y,old.h)};
  if(old.terrainGroup){const dx=candidate.x-old.x,dy=candidate.y-old.y;return moveObjects(state,terrainParts(state,old).map(o=>({id:o.id,x:o.x+dx,y:o.y+dy})));}assertPlacement(state,candidate);
  const next=clone(state);Object.assign(next.objects.find(o=>o.id===id),candidate);
@@ -124,32 +142,35 @@ function moveObject(state,id,x,y){
 function moveObjects(state,entries){
  if(!Array.isArray(entries)||!entries.length||entries.length>800)throw new Error(t('Keine Elemente zum Verschieben ausgewählt.'));
  const ids=new Set(entries.map(e=>e?.id));if(ids.size!==entries.length||[...ids].some(id=>!state.objects.some(o=>o.id===id)))throw new Error(t('Ein ausgewähltes Element wurde nicht gefunden.'));
+ if(state.objects.some(o=>ids.has(o.id)&&!owns(state,o)))throw new Error(t('Wähle zuerst die passende Allianz.'));
  const candidates=entries.map(e=>{const old=state.objects.find(o=>o.id===e.id);if(e.x!==snap(e.x,old.w)||e.y!==snap(e.y,old.h))throw new Error(t('Ungültige Objektposition.'));return {...old,x:e.x,y:e.y};});
  for(const candidate of candidates)if(candidate.terrainGroup){const old=state.objects.find(o=>o.id===candidate.id),dx=candidate.x-old.x,dy=candidate.y-old.y;for(const part of terrainParts(state,old)){const moved=candidates.find(o=>o.id===part.id);if(!moved||moved.x-part.x!==dx||moved.y-part.y!==dy)throw new Error(t('Verbundene Terrainflächen müssen gemeinsam verschoben werden.'));}}
  for(const candidate of candidates)assertPlacement(state,candidate,ids);
  for(let i=0;i<candidates.length;i++)for(let j=0;j<i;j++)if(!(candidates[i].type==='terrain'&&candidates[j].type==='terrain')&&overlaps(candidates[i],candidates[j]))throw new Error(t('Die ausgewählten Elemente überschneiden sich nach dem Verschieben.'));
  const next=clone(state);for(const candidate of candidates)Object.assign(next.objects.find(o=>o.id===candidate.id),candidate);
- const anchor=candidates.find(o=>o.type===anchorType(state));if(anchor)followReference(next,anchor);
+ const anchor=candidates.find(o=>o.type===anchorType(state)&&allianceOf(o)===1);if(anchor)followReference(next,anchor);
  return next;
 }
-function nextBeacon(state){for(const char of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ')if(!state.objects.some(o=>o.beacon===char))return char;throw new Error(t('Alle Beacon-Buchstaben sind vergeben.'));}
-function makeObject(state,type,x=0,y=0){
+function nextBeacon(state){for(const char of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ')if(!allianceObjects(state).some(o=>o.beacon===char))return char;throw new Error(t('Alle Beacon-Buchstaben sind vergeben.'));}
+function makeObject(state,type,x=0,y=0){const o=makeObjectLocal(state,type,x,y);return activeAlliance(state)===1?o:{...o,alliance:activeAlliance(state)};}
+function makeObjectLocal(state,type,x=0,y=0){
  if(!isSeason4(state)&&['center','beacon'].includes(type))throw new Error(t('Allianzzentrum und Beacons sind nur in Season 4 verfügbar.'));
- if(type==='beacon'||type==='base')return {id:uid('base'),type:'base',x:snap(x),y:snap(y),w:3,h:3,slot:Math.max(0,...state.objects.filter(o=>o.type==='base').map(o=>o.slot))+1,playerId:null,beacon:type==='beacon'?nextBeacon(state):null,lightSize:25,electricians:40};
+ if(type==='beacon'||type==='base')return {id:uid('base'),type:'base',x:snap(x),y:snap(y),w:3,h:3,slot:Math.max(0,...allianceObjects(state).filter(o=>o.type==='base').map(o=>o.slot))+1,playerId:null,beacon:type==='beacon'?nextBeacon(state):null,lightSize:25,electricians:40};
  if(type==='center')return {id:uid('center'),type,name:'Allianzzentrum',x:snap(x,9),y:snap(y,9),w:9,h:9};
  if(type==='marshall')return {id:uid('marshall'),type,name:'Marshall’s Guard',x:snap(x),y:snap(y),w:3,h:3};
  if(type==='terrain')return {id:uid('terrain'),type,name:'Terrain',x:snap(x,4),y:snap(y,4),w:4,h:4};
  throw new Error(t('Unbekanntes Element.'));
 }
 function addObject(state,o){
+ if(!owns(state,o))throw new Error(t('Wähle zuerst die passende Allianz.'));
  if(state.objects.length>=800)throw new Error(t('Ein Plan kann höchstens 800 Elemente enthalten.'));
- if(['center','marshall'].includes(o.type)&&state.objects.some(q=>q.type===o.type))throw new Error(t('Dieses Element ist bereits auf der Karte.'));
+ if(['center','marshall'].includes(o.type)&&state.objects.some(q=>q.type===o.type&&allianceOf(q)===allianceOf(o)))throw new Error(t('Dieses Element ist bereits auf der Karte.'));
  assertPlacement(state,o);const next=clone(state);next.objects.push(clone(o));
  followReference(next,o);
  return next;
 }
 function removeObject(state,id){return removeObjects(state,[id]);}
-function removeObjects(state,ids){const set=new Set(expandObjectIds(state,ids));if(!set.size)return state;const next=clone(state);next.objects=next.objects.filter(o=>!set.has(o.id));return next;}
+function removeObjects(state,ids){const set=new Set(expandObjectIds(state,ids));if(!set.size)return state;if(state.objects.some(o=>set.has(o.id)&&!owns(state,o)))throw new Error(t('Wähle zuerst die passende Allianz.'));const next=clone(state);next.objects=next.objects.filter(o=>!set.has(o.id));return next;}
 function terrainTouching(a,b){const A=rect(a),B=rect(b);return A.left<=B.right+1e-7&&A.right>=B.left-1e-7&&A.bottom<=B.top+1e-7&&A.top>=B.bottom-1e-7;}
 function terrainsConnected(parts){
  if(!parts.length)return false;const seen=new Set([parts[0].id]),queue=[parts[0]];
@@ -158,13 +179,14 @@ function terrainsConnected(parts){
 }
 function connectTerrains(state,ids){
  const set=new Set(expandObjectIds(state,ids)),parts=state.objects.filter(o=>set.has(o.id));
+ if(parts.some(o=>!owns(state,o)))throw new Error(t('Wähle zuerst die passende Allianz.'));
  if(parts.length<2)throw new Error(t('Wähle mindestens zwei Terrainflächen aus.'));
- if(parts.some(o=>o.type!=='terrain'))throw new Error(t('Nur Terrainflächen können verbunden werden.'));
+ if(parts.some(o=>o.type!=='terrain'||allianceOf(o)!==allianceOf(parts[0])))throw new Error(t('Nur Terrainflächen können verbunden werden.'));
  if(!terrainsConnected(parts))throw new Error(t('Die ausgewählten Terrainflächen berühren sich nicht durchgehend.'));
  const groupId=parts.find(o=>o.terrainGroup)?.terrainGroup??uid('terrain_group'),next=clone(state);
  for(const o of next.objects)if(set.has(o.id))o.terrainGroup=groupId;return next;
 }
-function disconnectTerrains(state,ids){const set=new Set(expandObjectIds(state,ids)),next=clone(state);for(const o of next.objects)if(set.has(o.id))delete o.terrainGroup;return next;}
+function disconnectTerrains(state,ids){const set=new Set(expandObjectIds(state,ids));if(state.objects.some(o=>set.has(o.id)&&!owns(state,o)))throw new Error(t('Wähle zuerst die passende Allianz.'));const next=clone(state);for(const o of next.objects)if(set.has(o.id))delete o.terrainGroup;return next;}
 // Sweep rectangle edges to draw the union with holes and no internal borders.
 function terrainUnionGeometry(parts){
  const rectangles=parts.map(rect),xs=[...new Set(rectangles.flatMap(r=>[r.left,r.right]))].sort((a,b)=>a-b),slices=[],edges=[];
@@ -184,7 +206,7 @@ function planBaseFill(state,area,gap=0){
  const world=worldBounds(state),left=Math.max(world.left,Math.min(area.left,area.right)),right=Math.min(world.right,Math.max(area.left,area.right)),bottom=Math.max(world.bottom,Math.min(area.bottom,area.top)),top=Math.min(world.top,Math.max(area.bottom,area.top)),pitch=3+gap;
  const x0=Math.ceil(left+1.5-1e-8),y0=Math.ceil(bottom+1.5-1e-8),x1=Math.floor(right-1.5+1e-8),y1=Math.floor(top-1.5+1e-8),capacity=Math.max(0,800-state.objects.length);
  if(x0>x1||y0>y1)return {positions:[],skipped:0,limited:false,gap};
- const anchor=state.objects.find(o=>o.type===anchorType(state)),cx=anchor?.x??state.origin.mapX,cy=anchor?.y??state.origin.mapY;
+ const anchor=state.objects.find(o=>owns(state,o)&&o.type===anchorType(state)),cx=anchor?.x??state.origin.mapX,cy=anchor?.y??state.origin.mapY;
  // Never widen an interval beyond the chosen pitch: a 6-tile interval
  // leaves a hostile 3x3 landing space. For gap 2, use two inner axes at
  // -2/+2 (one empty tile), then +/-7, +/-12, ... (two empty tiles).
@@ -221,8 +243,8 @@ function planBaseFill(state,area,gap=0){
 }
 function fillBases(state,area,gap=0){
  const preview=planBaseFill(state,area,gap);if(!preview.positions.length)return {state,added:0,skipped:preview.skipped,limited:preview.limited,ids:[]};
- const next=clone(state),ids=[];let slot=Math.max(0,...state.objects.filter(o=>o.type==='base').map(o=>o.slot));
- for(const {x,y} of preview.positions){const id=uid('base');ids.push(id);next.objects.push({id,type:'base',x,y,w:3,h:3,slot:++slot,playerId:null,beacon:null,lightSize:25,electricians:40,spacing:gap});}
+ const next=clone(state),ids=[];let slot=Math.max(0,...allianceObjects(state).filter(o=>o.type==='base').map(o=>o.slot));
+ for(const {x,y} of preview.positions){const id=uid('base');ids.push(id);next.objects.push({id,type:'base',x,y,w:3,h:3,slot:++slot,playerId:null,beacon:null,lightSize:25,electricians:40,spacing:gap,...(activeAlliance(state)===1?{}:{alliance:activeAlliance(state)})});}
  return {state:next,added:ids.length,skipped:preview.skipped,limited:preview.limited,ids};
 }
 function parsePlayerFile(text,format='txt'){
@@ -254,24 +276,24 @@ function decodePlayerFile(buffer){
 function addPlayerNames(state,names){
  const raw=names.map(normalizeName).filter(Boolean);
  if(raw.some(name=>name.length>80))throw new Error(t('Ein Name darf höchstens 80 Zeichen lang sein.'));
- const next=clone(state),seen=new Set(next.players.map(p=>nameKey(p.name)));let added=0;
- for(const name of raw){if(seen.has(nameKey(name)))continue;seen.add(nameKey(name));next.players.push({id:uid('player'),name,priority:2});added++;}
- if(next.players.length>300)throw new Error(t('Die Liste kann höchstens 300 Spieler enthalten.'));
+ const next=clone(state),seen=new Set(alliancePlayers(next).map(p=>nameKey(p.name)));let added=0;
+ for(const name of raw){if(seen.has(nameKey(name)))continue;seen.add(nameKey(name));next.players.push({id:uid('player'),name,priority:2,...(activeAlliance(state)===1?{}:{alliance:activeAlliance(state)})});added++;}
+ if(alliancePlayers(next).length>300)throw new Error(t('Die Liste kann höchstens 300 Spieler enthalten.'));
  return {state:next,added,skipped:raw.length-added};
 }
 function addPlayers(state,text){return addPlayerNames(state,parsePlayerFile(text,'txt'));}
 function importPlayers(state,text,format){return addPlayerNames(state,parsePlayerFile(text,format));}
 function autofillOptions(state,includeBeacons=false){
  const occupied=new Set(state.objects.filter(o=>o.playerId).map(o=>o.playerId));
- const players=state.players.filter(p=>!occupied.has(p.id));
- const empty=state.objects.filter(o=>o.type==='base'&&!o.playerId);
- const distance=o=>(o.x-state.origin.mapX)**2+(o.y-state.origin.mapY)**2;
+ const players=alliancePlayers(state).filter(p=>!occupied.has(p.id));
+ const empty=allianceObjects(state).filter(o=>o.type==='base'&&!o.playerId);
+ const distance=o=>(o.x-referencePoint(state).x)**2+(o.y-referencePoint(state).y)**2;
  const seats=empty.filter(o=>includeBeacons||!o.beacon).sort((a,b)=>distance(a)-distance(b)||a.slot-b.slot||a.id.localeCompare(b.id));
  return {players,seats,reserved:includeBeacons?0:empty.filter(o=>o.beacon).length};
 }
 function groupForPlayer(state,id){return (state.groups??[]).find(g=>g.playerIds.includes(id))??null;}
 function requirePlayerIds(state,playerIds){
- if(!Array.isArray(playerIds)||!playerIds.length||playerIds.length>300||playerIds.some(id=>!state.players.some(p=>p.id===id)))throw new Error(t('Spieler nicht gefunden.'));
+ if(!Array.isArray(playerIds)||!playerIds.length||playerIds.length>300||playerIds.some(id=>!alliancePlayers(state).some(p=>p.id===id)))throw new Error(t('Spieler nicht gefunden.'));
  return new Set(playerIds);
 }
 function setPlayerGroups(state,playerIds,groupId){
@@ -280,7 +302,7 @@ function setPlayerGroups(state,playerIds,groupId){
  if([...ids].every(id=>(groupForPlayer(state,id)?.id??null)===groupId))return state;
  const next=clone(state);next.groups=clone(next.groups??emptyGroups());
  for(const g of next.groups)g.playerIds=g.playerIds.filter(id=>!ids.has(id));
- if(groupId!==null){let group=next.groups.find(g=>g.id===groupId);if(!group){group={id:groupId,playerIds:[]};next.groups.push(group);}group.playerIds.push(...state.players.filter(p=>ids.has(p.id)).map(p=>p.id));}
+ if(groupId!==null){let group=allianceGroups(next).find(g=>g.id===groupId);if(!group){group={id:groupId,playerIds:[],...(activeAlliance(state)===1?{}:{alliance:activeAlliance(state)})};next.groups.push(group);}group.playerIds.push(...state.players.filter(p=>ids.has(p.id)).map(p=>p.id));}
  return next;
 }
 function setPlayerGroup(state,playerId,groupId){return setPlayerGroups(state,[playerId],groupId);}
@@ -292,10 +314,10 @@ function setPlayerPriorities(state,playerIds,priority){
 }
 function setPriorityLabel(state,level,label){
  if(!Number.isInteger(level)||level<1||level>3||typeof label!=='string'||label.length>40)throw new Error(t('Die Prioritätsbezeichnung darf höchstens 40 Zeichen haben.'));
- const next=clone(state);next.priorityLabels=clone(next.priorityLabels??['','','']);next.priorityLabels[level-1]=normalizeName(label);return next;
+ const next=clone(state),id=activeAlliance(state),labels=clone(priorityLabelsFor(state));labels[level-1]=normalizeName(label);if(id===1)next.priorityLabels=labels;else{next.alliancePriorityLabels??={};next.alliancePriorityLabels[id]=labels;}return next;
 }
 function groupPriority(state,group){const members=state.players.filter(p=>group.playerIds.includes(p.id));return members.length?members.reduce((sum,p)=>sum+priorityOf(p),0)/members.length:2;}
-function clearPlayers(state){const next=clone(state);next.players=[];next.groups=emptyGroups();for(const o of next.objects)if(o.type==='base')o.playerId=null;return next;}
+function clearPlayers(state){const next=clone(state);next.players=next.players.filter(p=>!owns(state,p));next.groups=[...next.groups.filter(g=>!owns(state,g)),...emptyGroups().map(g=>activeAlliance(state)===1?g:{...g,alliance:activeAlliance(state)})];for(const o of next.objects)if(o.type==='base'&&owns(state,o))o.playerId=null;return next;}
 function areNeighbors(a,b,gap=1){gap=Math.max(gap,a.spacing??0,b.spacing??0);return a.id!==b.id&&Math.abs(a.x-b.x)<=(a.w+b.w)/2+gap+1e-8&&Math.abs(a.y-b.y)<=(a.h+b.h)/2+gap+1e-8;}
 function groupComponents(objects,gap=1){
  const unseen=new Set(objects.map((_,i)=>i));let count=0;
@@ -308,7 +330,7 @@ const pairDistance=(a,b)=>(a.x-b.x)**2+(a.y-b.y)**2;
 const compareScores=(a,b)=>{for(let i=0;i<a.length;i++)if(Math.abs(a[i]-b[i])>1e-8)return a[i]-b[i];return 0;};
 function groupSeats(state,free,anchors,count){
  if(!count||!free.length)return [];
- const center=o=>(o.x-state.origin.mapX)**2+(o.y-state.origin.mapY)**2,gap=state.layout==='compact'?0:1;
+ const center=o=>(o.x-referencePoint(state).x)**2+(o.y-referencePoint(state).y)**2,gap=state.layout==='compact'?0:1;
  // Bounded multi-start growth: favor connected, mutually adjacent clusters, then proximity to the anchor.
  const seedCount=count>20?12:48;
  const seeds=[...free].sort((a,b)=>{
@@ -338,10 +360,10 @@ function autofill(state,includeBeacons=false){
  if(!assigned)return {state,assigned:0,remaining:players.length,freeSeats:seats.length,reserved,splitGroups:[]};
  const next=clone(state),unassigned=new Set(players.map(p=>p.id)),available=new Map(seats.map(o=>[o.id,o])),placements=new Map();
  const order=new Map(state.players.map((p,i)=>[p.id,i])),byId=new Map(state.players.map(p=>[p.id,p]));
- const distance=o=>(o.x-state.origin.mapX)**2+(o.y-state.origin.mapY)**2;
+ const distance=o=>(o.x-referencePoint(state).x)**2+(o.y-referencePoint(state).y)**2;
  const seatOrder=(a,b)=>distance(a)-distance(b)||a.slot-b.slot||a.id.localeCompare(b.id);
  const units=[],grouped=new Set();
- for(const group of state.groups??[]){
+ for(const group of allianceGroups(state)){
   const members=group.playerIds.filter(id=>unassigned.has(id));if(!members.length)continue;
   for(const id of members)grouped.add(id);
   units.push({members,anchors:state.objects.filter(o=>group.playerIds.includes(o.playerId)),score:groupPriority(state,group),order:Math.min(...group.playerIds.map(id=>order.get(id)))});
@@ -365,26 +387,28 @@ function autofill(state,includeBeacons=false){
 function assign(state,playerId,objectId,replace=false){
  const obj=state.objects.find(o=>o.id===objectId);
  if(!obj||obj.type!=='base')throw new Error(t('Spieler können nur auf einer Basis sitzen.'));
- if(!state.players.some(p=>p.id===playerId))throw new Error(t('Spieler nicht gefunden.'));
+ if(!alliancePlayers(state).some(p=>p.id===playerId))throw new Error(t('Spieler nicht gefunden.'));
+ if(!owns(state,obj))throw new Error(t('Wähle zuerst die passende Allianz.'));
  if(obj.playerId&&obj.playerId!==playerId&&!replace)throw new Error(t('Dieser Platz ist bereits vergeben. Wähle einen freien Platz.'));
  const next=clone(state);for(const o of next.objects)if(o.playerId===playerId)o.playerId=null;
  next.objects.find(o=>o.id===objectId).playerId=playerId;return next;
 }
-function unassign(state,objectId){const next=clone(state);const obj=next.objects.find(o=>o.id===objectId);if(obj?.type==='base')obj.playerId=null;return next;}
+function unassign(state,objectId){const next=clone(state);const obj=next.objects.find(o=>o.id===objectId);if(obj&&!owns(state,obj))throw new Error(t('Wähle zuerst die passende Allianz.'));if(obj?.type==='base')obj.playerId=null;return next;}
 function unassignAll(state){
- if(!state.objects.some(o=>o.type==='base'&&o.playerId))return state;
- const next=clone(state);for(const o of next.objects)if(o.type==='base')o.playerId=null;return next;
+ if(!allianceObjects(state).some(o=>o.type==='base'&&o.playerId))return state;
+ const next=clone(state);for(const o of next.objects)if(o.type==='base'&&owns(state,o))o.playerId=null;return next;
 }
-function removePlayer(state,id){const next=clone(state);next.players=next.players.filter(p=>p.id!==id);for(const g of next.groups??[])g.playerIds=g.playerIds.filter(p=>p!==id);for(const o of next.objects)if(o.playerId===id)o.playerId=null;return next;}
+function removePlayer(state,id){requirePlayerIds(state,[id]);const next=clone(state);next.players=next.players.filter(p=>p.id!==id);for(const g of next.groups??[])g.playerIds=g.playerIds.filter(p=>p!==id);for(const o of next.objects)if(o.playerId===id)o.playerId=null;return next;}
 // Align the entire plan via its reference's bottom-left tile. Individual moves never recalibrate the world.
 function setOrigin(state,x,y){
  requireCoordinates(x,y);const half=isSeason4(state)?4:1;
+ if(activeAlliance(state)!==1||state.objects.some(o=>allianceOf(o)!==1)){const ref=referenceCoords(state),dx=x-ref.x,dy=y-ref.y,objects=allianceObjects(state);if(!objects.length)throw new Error(t('Platziere zuerst das Zentrum dieser Allianz.'));return moveObjects(state,objects.map(o=>({id:o.id,x:o.x+dx,y:o.y+dy})));}
  if(x+half*2>=WORLD_SIZE||y+half*2>=WORLD_SIZE)throw new Error(t('Das gesamte Objekt muss innerhalb der Karte liegen (X/Y 0–999).'));
  const next={...clone(state),origin:{...state.origin,x:x+half,y:y+half}};
  for(const o of next.objects)assertWorldPlacement(next,o);return next;
 }
 function updateObject(state,id,patch){
- const next=clone(state),obj=next.objects.find(o=>o.id===id);if(!obj)throw new Error(t('Element nicht gefunden.'));
+ const next=clone(state),obj=next.objects.find(o=>o.id===id);if(!obj)throw new Error(t('Element nicht gefunden.'));if(!owns(state,obj))throw new Error(t('Wähle zuerst die passende Allianz.'));
  if(obj.type==='terrain'){
   if(obj.terrainGroup&&(patch.w!==undefined||patch.h!==undefined))throw new Error(t('Löse die Terrainverbindung, um einzelne Teile zu vergrößern.'));
   const oldRect=rect(obj);
@@ -394,7 +418,7 @@ function updateObject(state,id,patch){
  }
  if(patch.name!==undefined&&obj.type!=='base'){const name=normalizeName(patch.name).slice(0,80);obj.name=name||DEFAULT_NAMES[obj.type];if(name)obj.customName=true;else delete obj.customName;}
  if(obj.type==='base'){
-  if(patch.beacon!==undefined){if(patch.beacon!==null&&!/^[A-Z]$/.test(patch.beacon))throw new Error(t('Beacon-Buchstabe: A bis Z.'));if(patch.beacon&&next.objects.some(q=>q.id!==id&&q.beacon===patch.beacon))throw new Error(t('Dieser Beacon-Buchstabe ist bereits vergeben.'));obj.beacon=patch.beacon;}
+  if(patch.beacon!==undefined){if(patch.beacon!==null&&!/^[A-Z]$/.test(patch.beacon))throw new Error(t('Beacon-Buchstabe: A bis Z.'));if(patch.beacon&&next.objects.some(q=>q.id!==id&&q.beacon===patch.beacon&&allianceOf(q)===allianceOf(obj)))throw new Error(t('Dieser Beacon-Buchstabe ist bereits vergeben.'));obj.beacon=patch.beacon;}
   if(patch.lightSize!==undefined){if(!Number.isInteger(patch.lightSize)||!finite(patch.lightSize,1,101))throw new Error(t('Lichtbreite: 1 bis 101 Felder.'));obj.lightSize=patch.lightSize;}
   if(patch.electricians!==undefined){if(!Number.isInteger(patch.electricians)||!finite(patch.electricians,0,100))throw new Error(t('Elektriker: 0 bis 100.'));obj.electricians=patch.electricians;}
  }
@@ -406,10 +430,10 @@ function terrainResizeCandidate(o,corner,x,y){
  const w=Math.max(1,Math.min(60,Math.round((x-fixedX)*(east?1:-1)))),h=Math.max(1,Math.min(60,Math.round((y-fixedY)*(north?1:-1))));
  return {...o,w,h,x:fixedX+(east?1:-1)*w/2,y:fixedY+(north?1:-1)*h/2};
 }
-function resizeTerrain(state,id,corner,x,y){const o=state.objects.find(o=>o.id===id),candidate=terrainResizeCandidate(o,corner,x,y);assertPlacement(state,candidate);const next=clone(state);Object.assign(next.objects.find(o=>o.id===id),candidate);return next;}
+function resizeTerrain(state,id,corner,x,y){const o=state.objects.find(o=>o.id===id),candidate=terrainResizeCandidate(o,corner,x,y);if(!owns(state,o))throw new Error(t('Wähle zuerst die passende Allianz.'));assertPlacement(state,candidate);const next=clone(state);Object.assign(next.objects.find(o=>o.id===id),candidate);return next;}
 
 function coverage(state,o){
- const lights=state.objects.filter(q=>q.type==='base'&&q.beacon).map(q=>({x:q.x,y:q.y,w:q.lightSize,h:q.lightSize}));
+ const lights=state.objects.filter(q=>q.type==='base'&&q.beacon&&allianceOf(q)===allianceOf(o)).map(q=>({x:q.x,y:q.y,w:q.lightSize,h:q.lightSize}));
  const r=rect(o),contains=(a,x,y)=>{const b=rect(a);return x>=b.left-1e-8&&x<=b.right+1e-8&&y>=b.bottom-1e-8&&y<=b.top+1e-8;};
  const singleFull=lights.some(q=>contains(q,r.left,r.bottom)&&contains(q,r.right,r.top));
  const center=lights.some(q=>contains(q,o.x,o.y));
@@ -428,54 +452,58 @@ function bounds(state,includeLight=state.showLight){
  const rs=all.map(rect);return {left:Math.min(...rs.map(r=>r.left)),right:Math.max(...rs.map(r=>r.right)),bottom:Math.min(...rs.map(r=>r.bottom)),top:Math.max(...rs.map(r=>r.top))};
 }
 function validate(raw){
- if(!raw||raw.schema!==SCHEMA||![1,2,3,4,VERSION].includes(raw.version))throw new Error(t('Das ist keine unterstützte Hive-Plan-Datei.'));
+ if(!raw||raw.schema!==SCHEMA||![1,2,3,4,5,VERSION].includes(raw.version))throw new Error(t('Das ist keine unterstützte Hive-Plan-Datei.'));
  if(typeof raw.title!=='string'||raw.title.length>80)throw new Error(t('Ungültiger Planname.'));
  if(!raw.origin||!['x','y','mapX','mapY'].every(k=>Number.isSafeInteger(raw.origin[k])))throw new Error(t('Ungültiger Koordinatenursprung.'));
  if(!finite(raw.origin.x,0,999999)||!finite(raw.origin.y,0,999999)||!finite(raw.origin.mapX,-1000000000,1000000000)||!finite(raw.origin.mapY,-1000000000,1000000000))throw new Error(t('Ungültiger Koordinatenursprung.'));
  if(raw.origin.x>999||raw.origin.y>999)throw new Error(t(raw.version<5?'Der ältere Plan liegt außerhalb der neuen Karte (X/Y 0–999) und wurde nicht geladen.':'Ungültiger Koordinatenursprung.'));
- if(!Array.isArray(raw.players)||raw.players.length>300||!Array.isArray(raw.objects)||raw.objects.length>800)throw new Error(t('Die Datei enthält zu viele oder ungültige Elemente.'));
+ if(!Array.isArray(raw.players)||raw.players.length>1500||!Array.isArray(raw.objects)||raw.objects.length>800)throw new Error(t('Die Datei enthält zu viele oder ungültige Elemente.'));
  const season=raw.version===1?'4':raw.season;
  if(!SEASONS.includes(season))throw new Error(t('Ungültige Season.'));
  const state={schema:SCHEMA,version:VERSION,season,groups:[],priorityLabels:['','',''],title:raw.title,origin:{x:raw.origin.x,y:raw.origin.y,mapX:raw.origin.mapX,mapY:raw.origin.mapY},showLight:raw.showLight!==false,layout:['spaced','compact','empty'].includes(raw.layout)?raw.layout:'empty',players:[],objects:[]};
  if(raw.version>=3){if(!Array.isArray(raw.priorityLabels)||raw.priorityLabels.length!==3||raw.priorityLabels.some(v=>typeof v!=='string'||v.length>40))throw new Error(t('Ungültige Prioritätsbezeichnungen.'));state.priorityLabels=raw.priorityLabels.map(normalizeName);}
- const ids=new Set(),names=new Set(),assigned=new Set(),beacons=new Set();
+ const validAlliance=id=>Number.isInteger(id)&&id>=1&&id<=5;
+ if(raw.activeAlliance!==undefined){if(!validAlliance(raw.activeAlliance))throw new Error(t('Allianz muss zwischen 1 und 5 liegen.'));state.activeAlliance=raw.activeAlliance;}
+ if(raw.alliancePriorityLabels!==undefined){if(!raw.alliancePriorityLabels||typeof raw.alliancePriorityLabels!=='object'||Array.isArray(raw.alliancePriorityLabels))throw new Error(t('Ungültige Prioritätsbezeichnungen.'));state.alliancePriorityLabels={};for(const [key,labels] of Object.entries(raw.alliancePriorityLabels)){if(!['2','3','4','5'].includes(key)||!Array.isArray(labels)||labels.length!==3||labels.some(v=>typeof v!=='string'||v.length>40))throw new Error(t('Ungültige Prioritätsbezeichnungen.'));state.alliancePriorityLabels[key]=labels.map(normalizeName);}}
+ const ids=new Set(),names=new Set(),assigned=new Set(),beacons=new Set(),playerAlliances=new Map();
  const validId=id=>typeof id==='string'&&id.length>0&&id.length<=100&&/^[A-Za-z0-9_-]+$/.test(id);
- for(const p of raw.players){if(!p||!validId(p.id)||ids.has(p.id)||typeof p.name!=='string'||!normalizeName(p.name)||p.name.length>80||names.has(nameKey(p.name)))throw new Error(t('Ungültige oder doppelte Spieler.'));ids.add(p.id);names.add(nameKey(p.name));const priority=raw.version>=3?p.priority:2;if(!Number.isInteger(priority)||priority<1||priority>3)throw new Error(t('Priorität muss 1, 2 oder 3 sein.'));state.players.push({id:p.id,name:normalizeName(p.name),priority});}
+ for(const p of raw.players){if(!p||!validId(p.id)||ids.has(p.id)||typeof p.name!=='string'||!normalizeName(p.name)||p.name.length>80||names.has(allianceOf(p)+':'+nameKey(p.name))||!validAlliance(allianceOf(p)))throw new Error(t('Ungültige oder doppelte Spieler.'));ids.add(p.id);names.add(allianceOf(p)+':'+nameKey(p.name));playerAlliances.set(p.id,allianceOf(p));const priority=raw.version>=3?p.priority:2;if(!Number.isInteger(priority)||priority<1||priority>3)throw new Error(t('Priorität muss 1, 2 oder 3 sein.'));state.players.push({id:p.id,name:normalizeName(p.name),priority,...(p.alliance===undefined?{}:{alliance:p.alliance})});}
+ for(let id=1;id<=5;id++)if(state.players.filter(p=>allianceOf(p)===id).length>300)throw new Error(t('Die Liste kann höchstens 300 Spieler enthalten.'));
  const groups=raw.version===1?emptyGroups():raw.groups,groupIds=new Set(),groupedPlayers=new Set();
- if(!Array.isArray(groups)||groups.length>10)throw new Error(t('Ungültige Gruppenliste.'));
+ if(!Array.isArray(groups)||groups.length>50)throw new Error(t('Ungültige Gruppenliste.'));
  for(const g of groups){
-  if(!g||!Number.isInteger(g.id)||g.id<1||g.id>10||groupIds.has(g.id)||!Array.isArray(g.playerIds)||g.playerIds.length>300)throw new Error(t('Ungültige Gruppenliste.'));
-  groupIds.add(g.id);const playerIds=[];
-  for(const id of g.playerIds){if(!ids.has(id)||groupedPlayers.has(id))throw new Error(t('Ein Spieler darf nur einer Gruppe angehören.'));groupedPlayers.add(id);playerIds.push(id);}
-  state.groups.push({id:g.id,playerIds});
+  if(!g||!Number.isInteger(g.id)||g.id<1||g.id>10||groupIds.has(allianceOf(g)+':'+g.id)||!validAlliance(allianceOf(g))||!Array.isArray(g.playerIds)||g.playerIds.length>300)throw new Error(t('Ungültige Gruppenliste.'));
+  groupIds.add(allianceOf(g)+':'+g.id);const playerIds=[];
+  for(const id of g.playerIds){if(!ids.has(id)||groupedPlayers.has(id)||playerAlliances.get(id)!==allianceOf(g))throw new Error(t('Ein Spieler darf nur einer Gruppe angehören.'));groupedPlayers.add(id);playerIds.push(id);}
+  state.groups.push({id:g.id,playerIds,...(g.alliance===undefined?{}:{alliance:g.alliance})});
  }
  if(!isSeason4(state))state.showLight=false;
- const objIds=new Set();let centerCount=0,marshallCount=0;
+ const objIds=new Set(),centers=new Set(),marshalls=new Set(),terrainOwners=new Map();
  for(const o of raw.objects){
-  if(!o||!validId(o.id)||objIds.has(o.id)||!['base','center','marshall','terrain'].includes(o.type)||!finite(o.x,-1000001000,1000001000)||!finite(o.y,-1000001000,1000001000))throw new Error(t('Ungültiges Kartenelement.'));
+  if(!o||!validAlliance(allianceOf(o))||!validId(o.id)||objIds.has(o.id)||!['base','center','marshall','terrain'].includes(o.type)||!finite(o.x,-1000001000,1000001000)||!finite(o.y,-1000001000,1000001000))throw new Error(t('Ungültiges Kartenelement.'));
   objIds.add(o.id);const fixed=o.type==='center'?9:3,w=o.type==='terrain'?o.w:fixed,h=o.type==='terrain'?o.h:fixed;
   const terrainPosition=o.type==='terrain'&&(raw.version<5?(Number.isInteger(o.x*2)&&Number.isInteger(o.y*2)):(o.x===snap(o.x,w)&&o.y===snap(o.y,h)));
   if(!Number.isInteger(w)||!Number.isInteger(h)||!finite(w,1,60)||!finite(h,1,60)||o.w!==w||o.h!==h||!(o.type==='terrain'?terrainPosition:(o.x===snap(o.x,w)&&o.y===snap(o.y,h))))throw new Error(t('Ungültige Größe oder Position eines Elements.'));
-  const q={id:o.id,type:o.type,x:o.x,y:o.y,w,h};
+  const q={id:o.id,type:o.type,x:o.x,y:o.y,w,h,...(o.alliance===undefined?{}:{alliance:o.alliance})};
   if(raw.version<5&&o.type==='terrain'){q.x=Math.floor(o.x-(w-1)/2)+(w-1)/2;q.y=Math.floor(o.y-(h-1)/2)+(h-1)/2;}
   if(o.type==='base'){
    if(!Number.isInteger(o.slot)||!finite(o.slot,1,100000)||!Number.isInteger(o.lightSize)||!finite(o.lightSize,1,101)||!Number.isInteger(o.electricians)||!finite(o.electricians,0,100))throw new Error(t('Ungültige Basis-Einstellungen.'));
-   if(o.playerId!==null&&(!ids.has(o.playerId)||assigned.has(o.playerId)))throw new Error(t('Eine Spielerzuweisung ist ungültig oder doppelt.'));
+   if(o.playerId!==null&&(!ids.has(o.playerId)||assigned.has(o.playerId)||playerAlliances.get(o.playerId)!==allianceOf(o)))throw new Error(t('Eine Spielerzuweisung ist ungültig oder doppelt.'));
    if(o.playerId)assigned.add(o.playerId);
-   if(o.beacon!==null&&(!/^[A-Z]$/.test(o.beacon)||beacons.has(o.beacon)))throw new Error(t('Ungültige oder doppelte Beacons.'));
-   if(o.beacon)beacons.add(o.beacon);
+   if(o.beacon!==null&&(!/^[A-Z]$/.test(o.beacon)||beacons.has(allianceOf(o)+':'+o.beacon)))throw new Error(t('Ungültige oder doppelte Beacons.'));
+   if(o.beacon)beacons.add(allianceOf(o)+':'+o.beacon);
    Object.assign(q,{slot:o.slot,playerId:o.playerId,beacon:o.beacon,lightSize:o.lightSize,electricians:o.electricians});
    if(o.spacing!==undefined){if(!Number.isInteger(o.spacing)||o.spacing<0||o.spacing>2)throw new Error(t('Ungültiger Füllbereich oder Basisabstand.'));q.spacing=o.spacing;}
   }else{if(typeof o.name!=='string'||o.name.length>80)throw new Error(t('Ungültiger Elementname.'));q.name=o.name;if(o.customName!==undefined){if(typeof o.customName!=='boolean')throw new Error(t('Ungültiger Elementname.'));q.customName=o.customName;}if(o.type==='terrain'&&o.terrainGroup!==undefined){if(!validId(o.terrainGroup))throw new Error(t('Ungültige Terrain-Gruppe.'));q.terrainGroup=o.terrainGroup;}}
-  if(o.type==='center')centerCount++;
-  if(o.type===anchorType(state)&&(o.x!==state.origin.mapX||o.y!==state.origin.mapY))throw new Error(t('Mittelpunkt und Koordinatenursprung stimmen nicht überein.'));
-  if(o.type==='marshall')marshallCount++;
-  if(centerCount>1||marshallCount>1)throw new Error(t('Zentrum oder Marshall mehrfach vorhanden.'));
+  if(o.type==='center'){if(centers.has(allianceOf(o)))throw new Error(t('Zentrum oder Marshall mehrfach vorhanden.'));centers.add(allianceOf(o));}
+  if(allianceOf(o)===1&&o.type===anchorType(state)&&(o.x!==state.origin.mapX||o.y!==state.origin.mapY))throw new Error(t('Mittelpunkt und Koordinatenursprung stimmen nicht überein.'));
+  if(o.type==='marshall'){if(marshalls.has(allianceOf(o)))throw new Error(t('Zentrum oder Marshall mehrfach vorhanden.'));marshalls.add(allianceOf(o));}
+  if(o.terrainGroup){if(terrainOwners.has(o.terrainGroup)&&terrainOwners.get(o.terrainGroup)!==allianceOf(o))throw new Error(t('Ungültige Terrain-Gruppe.'));terrainOwners.set(o.terrainGroup,allianceOf(o));}
   if(raw.version<5){try{assertWorldPlacement(state,q);}catch{throw new Error(t('Der ältere Plan liegt außerhalb der neuen Karte (X/Y 0–999) und wurde nicht geladen.'));}}
   assertPlacement(state,q);state.objects.push(q);
  }
  for(const group of new Set(state.objects.filter(o=>o.terrainGroup).map(o=>o.terrainGroup)))if(!terrainsConnected(state.objects.filter(o=>o.terrainGroup===group)))throw new Error(t('Ungültige Terrain-Gruppe.'));
  return state;
 }
-root.HiveModel={SCHEMA,VERSION,WORLD_SIZE,worldBounds,referenceCoords,assertWorldPlacement,setObjectCorner,PRIORITY_DEFAULTS,priorityOf,priorityLabel,setPlayerPriorities,setPriorityLabel,setPlayerGroups,groupPriority,SEASONS,emptyGroups,isSeason4,isDeveloping,anchorType,setSeason,groupForPlayer,setPlayerGroup,clearPlayers,areNeighbors,groupComponents,terrainResizeCandidate,resizeTerrain,terrainCornerCoords,terrainPositionFromCornerCoords,setTerrainCorner,connectTerrains,disconnectTerrains,terrainTouching,terrainsConnected,terrainParts,expandObjectIds,objectBounds,terrainUnionGeometry,planBaseFill,fillBases,moveObjects,removeObjects,COLORS,clone,uid,normalizeName,snap,rect,overlaps,coords,positionFromCoords,playerFor,objectForPlayer,objectLabel,makeLayout,collision,assertPlacement,moveObject,nextBeacon,makeObject,addObject,removeObject,parsePlayerFile,decodePlayerFile,importPlayers,addPlayers,autofillOptions,autofill,assign,unassign,unassignAll,removePlayer,setOrigin,updateObject,coverage,bounds,validate};
+root.HiveModel={ALLIANCE_COLORS,allianceOf,activeAlliance,owns,allianceObjects,alliancePlayers,allianceGroups,priorityLabelsFor,referencePoint,setAlliance,resetAllianceLayout,SCHEMA,VERSION,WORLD_SIZE,worldBounds,referenceCoords,assertWorldPlacement,setObjectCorner,PRIORITY_DEFAULTS,priorityOf,priorityLabel,setPlayerPriorities,setPriorityLabel,setPlayerGroups,groupPriority,SEASONS,emptyGroups,isSeason4,isDeveloping,anchorType,setSeason,groupForPlayer,setPlayerGroup,clearPlayers,areNeighbors,groupComponents,terrainResizeCandidate,resizeTerrain,terrainCornerCoords,terrainPositionFromCornerCoords,setTerrainCorner,connectTerrains,disconnectTerrains,terrainTouching,terrainsConnected,terrainParts,expandObjectIds,objectBounds,terrainUnionGeometry,planBaseFill,fillBases,moveObjects,removeObjects,COLORS,clone,uid,normalizeName,snap,rect,overlaps,coords,positionFromCoords,playerFor,objectForPlayer,objectLabel,makeLayout,collision,assertPlacement,moveObject,nextBeacon,makeObject,addObject,removeObject,parsePlayerFile,decodePlayerFile,importPlayers,addPlayers,autofillOptions,autofill,assign,unassign,unassignAll,removePlayer,setOrigin,updateObject,coverage,bounds,validate};
 })(globalThis);

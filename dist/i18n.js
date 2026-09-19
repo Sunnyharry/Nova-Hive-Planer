@@ -3299,6 +3299,86 @@ const messages={
   "Com espaçamento de 2 quadrados, a transição central é reduzida a 1 quadrado. Os objetos existentes permanecem nas suas posições.",
   "Khi chọn khoảng cách 2 ô, đoạn chuyển tiếp ở giữa được thu hẹp còn 1 ô. Các đối tượng hiện có giữ nguyên vị trí.",
   "2칸 간격을 선택하면 중앙 연결 구간은 1칸으로 좁아집니다. 기존 오브젝트의 위치는 유지됩니다."
+ ],
+ "Allianz": [
+  "Alliance",
+  "Alliance",
+  "Alianza",
+  "Aliança",
+  "Liên minh",
+  "연맹"
+ ],
+ "Allianz {n}": [
+  "Alliance {n}",
+  "Alliance {n}",
+  "Alianza {n}",
+  "Aliança {n}",
+  "Liên minh {n}",
+  "연맹 {n}"
+ ],
+ "Allianz muss zwischen 1 und 5 liegen.": [
+  "Alliance must be between 1 and 5.",
+  "L’alliance doit être comprise entre 1 et 5.",
+  "La alianza debe estar entre 1 y 5.",
+  "A aliança deve estar entre 1 e 5.",
+  "Liên minh phải từ 1 đến 5.",
+  "연맹 번호는 1~5여야 합니다."
+ ],
+ "Wähle zuerst die passende Allianz.": [
+  "Select the matching alliance first.",
+  "Sélectionnez d’abord l’alliance correspondante.",
+  "Selecciona primero la alianza correspondiente.",
+  "Selecione primeiro a aliança correspondente.",
+  "Hãy chọn đúng liên minh trước.",
+  "먼저 해당 연맹을 선택하세요."
+ ],
+ "Platziere zuerst das Zentrum dieser Allianz.": [
+  "Place this alliance’s center first.",
+  "Placez d’abord le centre de cette alliance.",
+  "Coloca primero el centro de esta alianza.",
+  "Posicione primeiro o centro desta aliança.",
+  "Hãy đặt trung tâm của liên minh này trước.",
+  "먼저 이 연맹의 센터를 배치하세요."
+ ],
+ "Ausgewählte Allianz ausrichten": [
+  "Align selected alliance",
+  "Aligner l’alliance sélectionnée",
+  "Alinear alianza seleccionada",
+  "Alinhar aliança selecionada",
+  "Căn chỉnh liên minh đã chọn",
+  "선택한 연맹 정렬"
+ ],
+ "Verschiebt nur die ausgewählte Allianz. Andere Allianzen behalten ihre Kartenkoordinaten.": [
+  "Moves only the selected alliance. Other alliances retain their map coordinates.",
+  "Déplace uniquement l’alliance sélectionnée. Les autres conservent leurs coordonnées.",
+  "Mueve solo la alianza seleccionada. Las demás conservan sus coordenadas.",
+  "Move apenas a aliança selecionada. As outras mantêm suas coordenadas.",
+  "Chỉ di chuyển liên minh đã chọn. Các liên minh khác giữ nguyên tọa độ.",
+  "선택한 연맹만 이동합니다. 다른 연맹의 지도 좌표는 유지됩니다."
+ ],
+ "Aktiv: {alliance}. Import, Gruppen, Autofill und neue Objekte gehören zu dieser Allianz.": [
+  "Active: {alliance}. Imports, groups, Autofill and new objects apply to this alliance.",
+  "Active : {alliance}. Importation, groupes, remplissage automatique et nouveaux objets concernent cette alliance.",
+  "Activa: {alliance}. Importación, grupos, relleno automático y nuevos objetos se aplican a esta alianza.",
+  "Ativa: {alliance}. Importação, grupos, preenchimento automático e novos objetos pertencem a esta aliança.",
+  "Đang chọn: {alliance}. Nhập người chơi, nhóm, tự động xếp và đối tượng mới áp dụng cho liên minh này.",
+  "활성: {alliance}. 가져오기, 그룹, 자동 배치 및 새 오브젝트는 이 연맹에 적용됩니다."
+ ],
+ "Ausgewählte Allianz zurücksetzen?": [
+  "Reset selected alliance?",
+  "Réinitialiser l’alliance sélectionnée ?",
+  "¿Restablecer la alianza seleccionada?",
+  "Redefinir a aliança selecionada?",
+  "Đặt lại liên minh đã chọn?",
+  "선택한 연맹을 초기화할까요?"
+ ],
+ "Nur {alliance} wird in dieser Variante zurückgesetzt. Andere Allianzen, Varianten und Spielerlisten bleiben erhalten.": [
+  "Only {alliance} is reset in this variant. Other alliances, variants and player lists are preserved.",
+  "Seule {alliance} est réinitialisée dans cette variante. Les autres alliances, variantes et listes de joueurs sont conservées.",
+  "Solo se restablece {alliance} en esta variante. Se conservan las demás alianzas, variantes y listas de jugadores.",
+  "Apenas {alliance} é redefinida nesta variante. As outras alianças, variantes e listas de jogadores são preservadas.",
+  "Chỉ {alliance} được đặt lại trong biến thể này. Các liên minh, biến thể và danh sách người chơi khác được giữ nguyên.",
+  "이 변형에서 {alliance}만 초기화됩니다. 다른 연맹, 변형 및 플레이어 목록은 유지됩니다."
  ]
 };
 let language='de';

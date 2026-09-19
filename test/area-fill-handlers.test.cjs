@@ -23,7 +23,7 @@ const context=vm.createContext({console,document,window:{addEventListener(){}},B
 for(const name of ['i18n','model','workspace'])vm.runInContext(fs.readFileSync('dist/'+name+'.js','utf8'),context);
 let app=fs.readFileSync('dist/app.js','utf8');
 const start="I.apply(document);$('language-select').value=I.language;render();requestAnimationFrame(fitMap);";assert.ok(app.includes(start));
-app=app.replace(start,"render=()=>{renderControls();renderMap();};renderInspector=()=>{};fitMap=()=>{};globalThis.testApp={get state(){return state;},get area(){return fillArea;},get preview(){return fillPreview;},commit,restoreHistory};"+start);
+app=app.replace(start,"render=()=>{renderControls();renderMap();};renderInspector=()=>{};fitMap=()=>{};globalThis.testApp={get state(){return state;},get area(){return fillArea;},get preview(){return fillPreview;},commit,restoreHistory,selectObject,exportSvg,csvExport};"+start);
 vm.runInContext(app,context);
 const M=context.HiveModel,api=context.testApp,json=value=>JSON.parse(JSON.stringify(value)),svg=get('map');
 const pointer=(name,x,y,target=svg)=>svg.fire(name,{clientX:x*10,clientY:-y*10,target});
@@ -68,5 +68,18 @@ async function draw(a,b){await pointer('pointerdown',...a);await pointer('pointe
  await draw([world.right,world.top-5],[world.right,world.top]);assert.equal(api.area.right,world.right);assert.equal(api.area.left,world.right-1);
  await pointer('pointerdown',world.right,world.top,handle('ne'));await pointer('pointermove',world.right+20,world.top+20);await pointer('pointerup',world.right+20,world.top+20);assert.equal(api.area.right,world.right);assert.equal(api.area.top,world.top);
  await get('cancel-area-fill').fire('click');assert.equal(api.area,null);assert.deepEqual(json(api.state),before);
+ // Actual alliance dropdown, hotkeys, roster import, Autofill and cross-layer selection.
+ api.commit(M.addPlayers(api.state,'Home player').state);
+ await change('alliance-select','2');assert.equal(M.activeAlliance(api.state),2);
+ await document.fire('keydown',{target:svg,key:'a'});await pointer('pointerdown',60,0);
+ assert.equal(api.state.objects.filter(o=>o.type==='center').length,2);
+ await document.fire('keydown',{target:svg,key:'b'});await pointer('pointerdown',68,0);
+ get('names-input').value='Yellow player';await get('names-form').fire('submit');await get('autofill').fire('click');
+ const yellow=api.state.objects.find(o=>M.allianceOf(o)===2&&o.type==='base');assert.ok(yellow.playerId);assert.equal(M.playerFor(api.state,yellow).name,'Yellow player');
+ assert.ok(svg.innerHTML.includes('#f2c75c'));assert.ok(svg.innerHTML.includes('Allianz 2'));
+ await change('alliance-select','1');assert.equal(M.alliancePlayers(api.state).length,1);assert.equal(M.alliancePlayers(api.state)[0].name,'Home player');
+ assert.ok(api.csvExport().includes('"Allianz 2";"Yellow player"'));assert.ok(api.exportSvg().source.includes('Allianz 5'));
+ api.selectObject(yellow.id);assert.equal(M.activeAlliance(api.state),2);assert.equal(get('alliance-select').value,'2');
+ await get('clear-players').fire('click');assert.equal(M.alliancePlayers(api.state).length,0);assert.equal(api.state.players.length,1);
  console.log('Passed: live draw/resize counts, four handles, fixed opposite corners, release position, pointer cancellation, keyboard resizing, gap change, exact Create/undo, empty preview and world limits. DOM test double, not visual browser QA.');
 })().catch(error=>{console.error(error);process.exitCode=1;});
