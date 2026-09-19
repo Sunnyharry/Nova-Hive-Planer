@@ -109,9 +109,9 @@ for(const type of ['base','beacon','center','marshall']){
  assert.throws(()=>M.addObject(ground,building),/überschneidet/);
  let blocked=M.addObject(M.makeLayout('empty'),building);
  assert.throws(()=>M.addObject(blocked,M.makeObject(blocked,'terrain',0,0)),/überschneidet/);
- const far=M.makeObject(blocked,'terrain',14,0);blocked=M.addObject(blocked,far);
+ const far=M.makeObject(blocked,'terrain',-14,0);blocked=M.addObject(blocked,far);
  assert.throws(()=>M.moveObject(blocked,far.id,0,0),/überschneidet/);
- assert.throws(()=>M.moveObject(blocked,building.id,14,0),/überschneidet/);
+ assert.throws(()=>M.moveObject(blocked,building.id,-14,0),/überschneidet/);
  assert.throws(()=>M.updateObject(blocked,far.id,{w:40,h:40}),/überschneidet/);
  const badPlan=M.clone(blocked);Object.assign(badPlan.objects.find(o=>o.id===far.id),{x:.5,y:.5});
  assert.throws(()=>M.validate(badPlan),/überschneidet/);

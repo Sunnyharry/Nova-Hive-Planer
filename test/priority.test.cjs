@@ -26,7 +26,7 @@ I.setLanguage('de');
 for(const season of M.SEASONS){const changed=M.setSeason(s,season);assert.deepEqual(changed.players,s.players);assert.deepEqual(changed.groups,s.groups);assert.deepEqual(changed.priorityLabels,s.priorityLabels);assert.deepEqual(M.validate(JSON.parse(JSON.stringify(changed))),changed);}
 assert.deepEqual(M.makeLayout('compact',s).priorityLabels,s.priorityLabels);
 const old=M.clone(s);old.version=2;delete old.priorityLabels;for(const p of old.players)delete p.priority;
-const migrated=M.validate(old);assert.equal(migrated.version,3);assert.ok(migrated.players.every(p=>p.priority===2));assert.deepEqual(migrated.groups,s.groups);assert.deepEqual(migrated.objects,s.objects);assert.deepEqual(migrated.priorityLabels,['','','']);
+const migrated=M.validate(old);assert.equal(migrated.version,M.VERSION);assert.ok(migrated.players.every(p=>p.priority===2));assert.deepEqual(migrated.groups,s.groups);assert.deepEqual(migrated.objects,s.objects);assert.deepEqual(migrated.priorityLabels,['','','']);
 for(const mutation of [raw=>raw.players[0].priority=0,raw=>delete raw.players[0].priority,raw=>raw.priorityLabels=['one'],raw=>raw.priorityLabels[1]=null]){const bad=M.clone(s);mutation(bad);assert.throws(()=>M.validate(bad));}
 
 // A straight row makes the ordering and lack of a fixed-ring quota unambiguous.

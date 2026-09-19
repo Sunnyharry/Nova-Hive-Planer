@@ -1,10 +1,10 @@
 # Nova Hive Planner
 
-Current application release: **1.1.3**. Increase the final number once per subsequent delivered update (1.1.4, 1.1.5, …); see `AGENTS.md`. The JSON schema version remains independent.
+Current application release: **1.1.4**. Increase the final number once per subsequent delivered update (1.1.5, 1.1.6, …); see `AGENTS.md`. The JSON schema version remains independent.
 
 A client-side Last War hive editor with English, German, French, Spanish, Portuguese, Vietnamese and Korean interfaces. Open `dist/index.html` in a modern browser, or serve the `dist` directory as static files. No dependencies, external assets, database or application login are required. The hosted Site has its own owner access policy.
 
-The editor supports editable 100-seat templates with one-tile gaps or no gaps, TXT / semicolon CSV imports, individual placement and movement, priority-aware grouped autofill, multi-select organization, undo/redo, JSON save/load, and SVG, PNG and CSV exports. Player names and their calculated X/Y coordinates appear inside each base.
+The editor supports editable 100-seat templates with one-tile gaps or no gaps, TXT / semicolon CSV imports, individual and multiple-object movement, connected terrain shapes, rectangular base-area filling, priority-aware grouped autofill, multi-select organization, undo/redo, JSON save/load, and SVG, PNG and CSV exports. Player names and their calculated X/Y coordinates appear inside each base.
 
 ## Download and open
 
@@ -32,7 +32,7 @@ Autofill never moves assigned players or creates new bases. Groups with manually
 
 For each group, a bounded multi-start search favors connected, compact clusters, then centrality. Newly assigned higher-priority members take the inner seats within that chosen cluster; existing members remain fixed. Individuals use the closest remaining seat by squared Euclidean distance to the reference, with seat number and ID as deterministic ties. Empty beacon seats remain reserved unless explicitly included. Manual anchors, terrain and group cohesion may prevent a strict global distance ordering by priority.
 
-Neighboring bases may touch at an edge or corner. In a one-tile-gap template, adjacent seats across that gap count as connected. Autofill is a best-effort placement heuristic, not a proof of a globally optimal layout. Fixed assignments or a shortage of neighboring seats may split groups; the actual result names affected groups. Group status also shows whether its placed members are connected.
+Neighboring bases may touch at an edge or corner. Adjacent seats across a template's one-tile gap or an area fill's chosen gap count as connected. Autofill is a best-effort placement heuristic, not a proof of a globally optimal layout. Fixed assignments or a shortage of neighboring seats may split groups; the actual result names affected groups. Group status also shows whether its placed members are connected.
 
 The **Remove all players from Hive** button at the bottom of the right panel clears assignments only, including beacon players. It retains the roster, group memberships, all map objects and reference coordinates. Undo restores the assignments. It is disabled when no bases are assigned.
 
@@ -42,11 +42,21 @@ Press **B** for a base, **M** for Marshall, **A** for the Alliance Center, **T**
 
 ## Terrain
 
-Selected terrain shows four outward-facing corner arrow handles. Dragging a corner fixes the opposite corner, previews the dimensions, and snaps both dimensions to whole tiles (1–60 each). Red previews indicate blocked placements; releasing an invalid resize leaves the original geometry intact. A focused corner handle also accepts arrow keys, with Shift for five tiles. The right-panel width/height form remains available and resizes around the center. Terrain may overlap other terrain; buildings may overlap neither terrain nor buildings. Overlapping terrain can be selected through the right-panel terrain selector.
+Select terrain to enter the world X/Y of its **bottom-left corner** in the right panel. For example, a 5×5 area placed at X820/Y920 extends rightward and upward from exactly that corner. Rectangular terrain works the same way. Half-tile coordinates are supported so previously saved geometry can retain its exact edges. Changing width or height in the panel keeps this corner fixed.
+
+Selected, unconnected terrain shows four outward-facing corner arrow handles. Dragging a corner fixes the opposite corner, previews the dimensions, and snaps both dimensions to whole tiles (1–60 each). Red previews indicate blocked placements; releasing an invalid resize leaves the original geometry intact. A focused corner handle also accepts arrow keys, with Shift for five tiles. Terrain may overlap other terrain; buildings may overlap neither terrain nor buildings. Overlapping terrain can be selected through the right-panel terrain selector.
+
+Select touching or overlapping terrain pieces with Ctrl/Command-click or a selection box, then choose **Connect terrain** in the right panel. They become one selectable, movable shape with a shared name and a continuous outline. Cutouts and holes remain empty and can contain buildings. Positioning a connected shape uses the bottom-left corner of its outer bounding rectangle. **Disconnect terrain** restores individual editing and corner resizing. Joining, separating, moving and deleting a shape are each one undo step.
+
+## Map selection and area fill
+
+The map toolbar offers **Pan view**, **Multi-select** and **Fill area**. Ctrl/Command-click adds or removes objects from the selection. Shift-drag starts a selection box from anywhere; in Multi-select mode, drag from empty space. Only fully enclosed pieces are selected, and a connected terrain shape is always selected as a whole. Drag any selected object to move the selection together, use arrow keys (Shift for five tiles), or enter X/Y offsets in the inspector. A collision cancels the entire move. Moving a selected coordinate reference retains its entered world coordinate, as with individual movement.
+
+Choose **Fill area**, draw a rectangle and select **0, 1 or 2 tiles** between bases. The preview shows whole 3×3 bases that fit inside the rectangle, excluding terrain, existing buildings and the requested gap around existing bases. **Create bases** inserts the preview in one undoable step, up to the existing 800-object plan limit. This creates empty seats; **Autofill** then assigns players using their existing priorities and friend groups. Escape or Cancel discards the preview.
 
 ## Persistence and validation
 
-Plans are stored in explicit JSON files, not browser or cloud storage. Only the interface language is remembered on the device. Version-3 plans include season, groups, player priorities and custom priority labels. Version-2 plans retain their season, groups, geometry and assignments and migrate all players to P2. Version-1 plans migrate to Season 4 with empty groups and P2 players, retaining names, geometry and assignments. Switching language preserves plan data and history; default map labels, help, errors and image/CSV export labels use the active language. Player names and custom labels stay as entered. CSV exports include group membership, numeric priority and its label.
+Plans are stored in explicit JSON files, not browser or cloud storage. Only the interface language is remembered on the device. Version-4 plans additionally store terrain connections, exact terrain geometry and per-base area-fill spacing. Version-3 plans retain season, groups, player priorities and custom priority labels. Version-2 plans retain their season, groups, geometry and assignments and migrate all players to P2. Version-1 plans migrate to Season 4 with empty groups and P2 players, retaining names, geometry and assignments. Switching language preserves plan data and history; default map labels, help, errors and image/CSV export labels use the active language. Player names and custom labels stay as entered. CSV exports include group membership, numeric priority and its label.
 
 Names are escaped in SVG/HTML, and CSV exports guard spreadsheet formula prefixes. JSON imports validate schema, season rules, memberships, priorities, priority labels, assignments, geometry and collisions before changing the plan.
 
@@ -59,9 +69,10 @@ node --check dist/app.js
 node test/model.test.cjs
 node test/season-groups.test.cjs
 node test/priority.test.cjs
+node test/map-editing.test.cjs
 node test/i18n.test.cjs
 ```
 
-These cover layout geometry, imports, all season modes, priority-aware grouped autofill, averages competing with individuals, fixed anchors, split-group reporting, terrain corner mathematics and collision rejection, clearing with intact undo snapshots, legacy file migration, and all localized messages in seven languages. Interface bindings and local assets were statically audited. Browser interaction and visual checks were not run in this update.
+These cover layout geometry, imports, all season modes, priority-aware grouped autofill, averages competing with individuals, fixed anchors, split-group reporting, exact bottom-left terrain placement, union outlines and holes, terrain connections and persistence, atomic multiple-object movement, all three fill spacings, obstacle avoidance and object limits, clearing with intact undo snapshots, legacy file migration, and all 369 localized messages in seven languages. Interface bindings and local assets were statically audited. Browser interaction and visual checks were not run in this update.
 
 Optional WebMCP tools register only when `document.modelContext` supports them and use the same model and state as the visible planner. Their browser registration has not been tested.

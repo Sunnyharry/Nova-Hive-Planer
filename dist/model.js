@@ -1,7 +1,7 @@
 /* Pure map model. One unit is one map tile; coordinates identify building centers. */
 (function(root){
 'use strict';
-const SCHEMA='nova-hive-planner',VERSION=3;
+const SCHEMA='nova-hive-planner',VERSION=4;
 const t=(key,params={})=>globalThis.HiveI18n?.t(key,params)??key.replace(/\{(\w+)\}/g,(_,k)=>String(params[k]??'{'+k+'}'));
 const DEFAULT_NAMES={center:'Allianzzentrum',marshall:'Marshall’s Guard',terrain:'Terrain'};
 const PRIORITY_DEFAULTS=['Zuverlässiger Kern','Aktiv','Casual'];
@@ -23,6 +23,26 @@ function rect(o){return {left:o.x-o.w/2,right:o.x+o.w/2,bottom:o.y-o.h/2,top:o.y
 function overlaps(a,b){const A=rect(a),B=rect(b);return A.left<B.right-1e-8&&A.right>B.left+1e-8&&A.bottom<B.top-1e-8&&A.top>B.bottom+1e-8;}
 function coords(state,o){return {x:state.origin.x+o.x-state.origin.mapX,y:state.origin.y+o.y-state.origin.mapY};}
 function positionFromCoords(state,x,y){return {x:x-state.origin.x+state.origin.mapX,y:y-state.origin.y+state.origin.mapY};}
+function objectBounds(objects){
+ const rs=objects.map(rect);return {left:Math.min(...rs.map(r=>r.left)),right:Math.max(...rs.map(r=>r.right)),bottom:Math.min(...rs.map(r=>r.bottom)),top:Math.max(...rs.map(r=>r.top))};
+}
+function expandObjectIds(state,ids){
+ const selected=new Set(ids),groups=new Set(state.objects.filter(o=>selected.has(o.id)&&o.terrainGroup).map(o=>o.terrainGroup));
+ return state.objects.filter(o=>selected.has(o.id)||(o.terrainGroup&&groups.has(o.terrainGroup))).map(o=>o.id);
+}
+function terrainParts(state,o){return o.terrainGroup?state.objects.filter(q=>q.type==='terrain'&&q.terrainGroup===o.terrainGroup):[o];}
+function terrainCornerCoords(state,o){
+ const r=objectBounds(terrainParts(state,o));return {x:state.origin.x+r.left-state.origin.mapX,y:state.origin.y+r.bottom-state.origin.mapY};
+}
+function terrainPositionFromCornerCoords(state,o,x,y){
+ if(o?.type!=='terrain'||!Number.isInteger(x*2)||!Number.isInteger(y*2)||!finite(x,0,999999)||!finite(y,0,999999))throw new Error(t('Terrain-Koordinaten müssen in Schritten von 0,5 zwischen 0 und 999999 liegen.'));
+ const r=objectBounds(terrainParts(state,o));return {x:o.x+state.origin.mapX+x-state.origin.x-r.left,y:o.y+state.origin.mapY+y-state.origin.y-r.bottom};
+}
+function setTerrainCorner(state,id,x,y){
+ const old=state.objects.find(o=>o.id===id);if(!old||old.type!=='terrain')throw new Error(t('Nur Terrain kann über seine linke untere Ecke positioniert werden.'));
+ const pos=terrainPositionFromCornerCoords(state,old,x,y),dx=pos.x-old.x,dy=pos.y-old.y;
+ return moveObjects(state,terrainParts(state,old).map(o=>({id:o.id,x:o.x+dx,y:o.y+dy})));
+}
 function playerFor(state,o){return state.players.find(p=>p.id===o.playerId)??null;}
 function objectForPlayer(state,id){return state.objects.find(o=>o.playerId===id)??null;}
 function objectLabel(state,o){
@@ -67,18 +87,33 @@ function setSeason(state,season){
  if(season===state.season)return state;
  return makeLayout(state.layout,{...state,season,showLight:season==='4'});
 }
-function collision(state,o,ignoreId=o.id){return state.objects.find(other=>other.id!==ignoreId&&!(o.type==='terrain'&&other.type==='terrain')&&overlaps(o,other))??null;}
-function assertPlacement(state,o){
+function collision(state,o,ignoreId=o.id){
+ const ignored=ignoreId instanceof Set?ignoreId:new Set([ignoreId]);
+ return state.objects.find(other=>!ignored.has(other.id)&&!(o.type==='terrain'&&other.type==='terrain')&&overlaps(o,other))??null;
+}
+function assertPlacement(state,o,ignoreId=o.id){
  if(!isSeason4(state)&&(o.type==='center'||o.beacon))throw new Error(t('Allianzzentrum und Beacons sind nur in Season 4 verfügbar.'));
  if(!finite(o.x,-5000,5000)||!finite(o.y,-5000,5000))throw new Error(t('Dieser Platz liegt außerhalb des Planbereichs.'));
- const hit=collision(state,o);
+ const hit=collision(state,o,ignoreId);
  if(hit)throw new Error(t('Die Fläche überschneidet sich mit {name}.',{name:objectLabel(state,hit)}));
 }
 function moveObject(state,id,x,y){
  const old=state.objects.find(o=>o.id===id);if(!old)throw new Error(t('Element nicht gefunden.'));
- const candidate={...old,x:snap(x,old.w),y:snap(y,old.h)};assertPlacement(state,candidate);
+ const candidate={...old,x:old.type==='terrain'?old.x+Math.round(x-old.x):snap(x,old.w),y:old.type==='terrain'?old.y+Math.round(y-old.y):snap(y,old.h)};
+ if(old.terrainGroup){const dx=candidate.x-old.x,dy=candidate.y-old.y;return moveObjects(state,terrainParts(state,old).map(o=>({id:o.id,x:o.x+dx,y:o.y+dy})));}assertPlacement(state,candidate);
  const next=clone(state);Object.assign(next.objects.find(o=>o.id===id),candidate);
  if(old.type===anchorType(state)){next.origin.mapX=candidate.x;next.origin.mapY=candidate.y;}
+ return next;
+}
+function moveObjects(state,entries){
+ if(!Array.isArray(entries)||!entries.length||entries.length>800)throw new Error(t('Keine Elemente zum Verschieben ausgewählt.'));
+ const ids=new Set(entries.map(e=>e?.id));if(ids.size!==entries.length||[...ids].some(id=>!state.objects.some(o=>o.id===id)))throw new Error(t('Ein ausgewähltes Element wurde nicht gefunden.'));
+ const candidates=entries.map(e=>{const old=state.objects.find(o=>o.id===e.id);if(!(old.type==='terrain'?(Number.isInteger(e.x*2)&&Number.isInteger(e.y*2)):(Number.isInteger(e.x)&&Number.isInteger(e.y))))throw new Error(t('Ungültige Objektposition.'));return {...old,x:e.x,y:e.y};});
+ for(const candidate of candidates)if(candidate.terrainGroup){const old=state.objects.find(o=>o.id===candidate.id),dx=candidate.x-old.x,dy=candidate.y-old.y;for(const part of terrainParts(state,old)){const moved=candidates.find(o=>o.id===part.id);if(!moved||moved.x-part.x!==dx||moved.y-part.y!==dy)throw new Error(t('Verbundene Terrainflächen müssen gemeinsam verschoben werden.'));}}
+ for(const candidate of candidates)assertPlacement(state,candidate,ids);
+ for(let i=0;i<candidates.length;i++)for(let j=0;j<i;j++)if(!(candidates[i].type==='terrain'&&candidates[j].type==='terrain')&&overlaps(candidates[i],candidates[j]))throw new Error(t('Die ausgewählten Elemente überschneiden sich nach dem Verschieben.'));
+ const next=clone(state);for(const candidate of candidates)Object.assign(next.objects.find(o=>o.id===candidate.id),candidate);
+ const anchor=candidates.find(o=>o.type===anchorType(state));if(anchor){next.origin.mapX=anchor.x;next.origin.mapY=anchor.y;}
  return next;
 }
 function nextBeacon(state){for(const char of 'ABCDEFGHIJKLMNOPQRSTUVWXYZ')if(!state.objects.some(o=>o.beacon===char))return char;throw new Error(t('Alle Beacon-Buchstaben sind vergeben.'));}
@@ -97,7 +132,58 @@ function addObject(state,o){
  if(o.type===anchorType(state)){next.origin.mapX=o.x;next.origin.mapY=o.y;}
  return next;
 }
-function removeObject(state,id){const next=clone(state);next.objects=next.objects.filter(o=>o.id!==id);return next;}
+function removeObject(state,id){return removeObjects(state,[id]);}
+function removeObjects(state,ids){const set=new Set(expandObjectIds(state,ids));if(!set.size)return state;const next=clone(state);next.objects=next.objects.filter(o=>!set.has(o.id));return next;}
+function terrainTouching(a,b){const A=rect(a),B=rect(b);return A.left<=B.right+1e-7&&A.right>=B.left-1e-7&&A.bottom<=B.top+1e-7&&A.top>=B.bottom-1e-7;}
+function terrainsConnected(parts){
+ if(!parts.length)return false;const seen=new Set([parts[0].id]),queue=[parts[0]];
+ while(queue.length){const current=queue.pop();for(const other of parts)if(!seen.has(other.id)&&terrainTouching(current,other)){seen.add(other.id);queue.push(other);}}
+ return seen.size===parts.length;
+}
+function connectTerrains(state,ids){
+ const set=new Set(expandObjectIds(state,ids)),parts=state.objects.filter(o=>set.has(o.id));
+ if(parts.length<2)throw new Error(t('Wähle mindestens zwei Terrainflächen aus.'));
+ if(parts.some(o=>o.type!=='terrain'))throw new Error(t('Nur Terrainflächen können verbunden werden.'));
+ if(!terrainsConnected(parts))throw new Error(t('Die ausgewählten Terrainflächen berühren sich nicht durchgehend.'));
+ const groupId=parts.find(o=>o.terrainGroup)?.terrainGroup??uid('terrain_group'),next=clone(state);
+ for(const o of next.objects)if(set.has(o.id))o.terrainGroup=groupId;return next;
+}
+function disconnectTerrains(state,ids){const set=new Set(expandObjectIds(state,ids)),next=clone(state);for(const o of next.objects)if(set.has(o.id))delete o.terrainGroup;return next;}
+// Sweep rectangle edges to draw the union with holes and no internal borders.
+function terrainUnionGeometry(parts){
+ const rectangles=parts.map(rect),xs=[...new Set(rectangles.flatMap(r=>[r.left,r.right]))].sort((a,b)=>a-b),slices=[],edges=[];
+ const merge=intervals=>{const result=[];for(const [lo,hi] of intervals.sort((a,b)=>a[0]-b[0]||a[1]-b[1])){const previous=result[result.length-1];if(previous&&lo<=previous[1])previous[1]=Math.max(previous[1],hi);else result.push([lo,hi]);}return result;};
+ let previous=[];
+ for(let i=0;i<xs.length;i++){
+  const x=xs[i],right=xs[i+1],current=right===undefined?[]:merge(rectangles.filter(r=>r.left<right&&r.right>x).map(r=>[r.bottom,r.top]));
+  const events=new Map();for(const [a,b] of [...previous,...current]){events.set(a,(events.get(a)??0)^1);events.set(b,(events.get(b)??0)^1);}
+  let inside=false,start=null;for(const [y,toggle] of [...events].sort((a,b)=>a[0]-b[0]))if(toggle){if(inside)edges.push([x,start,x,y]);else start=y;inside=!inside;}
+  for(const [bottom,top] of current){slices.push({left:x,right,bottom,top});edges.push([x,bottom,right,bottom],[x,top,right,top]);}
+  previous=current;
+ }
+ return {slices,edges};
+}
+function planBaseFill(state,area,gap=0){
+ if(!area||![area.left,area.right,area.bottom,area.top].every(n=>finite(n,-5001.5,5001.5))||!Number.isInteger(gap)||gap<0||gap>2)throw new Error(t('Ungültiger Füllbereich oder Basisabstand.'));
+ const left=Math.min(area.left,area.right),right=Math.max(area.left,area.right),bottom=Math.min(area.bottom,area.top),top=Math.max(area.bottom,area.top),pitch=3+gap;
+ const x0=Math.ceil(left+1.5-1e-8),y0=Math.ceil(bottom+1.5-1e-8),x1=Math.floor(right-1.5+1e-8),y1=Math.floor(top-1.5+1e-8),capacity=Math.max(0,800-state.objects.length);
+ const positions=[],buckets=new Map();let skipped=0,limited=false;
+ // Only nearby obstacles need inspection, even for large selected areas.
+ for(const o of state.objects){const r=rect(o),pad=o.type==='base'?gap:0;for(let gx=Math.floor((r.left-pad)/16);gx<=Math.floor((r.right+pad)/16);gx++)for(let gy=Math.floor((r.bottom-pad)/16);gy<=Math.floor((r.top+pad)/16);gy++){const key=gx+','+gy;if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(o);}}
+ outer:for(let y=y0;y<=y1;y+=pitch)for(let x=x0;x<=x1;x+=pitch){
+  if(positions.length>=capacity){limited=true;break outer;}
+  const candidate={x,y,w:3,h:3},nearby=new Set();for(let gx=Math.floor((x-1.5)/16);gx<=Math.floor((x+1.5)/16);gx++)for(let gy=Math.floor((y-1.5)/16);gy<=Math.floor((y+1.5)/16);gy++)for(const o of buckets.get(gx+','+gy)??[])nearby.add(o);
+  if([...nearby].some(o=>overlaps(candidate,o.type==='base'?{...o,w:o.w+2*gap,h:o.h+2*gap}:o))){skipped++;continue;}
+  positions.push({x:x||0,y:y||0});
+ }
+ return {positions,skipped,limited,gap};
+}
+function fillBases(state,area,gap=0){
+ const preview=planBaseFill(state,area,gap);if(!preview.positions.length)return {state,added:0,skipped:preview.skipped,limited:preview.limited,ids:[]};
+ const next=clone(state),ids=[];let slot=Math.max(0,...state.objects.filter(o=>o.type==='base').map(o=>o.slot));
+ for(const {x,y} of preview.positions){const id=uid('base');ids.push(id);next.objects.push({id,type:'base',x,y,w:3,h:3,slot:++slot,playerId:null,beacon:null,lightSize:25,electricians:40,spacing:gap});}
+ return {state:next,added:ids.length,skipped:preview.skipped,limited:preview.limited,ids};
+}
 function parsePlayerFile(text,format='txt'){
  const source=String(text).replace(/^\uFEFF/,'');
  if(source.includes('\0'))throw new Error(t('Bitte eine Textdatei im Format UTF-8 oder UTF-16 verwenden.'));
@@ -169,7 +255,7 @@ function setPriorityLabel(state,level,label){
 }
 function groupPriority(state,group){const members=state.players.filter(p=>group.playerIds.includes(p.id));return members.length?members.reduce((sum,p)=>sum+priorityOf(p),0)/members.length:2;}
 function clearPlayers(state){const next=clone(state);next.players=[];next.groups=emptyGroups();for(const o of next.objects)if(o.type==='base')o.playerId=null;return next;}
-function areNeighbors(a,b,gap=1){return a.id!==b.id&&Math.abs(a.x-b.x)<=(a.w+b.w)/2+gap+1e-8&&Math.abs(a.y-b.y)<=(a.h+b.h)/2+gap+1e-8;}
+function areNeighbors(a,b,gap=1){gap=Math.max(gap,a.spacing??0,b.spacing??0);return a.id!==b.id&&Math.abs(a.x-b.x)<=(a.w+b.w)/2+gap+1e-8&&Math.abs(a.y-b.y)<=(a.h+b.h)/2+gap+1e-8;}
 function groupComponents(objects,gap=1){
  const unseen=new Set(objects.map((_,i)=>i));let count=0;
  while(unseen.size){count++;const seed=unseen.values().next().value;unseen.delete(seed);const queue=[seed];
@@ -253,9 +339,11 @@ function setOrigin(state,x,y){if(!Number.isInteger(x)||!Number.isInteger(y)||!fi
 function updateObject(state,id,patch){
  const next=clone(state),obj=next.objects.find(o=>o.id===id);if(!obj)throw new Error(t('Element nicht gefunden.'));
  if(obj.type==='terrain'){
+  if(obj.terrainGroup&&(patch.w!==undefined||patch.h!==undefined))throw new Error(t('Löse die Terrainverbindung, um einzelne Teile zu vergrößern.'));
+  const oldRect=rect(obj);
   if(patch.w!==undefined){if(!Number.isInteger(patch.w)||!finite(patch.w,1,60))throw new Error(t('Breite: 1 bis 60 Felder.'));obj.w=patch.w;}
   if(patch.h!==undefined){if(!Number.isInteger(patch.h)||!finite(patch.h,1,60))throw new Error(t('Höhe: 1 bis 60 Felder.'));obj.h=patch.h;}
-  obj.x=snap(obj.x,obj.w);obj.y=snap(obj.y,obj.h);
+  obj.x=oldRect.left+obj.w/2;obj.y=oldRect.bottom+obj.h/2;
  }
  if(patch.name!==undefined&&obj.type!=='base'){const name=normalizeName(patch.name).slice(0,80);obj.name=name||DEFAULT_NAMES[obj.type];if(name)obj.customName=true;else delete obj.customName;}
  if(obj.type==='base'){
@@ -266,7 +354,7 @@ function updateObject(state,id,patch){
  assertPlacement(next,obj);return next;
 }
 function terrainResizeCandidate(o,corner,x,y){
- if(o?.type!=='terrain'||!['nw','ne','sw','se'].includes(corner)||!Number.isFinite(x)||!Number.isFinite(y))throw new Error(t('Ungültige Terrain-Größe.'));
+ if(o?.type!=='terrain'||o.terrainGroup||!['nw','ne','sw','se'].includes(corner)||!Number.isFinite(x)||!Number.isFinite(y))throw new Error(t('Ungültige Terrain-Größe.'));
  const r=rect(o),east=corner.endsWith('e'),north=corner.startsWith('n'),fixedX=east?r.left:r.right,fixedY=north?r.bottom:r.top;
  const w=Math.max(1,Math.min(60,Math.round((x-fixedX)*(east?1:-1)))),h=Math.max(1,Math.min(60,Math.round((y-fixedY)*(north?1:-1))));
  return {...o,w,h,x:fixedX+(east?1:-1)*w/2,y:fixedY+(north?1:-1)*h/2};
@@ -293,7 +381,7 @@ function bounds(state,includeLight=state.showLight){
  const rs=all.map(rect);return {left:Math.min(...rs.map(r=>r.left)),right:Math.max(...rs.map(r=>r.right)),bottom:Math.min(...rs.map(r=>r.bottom)),top:Math.max(...rs.map(r=>r.top))};
 }
 function validate(raw){
- if(!raw||raw.schema!==SCHEMA||![1,2,VERSION].includes(raw.version))throw new Error(t('Das ist keine unterstützte Hive-Plan-Datei.'));
+ if(!raw||raw.schema!==SCHEMA||![1,2,3,VERSION].includes(raw.version))throw new Error(t('Das ist keine unterstützte Hive-Plan-Datei.'));
  if(typeof raw.title!=='string'||raw.title.length>80)throw new Error(t('Ungültiger Planname.'));
  if(!raw.origin||!['x','y','mapX','mapY'].every(k=>Number.isInteger(raw.origin[k])))throw new Error(t('Ungültiger Koordinatenursprung.'));
  if(!finite(raw.origin.x,0,999999)||!finite(raw.origin.y,0,999999)||!finite(raw.origin.mapX,-5000,5000)||!finite(raw.origin.mapY,-5000,5000))throw new Error(t('Ungültiger Koordinatenursprung.'));
@@ -301,10 +389,10 @@ function validate(raw){
  const season=raw.version===1?'4':raw.season;
  if(!SEASONS.includes(season))throw new Error(t('Ungültige Season.'));
  const state={schema:SCHEMA,version:VERSION,season,groups:[],priorityLabels:['','',''],title:raw.title,origin:{x:raw.origin.x,y:raw.origin.y,mapX:raw.origin.mapX,mapY:raw.origin.mapY},showLight:raw.showLight!==false,layout:['spaced','compact','empty'].includes(raw.layout)?raw.layout:'empty',players:[],objects:[]};
- if(raw.version===VERSION){if(!Array.isArray(raw.priorityLabels)||raw.priorityLabels.length!==3||raw.priorityLabels.some(v=>typeof v!=='string'||v.length>40))throw new Error(t('Ungültige Prioritätsbezeichnungen.'));state.priorityLabels=raw.priorityLabels.map(normalizeName);}
+ if(raw.version>=3){if(!Array.isArray(raw.priorityLabels)||raw.priorityLabels.length!==3||raw.priorityLabels.some(v=>typeof v!=='string'||v.length>40))throw new Error(t('Ungültige Prioritätsbezeichnungen.'));state.priorityLabels=raw.priorityLabels.map(normalizeName);}
  const ids=new Set(),names=new Set(),assigned=new Set(),beacons=new Set();
  const validId=id=>typeof id==='string'&&id.length>0&&id.length<=100&&/^[A-Za-z0-9_-]+$/.test(id);
- for(const p of raw.players){if(!p||!validId(p.id)||ids.has(p.id)||typeof p.name!=='string'||!normalizeName(p.name)||p.name.length>80||names.has(nameKey(p.name)))throw new Error(t('Ungültige oder doppelte Spieler.'));ids.add(p.id);names.add(nameKey(p.name));const priority=raw.version===VERSION?p.priority:2;if(!Number.isInteger(priority)||priority<1||priority>3)throw new Error(t('Priorität muss 1, 2 oder 3 sein.'));state.players.push({id:p.id,name:normalizeName(p.name),priority});}
+ for(const p of raw.players){if(!p||!validId(p.id)||ids.has(p.id)||typeof p.name!=='string'||!normalizeName(p.name)||p.name.length>80||names.has(nameKey(p.name)))throw new Error(t('Ungültige oder doppelte Spieler.'));ids.add(p.id);names.add(nameKey(p.name));const priority=raw.version>=3?p.priority:2;if(!Number.isInteger(priority)||priority<1||priority>3)throw new Error(t('Priorität muss 1, 2 oder 3 sein.'));state.players.push({id:p.id,name:normalizeName(p.name),priority});}
  const groups=raw.version===1?emptyGroups():raw.groups,groupIds=new Set(),groupedPlayers=new Set();
  if(!Array.isArray(groups)||groups.length>10)throw new Error(t('Ungültige Gruppenliste.'));
  for(const g of groups){
@@ -318,7 +406,8 @@ function validate(raw){
  for(const o of raw.objects){
   if(!o||!validId(o.id)||objIds.has(o.id)||!['base','center','marshall','terrain'].includes(o.type)||!finite(o.x,-5000,5000)||!finite(o.y,-5000,5000))throw new Error(t('Ungültiges Kartenelement.'));
   objIds.add(o.id);const fixed=o.type==='center'?9:3,w=o.type==='terrain'?o.w:fixed,h=o.type==='terrain'?o.h:fixed;
-  if(!Number.isInteger(w)||!Number.isInteger(h)||!finite(w,1,60)||!finite(h,1,60)||o.w!==w||o.h!==h||o.x!==snap(o.x,w)||o.y!==snap(o.y,h))throw new Error(t('Ungültige Größe oder Position eines Elements.'));
+  const terrainPosition=o.type==='terrain'&&Number.isInteger(o.x*2)&&Number.isInteger(o.y*2);
+  if(!Number.isInteger(w)||!Number.isInteger(h)||!finite(w,1,60)||!finite(h,1,60)||o.w!==w||o.h!==h||!(o.type==='terrain'?terrainPosition:(o.x===snap(o.x,w)&&o.y===snap(o.y,h))))throw new Error(t('Ungültige Größe oder Position eines Elements.'));
   const q={id:o.id,type:o.type,x:o.x,y:o.y,w,h};
   if(o.type==='base'){
    if(!Number.isInteger(o.slot)||!finite(o.slot,1,100000)||!Number.isInteger(o.lightSize)||!finite(o.lightSize,1,101)||!Number.isInteger(o.electricians)||!finite(o.electricians,0,100))throw new Error(t('Ungültige Basis-Einstellungen.'));
@@ -327,14 +416,16 @@ function validate(raw){
    if(o.beacon!==null&&(!/^[A-Z]$/.test(o.beacon)||beacons.has(o.beacon)))throw new Error(t('Ungültige oder doppelte Beacons.'));
    if(o.beacon)beacons.add(o.beacon);
    Object.assign(q,{slot:o.slot,playerId:o.playerId,beacon:o.beacon,lightSize:o.lightSize,electricians:o.electricians});
-  }else{if(typeof o.name!=='string'||o.name.length>80)throw new Error(t('Ungültiger Elementname.'));q.name=o.name;if(o.customName!==undefined){if(typeof o.customName!=='boolean')throw new Error(t('Ungültiger Elementname.'));q.customName=o.customName;}}
+   if(o.spacing!==undefined){if(!Number.isInteger(o.spacing)||o.spacing<0||o.spacing>2)throw new Error(t('Ungültiger Füllbereich oder Basisabstand.'));q.spacing=o.spacing;}
+  }else{if(typeof o.name!=='string'||o.name.length>80)throw new Error(t('Ungültiger Elementname.'));q.name=o.name;if(o.customName!==undefined){if(typeof o.customName!=='boolean')throw new Error(t('Ungültiger Elementname.'));q.customName=o.customName;}if(o.type==='terrain'&&o.terrainGroup!==undefined){if(!validId(o.terrainGroup))throw new Error(t('Ungültige Terrain-Gruppe.'));q.terrainGroup=o.terrainGroup;}}
   if(o.type==='center')centerCount++;
   if(o.type===anchorType(state)&&(o.x!==state.origin.mapX||o.y!==state.origin.mapY))throw new Error(t('Mittelpunkt und Koordinatenursprung stimmen nicht überein.'));
   if(o.type==='marshall')marshallCount++;
   if(centerCount>1||marshallCount>1)throw new Error(t('Zentrum oder Marshall mehrfach vorhanden.'));
   assertPlacement(state,q);state.objects.push(q);
  }
+ for(const group of new Set(state.objects.filter(o=>o.terrainGroup).map(o=>o.terrainGroup)))if(!terrainsConnected(state.objects.filter(o=>o.terrainGroup===group)))throw new Error(t('Ungültige Terrain-Gruppe.'));
  return state;
 }
-root.HiveModel={SCHEMA,VERSION,PRIORITY_DEFAULTS,priorityOf,priorityLabel,setPlayerPriorities,setPriorityLabel,setPlayerGroups,groupPriority,SEASONS,emptyGroups,isSeason4,isDeveloping,anchorType,setSeason,groupForPlayer,setPlayerGroup,clearPlayers,areNeighbors,groupComponents,terrainResizeCandidate,resizeTerrain,COLORS,clone,uid,normalizeName,snap,rect,overlaps,coords,positionFromCoords,playerFor,objectForPlayer,objectLabel,makeLayout,collision,assertPlacement,moveObject,nextBeacon,makeObject,addObject,removeObject,parsePlayerFile,decodePlayerFile,importPlayers,addPlayers,autofillOptions,autofill,assign,unassign,unassignAll,removePlayer,setOrigin,updateObject,coverage,bounds,validate};
+root.HiveModel={SCHEMA,VERSION,PRIORITY_DEFAULTS,priorityOf,priorityLabel,setPlayerPriorities,setPriorityLabel,setPlayerGroups,groupPriority,SEASONS,emptyGroups,isSeason4,isDeveloping,anchorType,setSeason,groupForPlayer,setPlayerGroup,clearPlayers,areNeighbors,groupComponents,terrainResizeCandidate,resizeTerrain,terrainCornerCoords,terrainPositionFromCornerCoords,setTerrainCorner,connectTerrains,disconnectTerrains,terrainTouching,terrainsConnected,terrainParts,expandObjectIds,objectBounds,terrainUnionGeometry,planBaseFill,fillBases,moveObjects,removeObjects,COLORS,clone,uid,normalizeName,snap,rect,overlaps,coords,positionFromCoords,playerFor,objectForPlayer,objectLabel,makeLayout,collision,assertPlacement,moveObject,nextBeacon,makeObject,addObject,removeObject,parsePlayerFile,decodePlayerFile,importPlayers,addPlayers,autofillOptions,autofill,assign,unassign,unassignAll,removePlayer,setOrigin,updateObject,coverage,bounds,validate};
 })(globalThis);

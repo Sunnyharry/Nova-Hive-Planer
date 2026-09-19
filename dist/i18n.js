@@ -2547,6 +2547,414 @@ const messages={
   "Os planos salvam temporada, grupos, prioridades e nomes personalizados. PNG/SVG mostram nomes e coordenadas; CSV inclui também grupo e prioridade.",
   "Tệp kế hoạch lưu mùa, nhóm, ưu tiên và tên ưu tiên tùy chỉnh. PNG/SVG hiển thị tên và tọa độ; CSV còn có nhóm và ưu tiên.",
   "계획 파일에는 시즌, 그룹, 우선순위와 사용자 지정 우선순위 이름이 저장됩니다. PNG/SVG에는 이름과 좌표가, CSV에는 그룹과 우선순위도 포함됩니다."
+ ],
+ "Kartenwerkzeuge": [
+  "Map tools",
+  "Outils de carte",
+  "Herramientas del mapa",
+  "Ferramentas do mapa",
+  "Công cụ bản đồ",
+  "지도 도구"
+ ],
+ "Ansicht verschieben": [
+  "Pan view",
+  "Déplacer la vue",
+  "Mover vista",
+  "Mover vista",
+  "Di chuyển khung nhìn",
+  "화면 이동"
+ ],
+ "Mehrfachauswahl": [
+  "Multi-select",
+  "Sélection multiple",
+  "Selección múltiple",
+  "Seleção múltipla",
+  "Chọn nhiều",
+  "다중 선택"
+ ],
+ "Bereich füllen": [
+  "Fill area",
+  "Remplir une zone",
+  "Rellenar área",
+  "Preencher área",
+  "Lấp đầy vùng",
+  "영역 채우기"
+ ],
+ "Strg + Klick: hinzufügen/entfernen · Umschalt + Ziehen: Auswahlrahmen": [
+  "Ctrl + click: add/remove · Shift + drag: selection box",
+  "Ctrl + clic : ajouter/retirer · Maj + glisser : cadre de sélection",
+  "Ctrl + clic: añadir/quitar · Mayús + arrastrar: marco de selección",
+  "Ctrl + clique: adicionar/remover · Shift + arrastar: caixa de seleção",
+  "Ctrl + nhấp: thêm/bỏ chọn · Shift + kéo: khung chọn",
+  "Ctrl + 클릭: 추가/해제 · Shift + 드래그: 선택 영역"
+ ],
+ "Abstand zwischen Basen": [
+  "Space between bases",
+  "Espacement entre les bases",
+  "Espacio entre bases",
+  "Espaço entre bases",
+  "Khoảng cách giữa các căn cứ",
+  "기지 사이 간격"
+ ],
+ "Kein Abstand": [
+  "No gap",
+  "Sans espace",
+  "Sin espacio",
+  "Sem espaço",
+  "Không có khoảng cách",
+  "간격 없음"
+ ],
+ "1 Feld": [
+  "1 tile",
+  "1 case",
+  "1 casilla",
+  "1 célula",
+  "1 ô",
+  "1칸"
+ ],
+ "2 Felder": [
+  "2 tiles",
+  "2 cases",
+  "2 casillas",
+  "2 células",
+  "2 ô",
+  "2칸"
+ ],
+ "Basen erzeugen": [
+  "Create bases",
+  "Créer les bases",
+  "Crear bases",
+  "Criar bases",
+  "Tạo căn cứ",
+  "기지 생성"
+ ],
+ "Vorschau: Gebäude und Terrain bleiben frei. Die neuen Plätze kannst du anschließend mit Autofill besetzen.": [
+  "Preview: buildings and terrain are kept clear. You can assign players to the new seats with Autofill afterwards.",
+  "Aperçu : les bâtiments et le terrain sont évités. Vous pourrez ensuite affecter les joueurs aux nouvelles places avec le remplissage auto.",
+  "Vista previa: se respetan los edificios y el terreno. Después puedes asignar jugadores a los nuevos puestos con Autofill.",
+  "Prévia: edifícios e terreno são evitados. Depois você pode atribuir jogadores às novas posições com Autofill.",
+  "Xem trước: không đè lên công trình và địa hình. Sau đó bạn có thể dùng Tự điền để xếp người chơi vào chỗ mới.",
+  "미리보기: 건물과 지형을 피해서 배치합니다. 이후 자동 배치로 새 자리에 플레이어를 배정할 수 있습니다."
+ ],
+ "Ziehe auf der Karte den Bereich auf, der mit Basen gefüllt werden soll.": [
+  "Drag out the area on the map to fill with bases.",
+  "Tracez sur la carte la zone à remplir de bases.",
+  "Dibuja en el mapa el área que quieras llenar de bases.",
+  "Arraste no mapa para delimitar a área a preencher com bases.",
+  "Kéo trên bản đồ để chọn vùng cần lấp đầy bằng căn cứ.",
+  "지도에서 기지로 채울 영역을 드래그하세요."
+ ],
+ "{n} neue Basen · {blocked} blockierte Plätze": [
+  "{n} new bases · {blocked} blocked positions",
+  "{n} nouvelles bases · {blocked} positions bloquées",
+  "{n} bases nuevas · {blocked} posiciones bloqueadas",
+  "{n} novas bases · {blocked} posições bloqueadas",
+  "{n} căn cứ mới · {blocked} vị trí bị chặn",
+  "새 기지 {n}개 · 막힌 자리 {blocked}개"
+ ],
+ "{added} Basen hinzugefügt. {skipped} Plätze waren blockiert.": [
+  "Added {added} bases. {skipped} positions were blocked.",
+  "{added} bases ajoutées. {skipped} positions étaient bloquées.",
+  "Se añadieron {added} bases. {skipped} posiciones estaban bloqueadas.",
+  "{added} bases adicionadas. {skipped} posições estavam bloqueadas.",
+  "Đã thêm {added} căn cứ. Có {skipped} vị trí bị chặn.",
+  "기지 {added}개를 추가했습니다. 자리 {skipped}개는 막혀 있었습니다."
+ ],
+ "Limit: 800 Kartenelemente.": [
+  "Limit: 800 map objects.",
+  "Limite : 800 objets sur la carte.",
+  "Límite: 800 objetos en el mapa.",
+  "Limite: 800 objetos no mapa.",
+  "Giới hạn: 800 đối tượng trên bản đồ.",
+  "제한: 지도 요소 800개."
+ ],
+ "{n} Elemente": [
+  "{n} objects",
+  "{n} objets",
+  "{n} objetos",
+  "{n} objetos",
+  "{n} đối tượng",
+  "요소 {n}개"
+ ],
+ "Linke untere Ecke": [
+  "Bottom-left corner",
+  "Coin inférieur gauche",
+  "Esquina inferior izquierda",
+  "Canto inferior esquerdo",
+  "Góc dưới bên trái",
+  "왼쪽 아래 모서리"
+ ],
+ "Ecke positionieren": [
+  "Position corner",
+  "Positionner le coin",
+  "Posicionar esquina",
+  "Posicionar canto",
+  "Đặt vị trí góc",
+  "모서리 위치 지정"
+ ],
+ "X und Y setzen die linke untere Ecke der Fläche. Breite und Höhe wachsen von dort nach rechts und oben.": [
+  "X and Y set the bottom-left corner. Width and height extend right and upward from there.",
+  "X et Y placent le coin inférieur gauche. La largeur et la hauteur s’étendent vers la droite et vers le haut.",
+  "X e Y fijan la esquina inferior izquierda. El ancho y el alto se extienden desde ahí hacia la derecha y arriba.",
+  "X e Y definem o canto inferior esquerdo. A largura e a altura se estendem para a direita e para cima.",
+  "X và Y đặt góc dưới bên trái. Chiều rộng và chiều cao mở rộng từ đó sang phải và lên trên.",
+  "X와 Y는 왼쪽 아래 모서리를 지정합니다. 너비와 높이는 그 지점에서 오른쪽과 위쪽으로 늘어납니다."
+ ],
+ "Je 1–60 Felder. Die linke untere Ecke bleibt bei Größenänderungen fest. Terrain darf anderes Terrain überlappen. Gebäude bleiben frei.": [
+  "1–60 tiles each. Resizing keeps the bottom-left corner fixed. Terrain may overlap other terrain. Buildings stay clear.",
+  "De 1 à 60 cases par dimension. Le coin inférieur gauche reste fixe lors du redimensionnement. Les terrains peuvent se chevaucher, les bâtiments restent libres.",
+  "De 1 a 60 casillas por dimensión. La esquina inferior izquierda queda fija al cambiar el tamaño. El terreno puede superponerse a otro terreno, pero no a edificios.",
+  "De 1 a 60 células por dimensão. O canto inferior esquerdo fica fixo ao redimensionar. Terrenos podem se sobrepor, mas edifícios ficam livres.",
+  "Mỗi chiều từ 1–60 ô. Góc dưới bên trái được giữ cố định khi đổi kích thước. Địa hình có thể chồng lên địa hình khác, nhưng không đè lên công trình.",
+  "각 방향 1–60칸. 크기를 바꿔도 왼쪽 아래 모서리는 고정됩니다. 지형끼리는 겹칠 수 있지만 건물과는 겹칠 수 없습니다."
+ ],
+ "Terrain platziert. Größe und linke untere Ecke kannst du rechts einstellen.": [
+  "Terrain placed. Set its size and bottom-left corner on the right.",
+  "Terrain placé. Réglez sa taille et son coin inférieur gauche à droite.",
+  "Terreno colocado. Ajusta el tamaño y la esquina inferior izquierda a la derecha.",
+  "Terreno posicionado. Ajuste o tamanho e o canto inferior esquerdo à direita.",
+  "Đã đặt địa hình. Chỉnh kích thước và góc dưới bên trái ở bảng bên phải.",
+  "지형을 배치했습니다. 오른쪽에서 크기와 왼쪽 아래 모서리를 설정하세요."
+ ],
+ "Terrain-Ecke positioniert.": [
+  "Terrain corner positioned.",
+  "Coin du terrain positionné.",
+  "Esquina del terreno posicionada.",
+  "Canto do terreno posicionado.",
+  "Đã đặt góc địa hình.",
+  "지형 모서리 위치를 지정했습니다."
+ ],
+ "Verbundene Terrainfläche": [
+  "Connected terrain",
+  "Terrain connecté",
+  "Terreno unido",
+  "Terreno conectado",
+  "Địa hình đã nối",
+  "연결된 지형"
+ ],
+ "{n} Teile · Außenmaß {w} × {h}": [
+  "{n} parts · outer size {w} × {h}",
+  "{n} parties · dimensions extérieures {w} × {h}",
+  "{n} partes · tamaño exterior {w} × {h}",
+  "{n} partes · tamanho externo {w} × {h}",
+  "{n} phần · kích thước bao ngoài {w} × {h}",
+  "{n}개 조각 · 외곽 크기 {w} × {h}"
+ ],
+ "Bei verbundenem Terrain bezieht sich die Ecke auf den äußeren Rahmen.": [
+  "For connected terrain, the corner refers to its outer bounding rectangle.",
+  "Pour un terrain connecté, le coin désigne celui du rectangle qui l’entoure.",
+  "En un terreno unido, la esquina corresponde al rectángulo exterior que lo engloba.",
+  "No terreno conectado, o canto corresponde ao retângulo externo que o envolve.",
+  "Với địa hình đã nối, góc được tính theo hình chữ nhật bao ngoài.",
+  "연결된 지형의 모서리는 전체를 감싸는 바깥 사각형을 기준으로 합니다."
+ ],
+ "Ziehe ein markiertes Element, um die gesamte Auswahl zu verschieben.": [
+  "Drag a selected object to move the whole selection.",
+  "Glissez un objet sélectionné pour déplacer toute la sélection.",
+  "Arrastra un objeto seleccionado para mover toda la selección.",
+  "Arraste um objeto selecionado para mover toda a seleção.",
+  "Kéo một đối tượng đã chọn để di chuyển toàn bộ lựa chọn.",
+  "선택한 요소를 드래그하면 선택된 요소 전체가 이동합니다."
+ ],
+ "Verschiebung X": [
+  "X offset",
+  "Décalage X",
+  "Desplazamiento X",
+  "Deslocamento X",
+  "Dịch chuyển X",
+  "X 이동량"
+ ],
+ "Verschiebung Y": [
+  "Y offset",
+  "Décalage Y",
+  "Desplazamiento Y",
+  "Deslocamento Y",
+  "Dịch chuyển Y",
+  "Y 이동량"
+ ],
+ "Auswahl verschieben": [
+  "Move selection",
+  "Déplacer la sélection",
+  "Mover selección",
+  "Mover seleção",
+  "Di chuyển lựa chọn",
+  "선택 항목 이동"
+ ],
+ "Auswahl entfernen": [
+  "Remove selection",
+  "Supprimer la sélection",
+  "Eliminar selección",
+  "Remover seleção",
+  "Xóa lựa chọn",
+  "선택 항목 삭제"
+ ],
+ "Terrain verbinden": [
+  "Connect terrain",
+  "Connecter les terrains",
+  "Unir terrenos",
+  "Conectar terrenos",
+  "Nối địa hình",
+  "지형 연결"
+ ],
+ "Terrain trennen": [
+  "Disconnect terrain",
+  "Séparer le terrain",
+  "Separar terreno",
+  "Separar terreno",
+  "Tách địa hình",
+  "지형 분리"
+ ],
+ "Terrainflächen verbunden.": [
+  "Terrain areas connected.",
+  "Terrains connectés.",
+  "Terrenos unidos.",
+  "Terrenos conectados.",
+  "Đã nối các vùng địa hình.",
+  "지형을 연결했습니다."
+ ],
+ "Terrainverbindung gelöst.": [
+  "Terrain parts disconnected.",
+  "Parties du terrain séparées.",
+  "Partes del terreno separadas.",
+  "Partes do terreno separadas.",
+  "Đã tách các phần địa hình.",
+  "지형 조각을 분리했습니다."
+ ],
+ "Keine Elemente zum Verschieben ausgewählt.": [
+  "No objects selected to move.",
+  "Aucun objet sélectionné à déplacer.",
+  "No hay objetos seleccionados para mover.",
+  "Nenhum objeto selecionado para mover.",
+  "Chưa chọn đối tượng để di chuyển.",
+  "이동할 요소를 선택하지 않았습니다."
+ ],
+ "Ein ausgewähltes Element wurde nicht gefunden.": [
+  "A selected object was not found.",
+  "Un objet sélectionné est introuvable.",
+  "No se encontró un objeto seleccionado.",
+  "Um objeto selecionado não foi encontrado.",
+  "Không tìm thấy một đối tượng đã chọn.",
+  "선택한 요소를 찾을 수 없습니다."
+ ],
+ "Die Verschiebung muss in ganzen Feldern erfolgen.": [
+  "Movement must use whole tiles.",
+  "Le déplacement doit se faire par cases entières.",
+  "El desplazamiento debe ser en casillas enteras.",
+  "O deslocamento deve usar células inteiras.",
+  "Phải di chuyển theo số ô nguyên.",
+  "이동량은 정수 칸 단위여야 합니다."
+ ],
+ "Die ausgewählten Elemente überschneiden sich nach dem Verschieben.": [
+  "The selected objects would overlap after moving.",
+  "Les objets sélectionnés se chevaucheraient après le déplacement.",
+  "Los objetos seleccionados se superpondrían al moverlos.",
+  "Os objetos selecionados ficariam sobrepostos após o deslocamento.",
+  "Các đối tượng đã chọn sẽ chồng lên nhau sau khi di chuyển.",
+  "이동 후 선택한 요소들이 서로 겹칩니다."
+ ],
+ "Die ausgewählten Terrainflächen berühren sich nicht durchgehend.": [
+  "The selected terrain areas do not form a connected shape.",
+  "Les terrains sélectionnés ne forment pas une zone continue.",
+  "Los terrenos seleccionados no forman una figura continua.",
+  "Os terrenos selecionados não formam uma área contínua.",
+  "Các vùng địa hình đã chọn chưa tạo thành một khối liền nhau.",
+  "선택한 지형들이 하나로 이어져 있지 않습니다."
+ ],
+ "Wähle mindestens zwei Terrainflächen aus.": [
+  "Select at least two terrain areas.",
+  "Sélectionnez au moins deux terrains.",
+  "Selecciona al menos dos terrenos.",
+  "Selecione pelo menos dois terrenos.",
+  "Chọn ít nhất hai vùng địa hình.",
+  "지형을 두 개 이상 선택하세요."
+ ],
+ "Nur Terrainflächen können verbunden werden.": [
+  "Only terrain areas can be connected.",
+  "Seuls les terrains peuvent être connectés.",
+  "Solo se pueden unir terrenos.",
+  "Apenas terrenos podem ser conectados.",
+  "Chỉ có thể nối các vùng địa hình.",
+  "지형만 연결할 수 있습니다."
+ ],
+ "Nur Terrain kann über seine linke untere Ecke positioniert werden.": [
+  "Only terrain can be positioned by its bottom-left corner.",
+  "Seul le terrain peut être positionné par son coin inférieur gauche.",
+  "Solo el terreno se puede posicionar por su esquina inferior izquierda.",
+  "Apenas o terreno pode ser posicionado pelo canto inferior esquerdo.",
+  "Chỉ địa hình mới có thể đặt theo góc dưới bên trái.",
+  "왼쪽 아래 모서리로 위치를 지정할 수 있는 것은 지형뿐입니다."
+ ],
+ "Terrain-Koordinaten müssen in Schritten von 0,5 zwischen 0 und 999999 liegen.": [
+  "Terrain coordinates must be in steps of 0.5 between 0 and 999999.",
+  "Les coordonnées du terrain doivent être comprises entre 0 et 999999, par pas de 0,5.",
+  "Las coordenadas del terreno deben estar entre 0 y 999999, en incrementos de 0,5.",
+  "As coordenadas do terreno devem estar entre 0 e 999999, em passos de 0,5.",
+  "Tọa độ địa hình phải từ 0 đến 999999, theo bước 0,5.",
+  "지형 좌표는 0에서 999999 사이의 0.5 단위여야 합니다."
+ ],
+ "Löse die Terrainverbindung, um einzelne Teile zu vergrößern.": [
+  "Disconnect the terrain to resize individual parts.",
+  "Séparez le terrain pour redimensionner ses différentes parties.",
+  "Separa el terreno para cambiar el tamaño de sus partes.",
+  "Separe o terreno para redimensionar partes individuais.",
+  "Tách địa hình để đổi kích thước từng phần.",
+  "개별 조각의 크기를 바꾸려면 지형을 분리하세요."
+ ],
+ "Verbundene Terrainflächen müssen gemeinsam verschoben werden.": [
+  "Connected terrain parts must move together.",
+  "Les parties connectées du terrain doivent être déplacées ensemble.",
+  "Las partes unidas del terreno deben moverse juntas.",
+  "As partes conectadas do terreno devem ser movidas juntas.",
+  "Các phần địa hình đã nối phải được di chuyển cùng nhau.",
+  "연결된 지형 조각은 함께 이동해야 합니다."
+ ],
+ "Ungültige Objektposition.": [
+  "Invalid object position.",
+  "Position d’objet non valide.",
+  "Posición de objeto no válida.",
+  "Posição de objeto inválida.",
+  "Vị trí đối tượng không hợp lệ.",
+  "요소 위치가 올바르지 않습니다."
+ ],
+ "Ungültige Terrain-Gruppe.": [
+  "Invalid terrain group.",
+  "Groupe de terrains non valide.",
+  "Grupo de terrenos no válido.",
+  "Grupo de terrenos inválido.",
+  "Nhóm địa hình không hợp lệ.",
+  "지형 그룹이 올바르지 않습니다."
+ ],
+ "Ungültiger Füllbereich oder Basisabstand.": [
+  "Invalid fill area or base spacing.",
+  "Zone de remplissage ou espacement des bases non valide.",
+  "Área de relleno o espacio entre bases no válido.",
+  "Área de preenchimento ou espaçamento entre bases inválido.",
+  "Vùng lấp đầy hoặc khoảng cách căn cứ không hợp lệ.",
+  "채우기 영역 또는 기지 간격이 올바르지 않습니다."
+ ],
+ "Terrain auswählen: Rechts lassen sich Größe und X/Y der linken unteren Ecke einstellen. Größenänderungen im Menü halten diese Ecke fest; Eckpfeile halten die gegenüberliegende Ecke fest. Benachbarte oder überlappende Terrainstücke gemeinsam markieren und mit „Terrain verbinden“ zu einer Form zusammenfügen. „Terrain trennen“ gibt die Teile wieder einzeln frei.": [
+  "Select terrain to set its size and bottom-left X/Y on the right. Resizing in the panel keeps this corner fixed; corner handles keep the opposite corner fixed. Select touching or overlapping parts and use “Connect terrain” to form one shape. “Disconnect terrain” makes the parts editable separately again.",
+  "Sélectionnez un terrain pour régler sa taille et les coordonnées X/Y de son coin inférieur gauche à droite. Le menu garde ce coin fixe ; les poignées gardent le coin opposé fixe. Sélectionnez des parties adjacentes ou superposées et utilisez « Connecter les terrains » pour former un seul objet. « Séparer le terrain » rend les parties à nouveau indépendantes.",
+  "Selecciona un terreno para ajustar su tamaño y las coordenadas X/Y de la esquina inferior izquierda a la derecha. El menú mantiene fija esa esquina; los tiradores mantienen fija la opuesta. Selecciona partes contiguas o superpuestas y usa «Unir terrenos» para formar una sola figura. «Separar terreno» permite editarlas por separado.",
+  "Selecione um terreno para ajustar o tamanho e as coordenadas X/Y do canto inferior esquerdo à direita. O menu mantém esse canto fixo; as alças mantêm o canto oposto fixo. Selecione partes adjacentes ou sobrepostas e use “Conectar terrenos” para formar um único objeto. “Separar terreno” permite editar as partes individualmente.",
+  "Chọn địa hình để chỉnh kích thước và X/Y của góc dưới bên trái ở bảng bên phải. Đổi kích thước trong menu giữ cố định góc này; kéo tay nắm giữ cố định góc đối diện. Chọn các phần liền nhau hoặc chồng lên nhau và dùng “Nối địa hình” để tạo một khối. “Tách địa hình” cho phép sửa từng phần riêng.",
+  "지형을 선택하면 오른쪽에서 크기와 왼쪽 아래 모서리의 X/Y를 설정할 수 있습니다. 메뉴에서 크기를 바꾸면 이 모서리가 고정되고, 모서리 손잡이를 끌면 반대쪽 모서리가 고정됩니다. 닿거나 겹치는 조각을 함께 선택하고 “지형 연결”로 하나의 모양을 만드세요. “지형 분리”로 각 조각을 다시 편집할 수 있습니다."
+ ],
+ "Mit Strg + Klick Elemente hinzufügen oder entfernen. Mit Umschalt + Ziehen oder dem Werkzeug Mehrfachauswahl einen Rahmen aufziehen. Nur vollständig enthaltene Elemente werden gewählt; verbundenes Terrain wird als Ganzes gewählt. Danach ein markiertes Element ziehen oder die Pfeiltasten nutzen.": [
+  "Ctrl + click adds or removes objects. Shift + drag or the Multi-select tool draws a selection box. Only fully enclosed objects are selected; connected terrain is selected as a whole. Then drag a selected object or use the arrow keys.",
+  "Ctrl + clic ajoute ou retire des objets. Maj + glisser ou l’outil Sélection multiple trace un cadre. Seuls les objets entièrement inclus sont sélectionnés ; les terrains connectés sont sélectionnés en entier. Glissez ensuite un objet sélectionné ou utilisez les flèches.",
+  "Ctrl + clic añade o quita objetos. Mayús + arrastrar o la herramienta Selección múltiple dibuja un marco. Solo se seleccionan los objetos completamente incluidos; el terreno unido se selecciona entero. Luego arrastra un objeto seleccionado o usa las flechas.",
+  "Ctrl + clique adiciona ou remove objetos. Shift + arrastar ou a ferramenta Seleção múltipla cria uma caixa. Apenas objetos totalmente incluídos são selecionados; terrenos conectados são selecionados por inteiro. Depois arraste um objeto selecionado ou use as setas.",
+  "Ctrl + nhấp để thêm hoặc bỏ đối tượng. Shift + kéo hoặc công cụ Chọn nhiều để vẽ khung chọn. Chỉ chọn đối tượng nằm hoàn toàn trong khung; địa hình đã nối được chọn cả khối. Sau đó kéo đối tượng đã chọn hoặc dùng phím mũi tên.",
+  "Ctrl + 클릭으로 요소를 추가하거나 해제합니다. Shift + 드래그 또는 다중 선택 도구로 선택 영역을 그리세요. 영역에 완전히 포함된 요소만 선택되며 연결된 지형은 전체가 선택됩니다. 이후 선택한 요소를 드래그하거나 방향키를 사용하세요."
+ ],
+ "Bereich füllen wählen, ein Rechteck aufziehen und 0, 1 oder 2 Felder Abstand einstellen. Die Vorschau zeigt passende freie Basisplätze. Mit Basen erzeugen übernehmen; danach kann Autofill die Spieler verteilen. Strg + Z nimmt den gesamten Schritt zurück.": [
+  "Choose Fill area, draw a rectangle and set a gap of 0, 1 or 2 tiles. The preview shows available base positions. Apply with Create bases; Autofill can then assign players. Ctrl + Z undoes the entire step.",
+  "Choisissez Remplir une zone, tracez un rectangle et réglez l’espacement sur 0, 1 ou 2 cases. L’aperçu montre les positions libres. Validez avec Créer les bases ; le remplissage auto pourra ensuite répartir les joueurs. Ctrl + Z annule toute l’étape.",
+  "Elige Rellenar área, dibuja un rectángulo y ajusta el espacio a 0, 1 o 2 casillas. La vista previa muestra los puestos libres. Confirma con Crear bases; después Autofill puede asignar jugadores. Ctrl + Z deshace todo el paso.",
+  "Escolha Preencher área, desenhe um retângulo e defina 0, 1 ou 2 células de espaço. A prévia mostra as posições livres. Confirme com Criar bases; depois Autofill pode atribuir os jogadores. Ctrl + Z desfaz toda a etapa.",
+  "Chọn Lấp đầy vùng, vẽ hình chữ nhật và đặt khoảng cách 0, 1 hoặc 2 ô. Xem trước hiển thị các vị trí căn cứ còn trống. Nhấn Tạo căn cứ để áp dụng; sau đó dùng Tự điền để xếp người chơi. Ctrl + Z hoàn tác toàn bộ bước này.",
+  "영역 채우기를 선택하고 사각형을 그린 뒤 간격을 0, 1, 2칸 중 선택하세요. 미리보기에 가능한 빈 기지 자리가 표시됩니다. 기지 생성으로 적용한 뒤 자동 배치로 플레이어를 배정할 수 있습니다. Ctrl + Z로 전체 작업을 되돌릴 수 있습니다."
  ]
 };
 let language='de';
