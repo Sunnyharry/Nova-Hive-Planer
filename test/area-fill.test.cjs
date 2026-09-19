@@ -13,8 +13,23 @@ for(const gap of [0,1,2]){
   const p=preview.positions[i],base={...p,w:3,h:3};M.assertWorldPlacement(state,base);
   assert.equal(M.overlaps(base,center),false);
   if(i)assert.ok(distance(preview.positions[i-1])<=distance(p),'inside-out order');
-  for(const q of preview.positions.slice(0,i))assert.equal(M.overlaps(base,{...q,w:3+2*gap,h:3+2*gap}),false,'requested minimum base spacing');
+  for(const q of preview.positions.slice(0,i))assert.equal(M.overlaps(base,{...q,w:3+2*Math.min(gap,1),h:3+2*Math.min(gap,1)}),false,'no overlaps or undersized central seam');
  }
+ // Check every possible integer 3x3 landing footprint inside the filled hive,
+ // including corners and transitions beside the center, not only grid seats.
+ const bounds=M.objectBounds(filled.state.objects);
+ for(let x=Math.ceil(bounds.left+1.5);x<=bounds.right-1.5;x++)for(let y=Math.ceil(bounds.bottom+1.5);y<=bounds.top-1.5;y++)assert.ok(filled.state.objects.some(o=>M.overlaps({x,y,w:3,h:3},o)),`free hostile landing at ${x}/${y}, gap ${gap}`);
+ for(const axis of ['x','y']){
+  const values=[...new Set(preview.positions.map(p=>p[axis]))].sort((a,b)=>a-b);
+  for(let i=1;i<values.length;i++)assert.ok(values[i]-values[i-1]-3<=gap,'never exceed the chosen gap');
+ }
+ // Separate fill passes must preserve the tighter seam and leave no skipped seat.
+ const left=M.fillBases(state,{...box,right:0},gap).state;
+ const complete=M.fillBases(left,box,gap).state;
+ assert.deepEqual(complete.objects.filter(o=>o.type==='base').map(key).sort(),preview.positions.map(key).sort());
+ const removed=filled.state.objects.find(o=>o.type==='base'&&o.x<0&&Math.abs(o.x)<4);
+ const repaired=M.fillBases(M.removeObject(filled.state,removed.id),box,gap);
+ assert.equal(repaired.added,1);assert.deepEqual(repaired.state.objects.at(-1).x,removed.x);assert.deepEqual(repaired.state.objects.at(-1).y,removed.y);
  // The first row must exist on all four faces, with at most one empty tile.
  for(const axis of ['x','y'])for(const sign of [-1,1]){
   const other=axis==='x'?'y':'x',row=preview.positions.filter(p=>sign*p[axis]>=6&&Math.abs(p[other])<6);
@@ -35,7 +50,7 @@ for(const gap of [0,1,2]){
  assert.deepEqual(M.planBaseFill(state,{left:10.5,right:box.right,bottom:box.bottom,top:box.top},gap).positions,preview.positions.filter(p=>p.x-1.5>=10.5));
  // At the object limit, keep the closest candidates, not a corner of the world.
  const full=M.planBaseFill(state,M.worldBounds(state),gap);assert.equal(full.positions.length,799);assert.equal(full.limited,true);
- const oracle=[],onAxis=n=>gap===0?n%3===0:gap===1?Math.abs(n)%4===2:n===0||Math.abs(n)>=6&&(Math.abs(n)-6)%5===0;
+ const oracle=[],onAxis=n=>gap===0?n%3===0:gap===1?Math.abs(n)%4===2:Math.abs(n)%5===2;
  for(let x=-100;x<=100;x++)for(let y=-100;y<=100;y++)if(onAxis(x)&&onAxis(y)&&!M.overlaps({x,y,w:3,h:3},center))oracle.push({x:x||0,y:y||0});
  oracle.sort((a,b)=>distance(a)-distance(b)||b.y-a.y||a.x-b.x);
  assert.deepEqual(full.positions,oracle.slice(0,799));

@@ -185,22 +185,25 @@ function planBaseFill(state,area,gap=0){
  const x0=Math.ceil(left+1.5-1e-8),y0=Math.ceil(bottom+1.5-1e-8),x1=Math.floor(right-1.5+1e-8),y1=Math.floor(top-1.5+1e-8),capacity=Math.max(0,800-state.objects.length);
  if(x0>x1||y0>y1)return {positions:[],skipped:0,limited:false,gap};
  const anchor=state.objects.find(o=>o.type===anchorType(state)),cx=anchor?.x??state.origin.mapX,cy=anchor?.y??state.origin.mapY;
- // A 9-tile center fits exactly into the 3- and 4-tile lattices. With a
- // 5-tile pitch, widen only the two central intervals to 6: the first bases
- // still touch the center, without reducing the requested gap between bases.
+ // Never widen an interval beyond the chosen pitch: a 6-tile interval
+ // leaves a hostile 3x3 landing space. For gap 2, use two inner axes at
+ // -2/+2 (one empty tile), then +/-7, +/-12, ... (two empty tiles).
+ // This also keeps all four faces of the 9x9 center one tile from bases.
  // Axis positions never depend on the selection rectangle's starting corner.
  function axis(center,lo,hi){
   const values=[];
   if(anchor?.type==='center'){
-   const inner=gap===0?[-3,0,3]:gap===1?[-2,2]:[0];
+   const inner=gap===0?[-3,0,3]:[-2,2];
    for(const offset of inner)if(center+offset>=lo&&center+offset<=hi)values.push(center+offset);
-   for(const sign of [-1,1])for(let offset=6;offset<=Math.max(Math.abs(lo-center),Math.abs(hi-center));offset+=pitch){const value=center+sign*offset;if(value>=lo&&value<=hi)values.push(value);}
+   for(const sign of [-1,1])for(let offset=gap===2?7:6;offset<=Math.max(Math.abs(lo-center),Math.abs(hi-center));offset+=pitch){const value=center+sign*offset;if(value>=lo&&value<=hi)values.push(value);}
   }else for(let k=Math.ceil((lo-center)/pitch);k<=Math.floor((hi-center)/pitch);k++)values.push(center+k*pitch);
   return values.sort((a,b)=>(a-center)**2-(b-center)**2||a-b);
  }
  const xs=axis(cx,x0,x1),ys=axis(cy,y0,y1).sort((a,b)=>(a-cy)**2-(b-cy)**2||b-a),positions=[],buckets=new Map();let skipped=0,limited=false;
  // Only nearby obstacles need inspection, even for large selected areas.
- for(const original of state.objects){const o=original.type==='base'?{...original,w:original.w+2*gap,h:original.h+2*gap}:original,r=rect(o);for(let gx=Math.floor(r.left/16);gx<=Math.floor(r.right/16);gx++)for(let gy=Math.floor(r.bottom/16);gy<=Math.floor(r.top/16);gy++){const key=gx+','+gy;if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(o);}}
+ for(const original of state.objects){const o=original.type==='base'?{...original,w:original.w+2*gap,h:original.h+2*gap}:original,r=rect(o);for(let gx=Math.floor(r.left/16);gx<=Math.floor(r.right/16);gx++)for(let gy=Math.floor(r.bottom/16);gy<=Math.floor(r.top/16);gy++){const key=gx+','+gy;if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(original);}}
+ // Apply the same narrow central seam when filling in multiple passes.
+ const centralPair=(a,b,center)=>anchor?.type==='center'&&gap===2&&Math.abs(a-center)===2&&a+b===2*center&&a!==b;
  // Merge distance-sorted columns with a small heap instead of sorting up to
  // 110,000 world-wide candidates on every live resize. Stop at the plan limit.
  const heap=[],compare=(a,b)=>a.distance-b.distance||b.y-a.y||a.x-b.x;
@@ -210,7 +213,7 @@ function planBaseFill(state,area,gap=0){
  while(heap.length){
   const {x,y,i}=pop();if(i+1<ys.length)push(x,i+1);
   const candidate={x,y,w:3,h:3},nearby=new Set();for(let gx=Math.floor((x-1.5)/16);gx<=Math.floor((x+1.5)/16);gx++)for(let gy=Math.floor((y-1.5)/16);gy<=Math.floor((y+1.5)/16);gy++)for(const o of buckets.get(gx+','+gy)??[])nearby.add(o);
-  if([...nearby].some(o=>overlaps(candidate,o))){skipped++;continue;}
+  if([...nearby].some(o=>overlaps(candidate,o.type==='base'?{...o,w:o.w+2*(centralPair(x,o.x,cx)?1:gap),h:o.h+2*(centralPair(y,o.y,cy)?1:gap)}:o))){skipped++;continue;}
   if(positions.length>=capacity){limited=true;break;}
   positions.push({x:x||0,y:y||0});
  }

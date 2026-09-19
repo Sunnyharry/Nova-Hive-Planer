@@ -3,7 +3,7 @@
 const I=globalThis.HiveI18n,t=(key,params)=>I.t(key,params);
 const M=globalThis.HiveModel,W=globalThis.HiveWorkspace,$=id=>document.getElementById(id),svg=$('map'),stage=$('stage');
 // User-facing release: increment the final number for each later delivered update.
-const APP_VERSION='1.1.7';
+const APP_VERSION='1.1.8';
 const TOOL_SHORTCUTS={b:'base',m:'marshall',a:'center',t:'terrain',l:'beacon'};
 const shortcutFor=type=>Object.keys(TOOL_SHORTCUTS).find(key=>TOOL_SHORTCUTS[key]===type)?.toUpperCase();
 let workspace=W.createWorkspace(),state=W.activePlan(workspace),selectedId=null,pending=null,filter='all',dirty=false,undoStack=[],redoStack=[],drag=null,suppressClick=false,confirmAction=null,toastTimer=null;
@@ -249,6 +249,7 @@ function renderControls(){
  if(pending)ph.querySelector('span').textContent=pending.kind==='player'?t('{name}: gewünschten Platz anklicken',{name:state.players.find(p=>p.id===pending.playerId)?.name??t('Spieler')}):t('{name}: auf die Karte klicken',{name:typeName(pending.o)});
 }
 function renderFillControls(){
+ $('area-fill-gap-note').hidden=Number($('fill-gap').value)!==2||!state.objects.some(o=>o.type==='center');
  $('area-fill-options').hidden=mapMode!=='fill';$('apply-area-fill').disabled=!fillPreview?.positions.length||!!drag;
  $('area-fill-summary').textContent=fillPreview?t('{w} × {h} Felder · {n} neue Basen · {blocked} blockierte Plätze',{w:fillArea.right-fillArea.left,h:fillArea.top-fillArea.bottom,n:fillPreview.positions.length,blocked:fillPreview.skipped})+(fillPreview.limited?' '+t('Limit: 800 Kartenelemente.'):''):t('Ziehe auf der Karte den Bereich auf, der mit Basen gefüllt werden soll.');
  $('area-fill-anchor').textContent=state.objects.some(o=>o.type===M.anchorType(state))?t(M.isSeason4(state)?'Raster am Allianzzentrum: von innen nach außen, am Zentrum höchstens 1 Feld Abstand.':'Raster am Marshall: von innen nach außen.'):t('Ohne Zentrum bleibt das Raster am Kartenursprung ausgerichtet.');

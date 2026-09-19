@@ -3291,6 +3291,14 @@ const messages={
   "Arraste os cantos: o tamanho e a quantidade de bases são atualizados imediatamente. Também pode usar as setas em um canto selecionado (Shift: 5 quadrados).",
   "Kéo các góc: kích thước và số căn cứ cập nhật ngay. Cũng có thể dùng phím mũi tên khi chọn góc (Shift: 5 ô).",
   "모서리를 드래그하면 크기와 기지 수가 즉시 갱신됩니다. 모서리에 초점을 맞춘 뒤 화살표 키도 사용할 수 있습니다(Shift: 5칸)."
+ ],
+ "Bei 2 Feldern Abstand wird der mittlere Übergang auf 1 Feld verdichtet. Vorhandene Objekte bleiben an ihrer Position.": [
+  "With 2-tile spacing, the central transition is tightened to 1 tile. Existing objects stay in their positions.",
+  "Avec un espacement de 2 cases, la transition centrale est resserrée à 1 case. Les objets existants restent à leur place.",
+  "Con una separación de 2 casillas, la transición central se reduce a 1 casilla. Los objetos existentes permanecen en su lugar.",
+  "Com espaçamento de 2 quadrados, a transição central é reduzida a 1 quadrado. Os objetos existentes permanecem nas suas posições.",
+  "Khi chọn khoảng cách 2 ô, đoạn chuyển tiếp ở giữa được thu hẹp còn 1 ô. Các đối tượng hiện có giữ nguyên vị trí.",
+  "2칸 간격을 선택하면 중앙 연결 구간은 1칸으로 좁아집니다. 기존 오브젝트의 위치는 유지됩니다."
  ]
 };
 let language='de';
