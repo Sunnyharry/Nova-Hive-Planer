@@ -112,9 +112,9 @@ button.danger-solid{background:#8c333b;border-color:#be555d;color:#fff0ef;flex-s
  <aside class="settings panel" aria-label="Plan und ausgewählter Platz" data-i18n-aria-label="Plan und ausgewählter Platz">
   <section class="settings-section"><h2><span data-i18n="Season">Season</span></h2><label class="sr-only" for="season-select"><span data-i18n="Season auswählen">Season auswählen</span></label><select id="season-select"><option value="off" data-i18n="Off Season">Off Season</option><option value="1">Season 1</option><option value="2">Season 2</option><option value="3">Season 3</option><option value="4">Season 4</option><option value="5">Season 5</option><option value="6">Season 6</option></select><p class="field-help" id="season-help"></p></section>
   <section class="settings-section"><h2 id="anchor-title">Allianzzentrum</h2><p class="field-help"><span data-i18n="Kartenkoordinaten des linken unteren Feldes">Kartenkoordinaten des linken unteren Feldes</span></p><form id="anchor-form" class="coordinate-form"><label>X<input id="anchor-x" type="number" step="1" min="0" max="991" value="496" required></label><label>Y<input id="anchor-y" type="number" step="1" min="0" max="991" value="496" required></label><button type="submit" class="full"><span data-i18n="Gesamten Hive ausrichten">Gesamten Hive ausrichten</span></button></form><p class="field-help" id="anchor-help"><span data-i18n="Alle Spielerkoordinaten berechnen sich daraus. X steigt nach rechts, Y nach oben.">Alle Spielerkoordinaten berechnen sich daraus. X steigt nach rechts, Y nach oben.</span></p></section>
-  <section class="settings-section"><h2><span data-i18n="Startaufstellung">Startaufstellung</span></h2><label class="sr-only" for="layout-select"><span data-i18n="Hive-Vorlage">Hive-Vorlage</span></label><select id="layout-select"><option value="spaced" data-i18n="100 Plätze · 1 Feld Abstand">100 Plätze · 1 Feld Abstand</option><option value="compact" data-i18n="100 Plätze · ohne Abstand">100 Plätze · ohne Abstand</option><option value="empty" data-i18n="Leere Karte">Leere Karte</option></select><button class="full" id="apply-layout"><span data-i18n="Vorlage anwenden">Vorlage anwenden</span></button></section>
+  <section class="settings-section"><h2><span data-i18n="Layout-Varianten">Layout-Varianten</span></h2><label class="sr-only" for="layout-select"><span data-i18n="Layout-Variante">Layout-Variante</span></label><select id="layout-select"><option value="spaced" data-i18n="100 Plätze · 1 Feld Abstand">100 Plätze · 1 Feld Abstand</option><option value="compact" data-i18n="100 Plätze · ohne Abstand">100 Plätze · ohne Abstand</option><option value="empty" data-i18n="Leere Karte">Leere Karte</option></select><p class="field-help" data-i18n="Wechseln bewahrt deine Arbeit. Plan speichern sichert alle Varianten gemeinsam.">Wechseln bewahrt deine Arbeit. Plan speichern sichert alle Varianten gemeinsam.</p><button class="full" id="apply-layout"><span data-i18n="Aktuelle Variante zurücksetzen">Aktuelle Variante zurücksetzen</span></button></section>
   <section class="settings-section selection-section"><div class="panel-title"><h2><span data-i18n="Ausgewählter Platz">Ausgewählter Platz</span></h2><span id="selection-type" class="small-tag" hidden></span></div><div id="inspector"><div class="selection-empty"><span aria-hidden="true">⌖</span><p><span data-i18n="Wähle eine Basis, den Marshall oder ein anderes Element auf der Karte.">Wähle eine Basis, den Marshall oder ein anderes Element auf der Karte.</span></p></div></div></section>
-  <div class="settings-bottom"><div class="hive-reset"><button id="unassign-all" class="danger full" aria-describedby="unassign-all-help" disabled><span data-i18n="Alle Spieler aus dem Hive entfernen">Alle Spieler aus dem Hive entfernen</span></button><p id="unassign-all-help" class="field-help"><span data-i18n="Spielerliste und Gruppen bleiben erhalten. Alle Plätze werden frei.">Spielerliste und Gruppen bleiben erhalten. Alle Plätze werden frei.</span></p></div><p><span data-i18n="Pläne werden als Datei gespeichert. Öffne die Datei später hier, um weiterzuplanen.">Pläne werden als Datei gespeichert. Öffne die Datei später hier, um weiterzuplanen.</span></p><button id="show-help" class="text-button"><span data-i18n="Kurzanleitung">Kurzanleitung</span></button><p id="app-version" class="app-version">Version 1.1.5</p></div>
+  <div class="settings-bottom"><div class="hive-reset"><button id="unassign-all" class="danger full" aria-describedby="unassign-all-help" disabled><span data-i18n="Alle Spieler aus dem Hive entfernen">Alle Spieler aus dem Hive entfernen</span></button><p id="unassign-all-help" class="field-help"><span data-i18n="Spielerliste und Gruppen bleiben erhalten. Alle Plätze werden frei.">Spielerliste und Gruppen bleiben erhalten. Alle Plätze werden frei.</span></p></div><p><span data-i18n="Eine Plan-Datei enthält alle Season- und Layout-Varianten. Beim Öffnen kehrst du zum zuletzt aktiven Kartenstand zurück.">Eine Plan-Datei enthält alle Season- und Layout-Varianten. Beim Öffnen kehrst du zum zuletzt aktiven Kartenstand zurück.</span></p><button id="show-help" class="text-button"><span data-i18n="Kurzanleitung">Kurzanleitung</span></button><p id="app-version" class="app-version">Version 1.1.6</p></div>
  </aside>
 </main>
 <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
@@ -126,7 +126,7 @@ button.danger-solid{background:#8c333b;border-color:#be555d;color:#fff0ef;flex-s
 extrageneity
 …" required maxlength="30000"></textarea><div class="dialog-footer"><span id="names-preview"><span data-i18n="Noch keine Namen">Noch keine Namen</span></span><button class="primary" type="submit"><span data-i18n="Zur Liste hinzufügen">Zur Liste hinzufügen</span></button></div></form></dialog>
 <dialog id="confirm-dialog"><div class="dialog-heading"><h2 id="confirm-title"><span data-i18n="Änderung übernehmen?">Änderung übernehmen?</span></h2><button class="icon-button" data-close="confirm-dialog" aria-label="Schließen" data-i18n-aria-label="Schließen">×</button></div><p id="confirm-message"></p><div class="dialog-footer"><button data-close="confirm-dialog"><span data-i18n="Abbrechen">Abbrechen</span></button><button id="confirm-yes" class="primary"><span data-i18n="Übernehmen">Übernehmen</span></button></div></dialog>
-<dialog id="help-dialog"><div class="dialog-heading"><h2><span data-i18n="Dein Hive, Platz für Platz">Dein Hive, Platz für Platz</span></h2><button class="icon-button" data-close="help-dialog" aria-label="Schließen" data-i18n-aria-label="Schließen">×</button></div><ol class="help-list"><li><strong><span data-i18n="Spieler importieren.">Spieler importieren.</span></strong> <span data-i18n="Namen einfügen oder eine TXT-Datei (ein Name pro Zeile) bzw. CSV (Semikolon) importieren. Nur Namen, keine Kopfzeile. UTF-8 und UTF-16 mit BOM werden unterstützt. Leere und doppelte Einträge werden übersprungen.">Namen einfügen oder eine TXT-Datei (ein Name pro Zeile) bzw. CSV (Semikolon) importieren. Nur Namen, keine Kopfzeile. UTF-8 und UTF-16 mit BOM werden unterstützt. Leere und doppelte Einträge werden übersprungen.</span></li><li><strong><span data-i18n="Season auswählen">Season auswählen</span></strong> <span data-i18n="Off Season: Marshall im Mittelpunkt. Season 4: Allianzzentrum und Beacons. Die übrigen Seasons sind als in Bearbeitung markiert.">Off Season: Marshall im Mittelpunkt. Season 4: Allianzzentrum und Beacons. Die übrigen Seasons sind als in Bearbeitung markiert.</span></li><li><strong><span data-i18n="Koordinaten setzen.">Koordinaten setzen.</span></strong> <span data-i18n="Wähle ein Objekt und gib rechts die X/Y-Koordinaten seines linken unteren Feldes ein. Mit „Gesamten Hive ausrichten“ verschiebst du alle Positionen gemeinsam. Die Welt umfasst 1000 × 1000 Felder (0–999).">Wähle ein Objekt und gib rechts die X/Y-Koordinaten seines linken unteren Feldes ein. Mit „Gesamten Hive ausrichten“ verschiebst du alle Positionen gemeinsam. Die Welt umfasst 1000 × 1000 Felder (0–999).</span></li><li><strong><span data-i18n="Spieler zuordnen.">Spieler zuordnen.</span></strong> <span data-i18n="Ziehe einen Namen auf eine Basis. Alternativ: Name anklicken, dann Basis anklicken.">Ziehe einen Namen auf eine Basis. Alternativ: Name anklicken, dann Basis anklicken.</span></li><li><strong><span data-i18n="Gruppen">Gruppen</span></strong> <span data-i18n="Öffne „Priority & Gruppen“ unter der Spielerliste. Markiere mehrere Spieler und ziehe sie in P1, P2 oder P3, dann im zweiten Tab in eine der zehn Freundesgruppen. Alternativ nutze „Zuweisen“. Priorität und Gruppe sind unabhängig. Neue Spieler beginnen mit P2. Die Prioritätsnamen sind editierbar.">Öffne „Priority & Gruppen“ unter der Spielerliste. Markiere mehrere Spieler und ziehe sie in P1, P2 oder P3, dann im zweiten Tab in eine der zehn Freundesgruppen. Alternativ nutze „Zuweisen“. Priorität und Gruppe sind unabhängig. Neue Spieler beginnen mit P2. Die Prioritätsnamen sind editierbar.</span></li><li><strong><span data-i18n="Autofill nutzen.">Autofill nutzen.</span></strong> <span data-i18n="Autofill ordnet einzelne Spieler nach Priorität und Gruppen nach ihrem Prioritätsdurchschnitt von innen nach außen. Gruppen bleiben möglichst zusammen. Manuell gesetzte Mitglieder bleiben fest und dienen als Anker für ihre Gruppe. Bei einem Feld Abstand gelten benachbarte Plätze als zusammenhängend.">Autofill ordnet einzelne Spieler nach Priorität und Gruppen nach ihrem Prioritätsdurchschnitt von innen nach außen. Gruppen bleiben möglichst zusammen. Manuell gesetzte Mitglieder bleiben fest und dienen als Anker für ihre Gruppe. Bei einem Feld Abstand gelten benachbarte Plätze als zusammenhängend.</span></li><li><strong><span data-i18n="Umgebung ergänzen.">Umgebung ergänzen.</span></strong> <span data-i18n="Terrain auswählen: Rechts lassen sich Größe und X/Y der linken unteren Ecke einstellen. Größenänderungen im Menü halten diese Ecke fest; Eckpfeile halten die gegenüberliegende Ecke fest. Benachbarte oder überlappende Terrainstücke gemeinsam markieren und mit „Terrain verbinden“ zu einer Form zusammenfügen. „Terrain trennen“ gibt die Teile wieder einzeln frei.">Terrain auswählen: Rechts lassen sich Größe und X/Y der linken unteren Ecke einstellen. Größenänderungen im Menü halten diese Ecke fest; Eckpfeile halten die gegenüberliegende Ecke fest. Benachbarte oder überlappende Terrainstücke gemeinsam markieren und mit „Terrain verbinden“ zu einer Form zusammenfügen. „Terrain trennen“ gibt die Teile wieder einzeln frei.</span></li><li><strong><span data-i18n="Alle Spieler entfernen">Alle Spieler entfernen</span></strong> <span data-i18n="Der rote Button leert die Spielerliste, Gruppen und Platzzuweisungen. Die Karte bleibt erhalten. Strg+Z stellt alles wieder her.">Der rote Button leert die Spielerliste, Gruppen und Platzzuweisungen. Die Karte bleibt erhalten. Strg+Z stellt alles wieder her.</span></li><li><strong><span data-i18n="Speichern und weitergeben.">Speichern und weitergeben.</span></strong> <span data-i18n="Plan-Dateien speichern Season, Gruppen, Prioritäten und eigene Prioritätsnamen. PNG/SVG zeigen Namen und Koordinaten, CSV zusätzlich Gruppe und Priorität.">Plan-Dateien speichern Season, Gruppen, Prioritäten und eigene Prioritätsnamen. PNG/SVG zeigen Namen und Koordinaten, CSV zusätzlich Gruppe und Priorität.</span></li><li><strong data-i18n="Mehrfachauswahl">Mehrfachauswahl</strong> <span data-i18n="Mit Strg + Klick Elemente hinzufügen oder entfernen. Mit Umschalt + Ziehen oder dem Werkzeug Mehrfachauswahl einen Rahmen aufziehen. Nur vollständig enthaltene Elemente werden gewählt; verbundenes Terrain wird als Ganzes gewählt. Danach ein markiertes Element ziehen oder die Pfeiltasten nutzen.">Mit Strg + Klick Elemente hinzufügen oder entfernen. Mit Umschalt + Ziehen oder dem Werkzeug Mehrfachauswahl einen Rahmen aufziehen. Nur vollständig enthaltene Elemente werden gewählt; verbundenes Terrain wird als Ganzes gewählt. Danach ein markiertes Element ziehen oder die Pfeiltasten nutzen.</span></li><li><strong data-i18n="Bereich füllen">Bereich füllen</strong> <span data-i18n="Bereich füllen wählen, ein Rechteck aufziehen und 0, 1 oder 2 Felder Abstand einstellen. Die Vorschau zeigt passende freie Basisplätze. Mit Basen erzeugen übernehmen; danach kann Autofill die Spieler verteilen. Strg + Z nimmt den gesamten Schritt zurück.">Bereich füllen wählen, ein Rechteck aufziehen und 0, 1 oder 2 Felder Abstand einstellen. Die Vorschau zeigt passende freie Basisplätze. Mit Basen erzeugen übernehmen; danach kann Autofill die Spieler verteilen. Strg + Z nimmt den gesamten Schritt zurück.</span></li></ol><p class="help-note" id="mode-help-note"></p><p class="help-note"><span data-i18n="Hinzufügen: B = Basis, M = Marshall, A = Allianzzentrum, T = Terrain, L = Beacon. Taste drücken, dann auf die Karte klicken. A und L sind nur in Season 4 verfügbar. Beim Schreiben sind diese Kürzel deaktiviert.">Hinzufügen: B = Basis, M = Marshall, A = Allianzzentrum, T = Terrain, L = Beacon. Taste drücken, dann auf die Karte klicken. A und L sind nur in Season 4 verfügbar. Beim Schreiben sind diese Kürzel deaktiviert.</span></p><p class="help-note"><span data-i18n="Tastatur: Pfeile = 1 Feld, Umschalt+Pfeile = 5 Felder, Entf = Entfernen, Strg+Z = Rückgängig, Esc = Abbrechen.">Tastatur: Pfeile = 1 Feld, Umschalt+Pfeile = 5 Felder, Entf = Entfernen, Strg+Z = Rückgängig, Esc = Abbrechen.</span></p></dialog>
+<dialog id="help-dialog"><div class="dialog-heading"><h2><span data-i18n="Dein Hive, Platz für Platz">Dein Hive, Platz für Platz</span></h2><button class="icon-button" data-close="help-dialog" aria-label="Schließen" data-i18n-aria-label="Schließen">×</button></div><ol class="help-list"><li><strong><span data-i18n="Spieler importieren.">Spieler importieren.</span></strong> <span data-i18n="Namen einfügen oder eine TXT-Datei (ein Name pro Zeile) bzw. CSV (Semikolon) importieren. Nur Namen, keine Kopfzeile. UTF-8 und UTF-16 mit BOM werden unterstützt. Leere und doppelte Einträge werden übersprungen.">Namen einfügen oder eine TXT-Datei (ein Name pro Zeile) bzw. CSV (Semikolon) importieren. Nur Namen, keine Kopfzeile. UTF-8 und UTF-16 mit BOM werden unterstützt. Leere und doppelte Einträge werden übersprungen.</span></li><li><strong><span data-i18n="Season auswählen">Season auswählen</span></strong> <span data-i18n="Off Season: Marshall im Mittelpunkt. Season 4: Allianzzentrum und Beacons. Die übrigen Seasons sind als in Bearbeitung markiert.">Off Season: Marshall im Mittelpunkt. Season 4: Allianzzentrum und Beacons. Die übrigen Seasons sind als in Bearbeitung markiert.</span></li><li><strong><span data-i18n="Koordinaten setzen.">Koordinaten setzen.</span></strong> <span data-i18n="Wähle ein Objekt und gib rechts die X/Y-Koordinaten seines linken unteren Feldes ein. Mit „Gesamten Hive ausrichten“ verschiebst du alle Positionen gemeinsam. Die Welt umfasst 1000 × 1000 Felder (0–999).">Wähle ein Objekt und gib rechts die X/Y-Koordinaten seines linken unteren Feldes ein. Mit „Gesamten Hive ausrichten“ verschiebst du alle Positionen gemeinsam. Die Welt umfasst 1000 × 1000 Felder (0–999).</span></li><li><strong><span data-i18n="Spieler zuordnen.">Spieler zuordnen.</span></strong> <span data-i18n="Ziehe einen Namen auf eine Basis. Alternativ: Name anklicken, dann Basis anklicken.">Ziehe einen Namen auf eine Basis. Alternativ: Name anklicken, dann Basis anklicken.</span></li><li><strong><span data-i18n="Gruppen">Gruppen</span></strong> <span data-i18n="Öffne „Priority & Gruppen“ unter der Spielerliste. Markiere mehrere Spieler und ziehe sie in P1, P2 oder P3, dann im zweiten Tab in eine der zehn Freundesgruppen. Alternativ nutze „Zuweisen“. Priorität und Gruppe sind unabhängig. Neue Spieler beginnen mit P2. Die Prioritätsnamen sind editierbar.">Öffne „Priority & Gruppen“ unter der Spielerliste. Markiere mehrere Spieler und ziehe sie in P1, P2 oder P3, dann im zweiten Tab in eine der zehn Freundesgruppen. Alternativ nutze „Zuweisen“. Priorität und Gruppe sind unabhängig. Neue Spieler beginnen mit P2. Die Prioritätsnamen sind editierbar.</span></li><li><strong><span data-i18n="Autofill nutzen.">Autofill nutzen.</span></strong> <span data-i18n="Autofill ordnet einzelne Spieler nach Priorität und Gruppen nach ihrem Prioritätsdurchschnitt von innen nach außen. Gruppen bleiben möglichst zusammen. Manuell gesetzte Mitglieder bleiben fest und dienen als Anker für ihre Gruppe. Bei einem Feld Abstand gelten benachbarte Plätze als zusammenhängend.">Autofill ordnet einzelne Spieler nach Priorität und Gruppen nach ihrem Prioritätsdurchschnitt von innen nach außen. Gruppen bleiben möglichst zusammen. Manuell gesetzte Mitglieder bleiben fest und dienen als Anker für ihre Gruppe. Bei einem Feld Abstand gelten benachbarte Plätze als zusammenhängend.</span></li><li><strong><span data-i18n="Umgebung ergänzen.">Umgebung ergänzen.</span></strong> <span data-i18n="Terrain auswählen: Rechts lassen sich Größe und X/Y der linken unteren Ecke einstellen. Größenänderungen im Menü halten diese Ecke fest; Eckpfeile halten die gegenüberliegende Ecke fest. Benachbarte oder überlappende Terrainstücke gemeinsam markieren und mit „Terrain verbinden“ zu einer Form zusammenfügen. „Terrain trennen“ gibt die Teile wieder einzeln frei.">Terrain auswählen: Rechts lassen sich Größe und X/Y der linken unteren Ecke einstellen. Größenänderungen im Menü halten diese Ecke fest; Eckpfeile halten die gegenüberliegende Ecke fest. Benachbarte oder überlappende Terrainstücke gemeinsam markieren und mit „Terrain verbinden“ zu einer Form zusammenfügen. „Terrain trennen“ gibt die Teile wieder einzeln frei.</span></li><li><strong><span data-i18n="Alle Spieler entfernen">Alle Spieler entfernen</span></strong> <span data-i18n="Der rote Button leert die Spielerliste, Gruppen und Platzzuweisungen. Die Karte bleibt erhalten. Strg+Z stellt alles wieder her.">Der rote Button leert die Spielerliste, Gruppen und Platzzuweisungen. Die Karte bleibt erhalten. Strg+Z stellt alles wieder her.</span></li><li><strong><span data-i18n="Speichern und weitergeben.">Speichern und weitergeben.</span></strong> <span data-i18n="Plan speichern sichert alle 21 Season- und Layout-Varianten mit ihren Objekten, Koordinaten und Zuweisungen. Spieler, Gruppen und Prioritäten gelten gemeinsam. PNG/SVG und CSV exportieren nur die geöffnete Variante.">Plan speichern sichert alle 21 Season- und Layout-Varianten mit ihren Objekten, Koordinaten und Zuweisungen. Spieler, Gruppen und Prioritäten gelten gemeinsam. PNG/SVG und CSV exportieren nur die geöffnete Variante.</span></li><li><strong data-i18n="Mehrfachauswahl">Mehrfachauswahl</strong> <span data-i18n="Mit Strg + Klick Elemente hinzufügen oder entfernen. Mit Umschalt + Ziehen oder dem Werkzeug Mehrfachauswahl einen Rahmen aufziehen. Nur vollständig enthaltene Elemente werden gewählt; verbundenes Terrain wird als Ganzes gewählt. Danach ein markiertes Element ziehen oder die Pfeiltasten nutzen.">Mit Strg + Klick Elemente hinzufügen oder entfernen. Mit Umschalt + Ziehen oder dem Werkzeug Mehrfachauswahl einen Rahmen aufziehen. Nur vollständig enthaltene Elemente werden gewählt; verbundenes Terrain wird als Ganzes gewählt. Danach ein markiertes Element ziehen oder die Pfeiltasten nutzen.</span></li><li><strong data-i18n="Bereich füllen">Bereich füllen</strong> <span data-i18n="Bereich füllen wählen, ein Rechteck aufziehen und 0, 1 oder 2 Felder Abstand einstellen. Die Vorschau zeigt passende freie Basisplätze. Mit Basen erzeugen übernehmen; danach kann Autofill die Spieler verteilen. Strg + Z nimmt den gesamten Schritt zurück.">Bereich füllen wählen, ein Rechteck aufziehen und 0, 1 oder 2 Felder Abstand einstellen. Die Vorschau zeigt passende freie Basisplätze. Mit Basen erzeugen übernehmen; danach kann Autofill die Spieler verteilen. Strg + Z nimmt den gesamten Schritt zurück.</span></li></ol><p class="help-note" id="mode-help-note"></p><p class="help-note"><span data-i18n="Hinzufügen: B = Basis, M = Marshall, A = Allianzzentrum, T = Terrain, L = Beacon. Taste drücken, dann auf die Karte klicken. A und L sind nur in Season 4 verfügbar. Beim Schreiben sind diese Kürzel deaktiviert.">Hinzufügen: B = Basis, M = Marshall, A = Allianzzentrum, T = Terrain, L = Beacon. Taste drücken, dann auf die Karte klicken. A und L sind nur in Season 4 verfügbar. Beim Schreiben sind diese Kürzel deaktiviert.</span></p><p class="help-note"><span data-i18n="Tastatur: Pfeile = 1 Feld, Umschalt+Pfeile = 5 Felder, Entf = Entfernen, Strg+Z = Rückgängig, Esc = Abbrechen.">Tastatur: Pfeile = 1 Feld, Umschalt+Pfeile = 5 Felder, Entf = Entfernen, Strg+Z = Rückgängig, Esc = Abbrechen.</span></p></dialog>
 <script>
 /* Complete interface messages. Order: English, French, Spanish, Portuguese, Vietnamese, Korean; keys are German. */
 (function(root){
@@ -3221,6 +3221,158 @@ const messages={
   "Base 3 × 3 · Marshall 3 × 3 · Coordenadas: célula inferior esquerda · Mundo 1000 × 1000",
   "Căn cứ 3 × 3 · Marshall 3 × 3 · Tọa độ: ô dưới cùng bên trái · Thế giới 1000 × 1000",
   "기지 3 × 3 · Marshall 3 × 3 · 좌표: 왼쪽 아래 칸 · 세계 1000 × 1000"
+ ],
+ "Layout-Varianten": [
+  "Layout variants",
+  "Variantes de disposition",
+  "Variantes de distribución",
+  "Variantes de disposição",
+  "Các biến thể bố cục",
+  "배치 변형"
+ ],
+ "Layout-Variante": [
+  "Layout variant",
+  "Variante de disposition",
+  "Variante de distribución",
+  "Variante de disposição",
+  "Biến thể bố cục",
+  "배치 변형"
+ ],
+ "Aktuelle Variante zurücksetzen": [
+  "Reset current variant",
+  "Réinitialiser cette variante",
+  "Restablecer variante actual",
+  "Redefinir variante atual",
+  "Đặt lại biến thể hiện tại",
+  "현재 변형 초기화"
+ ],
+ "Aktuelle Variante zurücksetzen?": [
+  "Reset the current variant?",
+  "Réinitialiser cette variante ?",
+  "¿Restablecer la variante actual?",
+  "Redefinir a variante atual?",
+  "Đặt lại biến thể hiện tại?",
+  "현재 변형을 초기화할까요?"
+ ],
+ "Nur die geöffnete Variante wird auf ihre Startaufstellung zurückgesetzt. Alle anderen Varianten und die Spielerliste bleiben erhalten. Strg+Z macht dies rückgängig.": [
+  "Only the open variant returns to its starting layout. All other variants and the roster are kept. Ctrl+Z undoes this.",
+  "Seule la variante ouverte revient à sa disposition initiale. Les autres variantes et la liste des joueurs sont conservées. Ctrl+Z annule cette action.",
+  "Solo la variante abierta vuelve a su distribución inicial. Las demás variantes y la lista de jugadores se conservan. Ctrl+Z deshace esta acción.",
+  "Somente a variante aberta volta à disposição inicial. As outras variantes e a lista de jogadores são mantidas. Ctrl+Z desfaz esta ação.",
+  "Chỉ biến thể đang mở được đặt lại về bố cục ban đầu. Các biến thể khác và danh sách người chơi được giữ nguyên. Ctrl+Z để hoàn tác.",
+  "열린 변형만 초기 배치로 돌아갑니다. 다른 변형과 플레이어 목록은 유지됩니다. Ctrl+Z로 되돌릴 수 있습니다."
+ ],
+ "Jede Season und jedes Layout behält seinen eigenen Kartenstand. Spieler, Gruppen und Prioritäten gelten für alle Varianten.": [
+  "Each season and layout keeps its own map. Players, groups and priorities are shared across all variants.",
+  "Chaque saison et disposition conserve sa propre carte. Les joueurs, groupes et priorités sont communs à toutes les variantes.",
+  "Cada temporada y distribución conserva su propio mapa. Los jugadores, grupos y prioridades se comparten entre todas las variantes.",
+  "Cada temporada e disposição mantém seu próprio mapa. Jogadores, grupos e prioridades são compartilhados entre todas as variantes.",
+  "Mỗi mùa và bố cục giữ bản đồ riêng. Người chơi, nhóm và mức ưu tiên được dùng chung cho mọi biến thể.",
+  "각 시즌과 배치는 별도의 지도를 유지합니다. 플레이어, 그룹, 우선순위는 모든 변형에서 공유됩니다."
+ ],
+ "Wechseln bewahrt deine Arbeit. Plan speichern sichert alle Varianten gemeinsam.": [
+  "Switching keeps your work. Save plan saves all variants together.",
+  "Changer de variante conserve votre travail. Enregistrer le plan sauvegarde toutes les variantes ensemble.",
+  "Cambiar de variante conserva tu trabajo. Guardar plano guarda todas las variantes juntas.",
+  "Trocar de variante preserva seu trabalho. Salvar plano salva todas as variantes juntas.",
+  "Chuyển đổi vẫn giữ nguyên công việc. Lưu bản thiết kế sẽ lưu tất cả biến thể cùng nhau.",
+  "전환해도 작업이 유지됩니다. 배치 저장은 모든 변형을 함께 저장합니다."
+ ],
+ "Eine Plan-Datei enthält alle Season- und Layout-Varianten. Beim Öffnen kehrst du zum zuletzt aktiven Kartenstand zurück.": [
+  "One plan file contains all season and layout variants. Opening it restores the map you last worked on.",
+  "Un fichier contient toutes les variantes de saison et de disposition. À l’ouverture, vous retrouvez la dernière carte active.",
+  "Un archivo contiene todas las variantes de temporada y distribución. Al abrirlo, vuelves al último mapa activo.",
+  "Um arquivo contém todas as variantes de temporada e disposição. Ao abri-lo, você volta ao último mapa ativo.",
+  "Một tệp chứa tất cả biến thể mùa và bố cục. Khi mở, bạn trở lại bản đồ hoạt động gần nhất.",
+  "파일 하나에 모든 시즌과 배치 변형이 포함됩니다. 열면 마지막으로 작업한 지도가 복원됩니다."
+ ],
+ "Alle Varianten gespeichert. Beim Öffnen wird auch die aktive Season und das aktive Layout wiederhergestellt.": [
+  "All variants saved. Opening the file also restores the active season and layout.",
+  "Toutes les variantes sont enregistrées. L’ouverture du fichier restaure aussi la saison et la disposition actives.",
+  "Todas las variantes guardadas. Al abrir el archivo también se restauran la temporada y la distribución activas.",
+  "Todas as variantes foram salvas. Ao abrir o arquivo, a temporada e a disposição ativas também são restauradas.",
+  "Đã lưu mọi biến thể. Khi mở tệp, mùa và bố cục đang hoạt động cũng được khôi phục.",
+  "모든 변형이 저장되었습니다. 파일을 열면 활성 시즌과 배치도 복원됩니다."
+ ],
+ "Alle Varianten geladen. Der zuletzt aktive Kartenstand ist geöffnet.": [
+  "All variants loaded. Your last active map is open.",
+  "Toutes les variantes sont chargées. La dernière carte active est ouverte.",
+  "Todas las variantes cargadas. Está abierto el último mapa activo.",
+  "Todas as variantes foram carregadas. O último mapa ativo está aberto.",
+  "Đã tải mọi biến thể. Bản đồ hoạt động gần nhất đang mở.",
+  "모든 변형을 불러왔습니다. 마지막 활성 지도가 열렸습니다."
+ ],
+ "Einzelplan geladen. Weitere Varianten stehen separat bereit.": [
+  "Single plan loaded. Other variants are available separately.",
+  "Plan individuel chargé. Les autres variantes sont disponibles séparément.",
+  "Plano individual cargado. Las demás variantes están disponibles por separado.",
+  "Plano individual carregado. As outras variantes estão disponíveis separadamente.",
+  "Đã tải bản thiết kế đơn. Các biến thể khác có sẵn riêng biệt.",
+  "단일 배치를 불러왔습니다. 다른 변형은 별도로 준비되어 있습니다."
+ ],
+ "Die Datei ersetzt alle aktuellen Varianten. Speichere deinen bisherigen Stand vorher. Mit Strg+Z kannst du das Öffnen rückgängig machen.": [
+  "The file replaces all current variants. Save your current work first. Ctrl+Z can undo opening the file.",
+  "Le fichier remplace toutes les variantes actuelles. Enregistrez votre travail avant de continuer. Ctrl+Z permet d’annuler l’ouverture.",
+  "El archivo reemplaza todas las variantes actuales. Guarda tu trabajo antes. Ctrl+Z permite deshacer la apertura.",
+  "O arquivo substitui todas as variantes atuais. Salve seu trabalho antes. Ctrl+Z permite desfazer a abertura.",
+  "Tệp sẽ thay thế mọi biến thể hiện tại. Hãy lưu công việc trước. Ctrl+Z có thể hoàn tác việc mở tệp.",
+  "파일이 현재의 모든 변형을 대체합니다. 현재 작업을 먼저 저장하세요. Ctrl+Z로 파일 열기를 되돌릴 수 있습니다."
+ ],
+ "Plan speichern sichert alle 21 Season- und Layout-Varianten mit ihren Objekten, Koordinaten und Zuweisungen. Spieler, Gruppen und Prioritäten gelten gemeinsam. PNG/SVG und CSV exportieren nur die geöffnete Variante.": [
+  "Save plan stores all 21 season and layout variants with their objects, coordinates and assignments. Players, groups and priorities are shared. PNG/SVG and CSV export only the open variant.",
+  "Enregistrer le plan sauvegarde les 21 variantes avec leurs objets, coordonnées et affectations. Joueurs, groupes et priorités sont communs. PNG/SVG et CSV exportent uniquement la variante ouverte.",
+  "Guardar plano almacena las 21 variantes con sus objetos, coordenadas y asignaciones. Los jugadores, grupos y prioridades se comparten. PNG/SVG y CSV exportan solo la variante abierta.",
+  "Salvar plano armazena as 21 variantes com seus objetos, coordenadas e atribuições. Jogadores, grupos e prioridades são compartilhados. PNG/SVG e CSV exportam apenas a variante aberta.",
+  "Lưu bản thiết kế lưu cả 21 biến thể mùa và bố cục cùng đối tượng, tọa độ và phân chỗ. Người chơi, nhóm và mức ưu tiên được dùng chung. PNG/SVG và CSV chỉ xuất biến thể đang mở.",
+  "배치 저장은 21개 시즌·배치 변형의 물체, 좌표, 배정을 모두 저장합니다. 플레이어, 그룹, 우선순위는 공유됩니다. PNG/SVG와 CSV는 열린 변형만 내보냅니다."
+ ],
+ "Die Plan-Datei ist zu groß (maximal 20 MB).": [
+  "The plan file is too large (maximum 20 MB).",
+  "Le fichier est trop volumineux (20 Mo maximum).",
+  "El archivo es demasiado grande (máximo 20 MB).",
+  "O arquivo é muito grande (máximo de 20 MB).",
+  "Tệp quá lớn (tối đa 20 MB).",
+  "파일이 너무 큽니다(최대 20MB)."
+ ],
+ "Das ist keine unterstützte Varianten-Datei.": [
+  "This variant file format is not supported.",
+  "Ce format de fichier de variantes n’est pas pris en charge.",
+  "Este formato de archivo de variantes no es compatible.",
+  "Este formato de arquivo de variantes não é compatível.",
+  "Định dạng tệp biến thể này không được hỗ trợ.",
+  "지원하지 않는 변형 파일 형식입니다."
+ ],
+ "Die Plan-Datei muss alle 21 Season- und Layout-Varianten enthalten.": [
+  "The plan file must contain all 21 season and layout variants.",
+  "Le fichier doit contenir les 21 variantes de saison et de disposition.",
+  "El archivo debe contener las 21 variantes de temporada y distribución.",
+  "O arquivo deve conter todas as 21 variantes de temporada e disposição.",
+  "Tệp phải chứa đủ 21 biến thể mùa và bố cục.",
+  "파일에는 21개 시즌·배치 변형이 모두 있어야 합니다."
+ ],
+ "Die aktive Variante fehlt in der Plan-Datei.": [
+  "The active variant is missing from the plan file.",
+  "La variante active est absente du fichier.",
+  "Falta la variante activa en el archivo.",
+  "A variante ativa está ausente no arquivo.",
+  "Tệp thiếu biến thể đang hoạt động.",
+  "파일에 활성 변형이 없습니다."
+ ],
+ "Eine Variante fehlt oder ist doppelt vorhanden.": [
+  "A variant is missing or duplicated.",
+  "Une variante est absente ou présente en double.",
+  "Falta una variante o hay una duplicada.",
+  "Uma variante está ausente ou duplicada.",
+  "Một biến thể bị thiếu hoặc trùng lặp.",
+  "변형이 없거나 중복되었습니다."
+ ],
+ "Ungültige Variante.": [
+  "Invalid variant.",
+  "Variante invalide.",
+  "Variante no válida.",
+  "Variante inválida.",
+  "Biến thể không hợp lệ.",
+  "잘못된 변형입니다."
  ]
 };
 let language='de';
@@ -3699,15 +3851,77 @@ root.HiveModel={SCHEMA,VERSION,WORLD_SIZE,worldBounds,referenceCoords,assertWorl
 
 </script>
 <script>
+/* One saved workspace contains all season/layout variants. Roster organization is shared. */
+(function(root){
+'use strict';
+const M=root.HiveModel,SCHEMA='nova-hive-workspace',VERSION=1,LAYOUTS=['spaced','compact','empty'],MAX_FILE_BYTES=20_000_000;
+const t=(key,params={})=>root.HiveI18n?.t(key,params)??key.replace(/\{(\w+)\}/g,(_,k)=>String(params[k]??'{'+k+'}'));
+const key=(season,layout)=>season+':'+layout;
+const variantFromPlan=plan=>M.clone({season:plan.season,layout:plan.layout,title:plan.title,origin:plan.origin,showLight:plan.showLight,objects:plan.objects});
+const sharedFromPlan=plan=>M.clone({players:plan.players,groups:plan.groups,priorityLabels:plan.priorityLabels});
+function activePlan(workspace){
+ const variant=workspace.variants.find(v=>v.season===workspace.active.season&&v.layout===workspace.active.layout);
+ if(!variant)throw new Error(t('Die aktive Variante fehlt in der Plan-Datei.'));
+ return M.clone({schema:M.SCHEMA,version:M.VERSION,...variant,players:workspace.players,groups:workspace.groups,priorityLabels:workspace.priorityLabels});
+}
+function createWorkspace(plan=M.makeLayout()){
+ const valid=M.validate(plan),variants=[];
+ for(const season of M.SEASONS)for(const layout of LAYOUTS){
+  const current=season===valid.season&&layout===valid.layout;
+  variants.push(variantFromPlan(current?valid:M.makeLayout(layout,{season,title:valid.title,players:[],objects:[]})));
+ }
+ return {schema:SCHEMA,version:VERSION,planVersion:M.VERSION,active:{season:valid.season,layout:valid.layout},...sharedFromPlan(valid),variants};
+}
+// Never mutate stored variants: history snapshots can safely share inactive branches.
+function updateWorkspace(workspace,plan){
+ if(!M.SEASONS.includes(plan.season)||!LAYOUTS.includes(plan.layout))throw new Error(t('Ungültige Variante.'));
+ const livePlayers=new Set(plan.players.map(p=>p.id)),current=variantFromPlan(plan);
+ const variants=workspace.variants.map(v=>{
+  if(v.season===plan.season&&v.layout===plan.layout)return current;
+  if(!v.objects.some(o=>o.playerId&&!livePlayers.has(o.playerId)))return v;
+  return {...v,objects:v.objects.map(o=>o.playerId&&!livePlayers.has(o.playerId)?{...o,playerId:null}:o)};
+ });
+ return {...workspace,active:{season:plan.season,layout:plan.layout},...sharedFromPlan(plan),variants};
+}
+function switchVariant(workspace,season,layout){
+ if(!M.SEASONS.includes(season)||!LAYOUTS.includes(layout))throw new Error(t('Ungültige Variante.'));
+ if(season===workspace.active.season&&layout===workspace.active.layout)return workspace;
+ if(!workspace.variants.some(v=>v.season===season&&v.layout===layout))throw new Error(t('Die aktive Variante fehlt in der Plan-Datei.'));
+ return {...workspace,active:{season,layout}};
+}
+function validateWorkspace(raw){
+ if(!raw||raw.schema!==SCHEMA||raw.version!==VERSION||!Number.isInteger(raw.planVersion)||raw.planVersion<5||raw.planVersion>M.VERSION)throw new Error(t('Das ist keine unterstützte Varianten-Datei.'));
+ if(!raw.active||!M.SEASONS.includes(raw.active.season)||!LAYOUTS.includes(raw.active.layout))throw new Error(t('Die aktive Variante fehlt in der Plan-Datei.'));
+ if(!Array.isArray(raw.variants)||raw.variants.length!==M.SEASONS.length*LAYOUTS.length)throw new Error(t('Die Plan-Datei muss alle 21 Season- und Layout-Varianten enthalten.'));
+ const seen=new Set(),variants=[];let shared=null;
+ for(const v of raw.variants){
+  if(!v||!M.SEASONS.includes(v.season)||!LAYOUTS.includes(v.layout)||seen.has(key(v.season,v.layout)))throw new Error(t('Eine Variante fehlt oder ist doppelt vorhanden.'));
+  seen.add(key(v.season,v.layout));
+  const valid=M.validate({...v,schema:M.SCHEMA,version:raw.planVersion,players:raw.players,groups:raw.groups,priorityLabels:raw.priorityLabels});
+  if(!shared)shared=sharedFromPlan(valid);variants.push(variantFromPlan(valid));
+ }
+ if(!seen.has(key(raw.active.season,raw.active.layout)))throw new Error(t('Die aktive Variante fehlt in der Plan-Datei.'));
+ return {schema:SCHEMA,version:VERSION,planVersion:M.VERSION,active:{season:raw.active.season,layout:raw.active.layout},...shared,variants};
+}
+function readFile(raw){
+ if(raw?.schema===M.SCHEMA)return createWorkspace(M.validate(raw));
+ return validateWorkspace(raw);
+}
+function saveFile(workspace){return {...validateWorkspace(workspace),savedAt:new Date().toISOString()};}
+root.HiveWorkspace={SCHEMA,VERSION,LAYOUTS,MAX_FILE_BYTES,createWorkspace,activePlan,updateWorkspace,switchVariant,validateWorkspace,readFile,saveFile};
+})(globalThis);
+
+</script>
+<script>
 (function(){
 'use strict';
 const I=globalThis.HiveI18n,t=(key,params)=>I.t(key,params);
-const M=globalThis.HiveModel,$=id=>document.getElementById(id),svg=$('map'),stage=$('stage');
+const M=globalThis.HiveModel,W=globalThis.HiveWorkspace,$=id=>document.getElementById(id),svg=$('map'),stage=$('stage');
 // User-facing release: increment the final number for each later delivered update.
-const APP_VERSION='1.1.5';
+const APP_VERSION='1.1.6';
 const TOOL_SHORTCUTS={b:'base',m:'marshall',a:'center',t:'terrain',l:'beacon'};
 const shortcutFor=type=>Object.keys(TOOL_SHORTCUTS).find(key=>TOOL_SHORTCUTS[key]===type)?.toUpperCase();
-let state=M.makeLayout(),selectedId=null,pending=null,filter='all',dirty=false,undoStack=[],redoStack=[],drag=null,suppressClick=false,confirmAction=null,toastTimer=null;
+let workspace=W.createWorkspace(),state=W.activePlan(workspace),selectedId=null,pending=null,filter='all',dirty=false,undoStack=[],redoStack=[],drag=null,suppressClick=false,confirmAction=null,toastTimer=null;
 let selectedObjectIds=new Set(),mapMode='pan',fillArea=null,fillPreview=null;
 let organizerOpen=false,organizationTab='priority',selectedPlayers=new Set(),lastAutofillResult=null;
 const groupName=id=>t('Gruppe {n}',{n:id});
@@ -3730,11 +3944,23 @@ function toast(message,error=false){clearTimeout(toastTimer);$('toast').textCont
 function safely(action){try{return action();}catch(error){toast(error.message||t('Die Änderung konnte nicht übernommen werden.'),true);return null;}}
 function commit(next,message){
  if(JSON.stringify(next)===JSON.stringify(state))return false;
- lastAutofillResult=null;undoStack.push(M.clone(state));if(undoStack.length>70)undoStack.shift();redoStack=[];state=next;dirty=true;
- setMapSelection([...selectedObjectIds],selectedId);refreshFillPreview();
- render();if(message)toast(message);return true;
+ return commitWorkspace(W.updateWorkspace(workspace,next),message);
 }
-function restoreHistory(direction){lastAutofillResult=null;const source=direction==='undo'?undoStack:redoStack,target=direction==='undo'?redoStack:undoStack;if(!source.length)return;target.push(M.clone(state));state=source.pop();dirty=true;resetMapTools(true);$('drag-ghost').hidden=true;clearOrganizationDrop();render();}
+function commitWorkspace(next,message){
+ if(next===workspace)return false;
+ lastAutofillResult=null;undoStack.push(workspace);if(undoStack.length>70)undoStack.shift();redoStack=[];
+ workspace=next;state=W.activePlan(workspace);dirty=true;
+ setMapSelection([...selectedObjectIds],selectedId);refreshFillPreview();render();if(message)toast(message);return true;
+}
+function restoreHistory(direction){
+ lastAutofillResult=null;const source=direction==='undo'?undoStack:redoStack,target=direction==='undo'?redoStack:undoStack;if(!source.length)return;
+ const previous=state.season+':'+state.layout;target.push(workspace);workspace=source.pop();state=W.activePlan(workspace);dirty=true;
+ resetMapTools(true);$('drag-ghost').hidden=true;clearOrganizationDrop();render();if(previous!==state.season+':'+state.layout)fitMap();
+}
+function activateVariant(season,layout){
+ const next=W.switchVariant(workspace,season,layout);if(next===workspace)return;
+ resetMapTools(true);$('drag-ghost').hidden=true;clearOrganizationDrop();commitWorkspace(next);fitMap();
+}
 function confirm(title,message,action){confirmAction=action;$('confirm-title').textContent=title;$('confirm-message').textContent=message;$('confirm-dialog').showModal();}
 function closeDialog(id){$(id).close();if(id==='confirm-dialog')confirmAction=null;}
 function pointFromClient(clientX,clientY){const matrix=svg.getScreenCTM();if(!matrix)return {x:0,y:0};const p=new DOMPoint(clientX,clientY).matrixTransform(matrix.inverse());return {x:p.x,y:-p.y};}
@@ -3903,7 +4129,7 @@ function renderControls(){
  $('season-select').value=state.season;$('season-badge').textContent=state.season==='off'?'OFF':`S0${state.season}`;
  for(const option of $('season-select').options)option.textContent=option.value==='off'?t('Off Season'):t('Season {n}',{n:option.value});
  $('season-warning').hidden=!M.isDeveloping(state);
- $('season-help').textContent=t('Beim Wechsel wird die Aufstellung neu erstellt. Spieler und Gruppen bleiben erhalten.');
+ $('season-help').textContent=t('Jede Season und jedes Layout behält seinen eigenen Kartenstand. Spieler, Gruppen und Prioritäten gelten für alle Varianten.');
  $('anchor-title').textContent=ref;$('anchor-size-key').textContent=t(s4?'Zentrum 9 × 9':'Marshall 3 × 3');
  $('autofill-direction').textContent=t('Autofill: Prioritäten und Gruppendurchschnitt, von innen nach außen.');
  $('mode-help-note').textContent=s4?t('Alle Koordinaten bezeichnen das linke untere Feld. Verschieben verändert nur die gewählten Objekte. L4 zeigt 25 × 25 Felder je Beacon.'):t('Alle Koordinaten bezeichnen das linke untere Feld. Der Marshall bleibt der Bezugspunkt für Autofill.');
@@ -4060,11 +4286,8 @@ for(const tab of $('organizer').querySelectorAll('[data-tab]')){
 }
 $('clear-players').addEventListener('click',()=>{pending=null;ghost=null;drag=null;$('drag-ghost').hidden=true;commit(M.clearPlayers(state),t('Alle Spieler entfernt. Strg+Z stellt Spieler, Gruppen und Zuweisungen wieder her.'));});
 $('unassign-all').addEventListener('click',()=>{pending=null;ghost=null;drag=null;$('drag-ghost').hidden=true;clearOrganizationDrop();commit(M.unassignAll(state),t('Alle Plätze freigegeben. Spielerliste und Gruppen bleiben erhalten. Strg+Z macht die Änderung rückgängig.'));});
-$('season-select').addEventListener('change',e=>{
- const value=e.target.value;e.target.value=state.season;if(value===state.season)return;
- const apply=()=>{resetMapTools(true);commit(M.setSeason(state,value),t('Season geändert.'));fitMap();};
- if(dirty)confirm(t('Season wechseln?'),t('Die Season-Vorlage ersetzt die aktuelle Aufstellung und das Terrain. Spieler und Gruppen bleiben erhalten. Strg+Z macht den Wechsel rückgängig.'),apply);else safely(apply);
-});
+$('season-select').addEventListener('change',e=>{const value=e.target.value;e.target.value=state.season;safely(()=>activateVariant(value,state.layout));});
+$('layout-select').addEventListener('change',e=>{const value=e.target.value;e.target.value=state.layout;safely(()=>activateVariant(state.season,value));});
 $('inspector').addEventListener('submit',e=>{
  if(!['position-form','terrain-size-form','bulk-move-form'].includes(e.target.id))return;e.preventDefault();const o=selected();if(!o)return;
  safely(()=>{
@@ -4131,7 +4354,7 @@ $('autofill').addEventListener('click',()=>safely(()=>{
 function renderNamesPreview(){const n=$('names-input').value.split(/\r\n?|\n/).filter(x=>x.trim()).length;$('names-preview').textContent=n?t('Erkannte Namen: {n}',{n}):t('Noch keine Namen');}
 $('names-input').addEventListener('input',renderNamesPreview);
 $('names-form').addEventListener('submit',e=>{e.preventDefault();safely(()=>{const {state:next,added,skipped}=M.addPlayers(state,$('names-input').value);commit(next);$('names-input').value='';$('names-preview').textContent=t('Noch keine Namen');closeDialog('names-dialog');toast(t('{added} Spieler hinzugefügt. {skipped} doppelte Einträge übersprungen.',{added,skipped}));});});
-$('apply-layout').addEventListener('click',()=>{const kind=$('layout-select').value;confirm(t('Startaufstellung anwenden?'),kind==='empty'?t('Die Karte wird geleert. Deine Spielerliste und die Kartenkoordinaten bleiben erhalten.'):t('Die Positionen werden auf die Vorlage zurückgesetzt. Namen auf den ursprünglichen 100 Plätzen bleiben zugeordnet. Individuell ergänzte Elemente werden entfernt.'),()=>{resetMapTools(true);commit(M.makeLayout(kind,state));fitMap();});});
+$('apply-layout').addEventListener('click',()=>confirm(t('Aktuelle Variante zurücksetzen?'),t('Nur die geöffnete Variante wird auf ihre Startaufstellung zurückgesetzt. Alle anderen Varianten und die Spielerliste bleiben erhalten. Strg+Z macht dies rückgängig.'),()=>{resetMapTools(true);commit(M.makeLayout(state.layout,state));fitMap();}));
 $('confirm-yes').addEventListener('click',()=>{const action=confirmAction;closeDialog('confirm-dialog');if(action)safely(action);});
 $('confirm-dialog').addEventListener('cancel',()=>confirmAction=null);
 document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>closeDialog(b.dataset.close)));
@@ -4149,11 +4372,16 @@ $('undo').addEventListener('click',()=>restoreHistory('undo'));$('redo').addEven
 $('open-plan').addEventListener('click',()=>$('plan-file').click());
 $('plan-file').addEventListener('change',async e=>{
  const file=e.target.files[0];e.target.value='';if(!file)return;
- try{if(file.size>2_000_000)throw new Error(t('Die Plan-Datei ist zu groß (maximal 2 MB).'));const raw=JSON.parse(await file.text()),next=M.validate(raw);const apply=()=>{resetMapTools(true);commit(next);dirty=false;render();fitMap();toast(t(raw.version<M.VERSION?'Älterer Plan auf ganze Felder umgestellt. Koordinaten beziehen sich jetzt auf das linke untere Feld.':'Plan geöffnet.'));};if(dirty)confirm(t('Plan öffnen?'),t('Die geladene Datei ersetzt den aktuellen Plan. Speichere deine Änderungen vorher, wenn du sie behalten möchtest.'),apply);else apply();}catch(error){toast(error instanceof SyntaxError?t('Die Datei enthält kein gültiges Plan-JSON.'):error.message,true);}
+ try{
+  if(file.size>W.MAX_FILE_BYTES)throw new Error(t('Die Plan-Datei ist zu groß (maximal 20 MB).'));
+  const raw=JSON.parse(await file.text()),next=W.readFile(raw),legacy=raw.schema===M.SCHEMA;
+  const apply=()=>{resetMapTools(true);commitWorkspace(next);dirty=false;render();fitMap();toast(t(legacy?'Einzelplan geladen. Weitere Varianten stehen separat bereit.':'Alle Varianten geladen. Der zuletzt aktive Kartenstand ist geöffnet.'));};
+  if(dirty)confirm(t('Plan öffnen?'),t('Die Datei ersetzt alle aktuellen Varianten. Speichere deinen bisherigen Stand vorher. Mit Strg+Z kannst du das Öffnen rückgängig machen.'),apply);else apply();
+ }catch(error){toast(error instanceof SyntaxError?t('Die Datei enthält kein gültiges Plan-JSON.'):error.message,true);}
 });
 function fileName(extension){return (state.title.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9_-]+/g,'-').replace(/^-|-$/g,'')||'hive-plan')+'.'+extension;}
 function download(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.style.display='none';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}
-function savePlan(){const valid=M.validate(state);download(new Blob([JSON.stringify({...valid,savedAt:new Date().toISOString()},null,2)],{type:'application/json'}),fileName('json'));dirty=false;renderControls();toast(t('Plan-Datei heruntergeladen. Mit „Öffnen“ kannst du sie später weiterbearbeiten.'));}
+function savePlan(){const valid=W.saveFile(workspace);download(new Blob([JSON.stringify(valid,null,2)],{type:'application/json'}),fileName('json'));dirty=false;renderControls();toast(t('Alle Varianten gespeichert. Beim Öffnen wird auch die aktive Season und das aktive Layout wiederhergestellt.'));}
 $('save-plan').addEventListener('click',()=>safely(savePlan));
 function csvExport(){
  const protect=value=>{let s=String(value??'');if(/^[=+@\-\t\r]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';};
@@ -4207,7 +4435,7 @@ document.addEventListener('keydown',e=>{
 window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
 new ResizeObserver(()=>{updateView();renderMap();}).observe(stage);
 function applyLanguage(previousLabel){
- const drafts=Array.from(document.querySelectorAll('#anchor-form input,#inspector input,#plan-title,#layout-select')).filter(el=>el.id!=='object-name-edit'||el.value!==previousLabel).map(el=>({id:el.id,value:el.value,checked:el.checked}));
+ const drafts=Array.from(document.querySelectorAll('#anchor-form input,#inspector input,#plan-title')).filter(el=>el.id!=='object-name-edit'||el.value!==previousLabel).map(el=>({id:el.id,value:el.value,checked:el.checked}));
  I.apply(document);$('language-select').value=I.language;$('toast').hidden=true;
  render();renderNamesPreview();
  for(const draft of drafts){const el=$(draft.id);if(el){el.value=draft.value;el.checked=draft.checked;el.setCustomValidity?.('');}}
@@ -4221,7 +4449,7 @@ const context=document.modelContext;
 if(context?.registerTool){
  const life=new AbortController();window.addEventListener('pagehide',()=>life.abort(),{once:true});
  const register=tool=>{try{void Promise.resolve(context.registerTool(tool,{signal:life.signal})).catch(()=>{});}catch{}};
- register({name:'read_hive_plan',title:'Hive-Plan lesen',description:'Returns the current players, placements and calculated coordinates.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true,untrustedContentHint:true},execute(){return {title:state.title,season:state.season,groups:state.groups,priorityLabels:state.priorityLabels,origin:state.origin,players:state.players,objects:state.objects.map(o=>({...o,name:M.objectLabel(state,o),coordinates:M.coords(state,o),coordinateReference:'bottom-left-tile'}))};}});
+ register({name:'read_hive_plan',title:'Hive-Plan lesen',description:'Returns the current players, placements and calculated coordinates.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true,untrustedContentHint:true},execute(){return {title:state.title,season:state.season,layout:state.layout,variantCount:workspace.variants.length,groups:state.groups,priorityLabels:state.priorityLabels,origin:state.origin,players:state.players,objects:state.objects.map(o=>({...o,name:M.objectLabel(state,o),coordinates:M.coords(state,o),coordinateReference:'bottom-left-tile'}))};}});
  register({name:'add_hive_players',title:'Spieler hinzufügen',description:'Adds names to the player list. Existing names are preserved and duplicates skipped.',inputSchema:{type:'object',properties:{names:{type:'array',items:{type:'string',minLength:1,maxLength:80},minItems:1,maxItems:300}},required:['names'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:true},execute(input){if(!input||!Array.isArray(input.names)||!input.names.length||input.names.length>300||input.names.some(n=>typeof n!=='string'||!n.trim()||n.includes('\n')||n.length>80))throw new Error(t('Ungültige oder doppelte Spieler.'));const r=M.addPlayers(state,input.names.join('\n'));commit(r.state);return {added:r.added,skipped:r.skipped,total:state.players.length};}});
  register({name:'set_hive_center_coordinates',title:'Zentrumskoordinaten setzen',description:'Aligns the whole plan using the bottom-left tile of the active reference (Alliance Center or Marshall). Every object must remain within the 1000 by 1000 world.',inputSchema:{type:'object',properties:{x:{type:'integer',minimum:0,maximum:999},y:{type:'integer',minimum:0,maximum:999}},required:['x','y'],additionalProperties:false},annotations:{readOnlyHint:false},execute(input){if(!input)throw new Error(t('Bitte gültige Koordinaten eingeben.'));commit(M.setOrigin(state,input.x,input.y));return {origin:state.origin};}});
  register({name:'assign_hive_players',title:'Spieler auf freie Plätze setzen',description:'Assigns existing players to existing empty bases in one batch. Fails atomically if any assignment is invalid.',inputSchema:{type:'object',properties:{assignments:{type:'array',items:{type:'object',properties:{playerId:{type:'string'},baseId:{type:'string'}},required:['playerId','baseId'],additionalProperties:false},minItems:1,maxItems:300}},required:['assignments'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:true},execute(input){if(!input||!Array.isArray(input.assignments)||!input.assignments.length||input.assignments.length>300)throw new Error(t('Eine Spielerzuweisung ist ungültig oder doppelt.'));let next=state;const ids=new Set();for(const a of input.assignments){if(!a||ids.has(a.playerId))throw new Error(t('Eine Spielerzuweisung ist ungültig oder doppelt.'));ids.add(a.playerId);next=M.assign(next,a.playerId,a.baseId);}commit(next);return {assigned:input.assignments.length};}});

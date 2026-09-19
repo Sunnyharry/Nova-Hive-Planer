@@ -3091,6 +3091,158 @@ const messages={
   "Base 3 × 3 · Marshall 3 × 3 · Coordenadas: célula inferior esquerda · Mundo 1000 × 1000",
   "Căn cứ 3 × 3 · Marshall 3 × 3 · Tọa độ: ô dưới cùng bên trái · Thế giới 1000 × 1000",
   "기지 3 × 3 · Marshall 3 × 3 · 좌표: 왼쪽 아래 칸 · 세계 1000 × 1000"
+ ],
+ "Layout-Varianten": [
+  "Layout variants",
+  "Variantes de disposition",
+  "Variantes de distribución",
+  "Variantes de disposição",
+  "Các biến thể bố cục",
+  "배치 변형"
+ ],
+ "Layout-Variante": [
+  "Layout variant",
+  "Variante de disposition",
+  "Variante de distribución",
+  "Variante de disposição",
+  "Biến thể bố cục",
+  "배치 변형"
+ ],
+ "Aktuelle Variante zurücksetzen": [
+  "Reset current variant",
+  "Réinitialiser cette variante",
+  "Restablecer variante actual",
+  "Redefinir variante atual",
+  "Đặt lại biến thể hiện tại",
+  "현재 변형 초기화"
+ ],
+ "Aktuelle Variante zurücksetzen?": [
+  "Reset the current variant?",
+  "Réinitialiser cette variante ?",
+  "¿Restablecer la variante actual?",
+  "Redefinir a variante atual?",
+  "Đặt lại biến thể hiện tại?",
+  "현재 변형을 초기화할까요?"
+ ],
+ "Nur die geöffnete Variante wird auf ihre Startaufstellung zurückgesetzt. Alle anderen Varianten und die Spielerliste bleiben erhalten. Strg+Z macht dies rückgängig.": [
+  "Only the open variant returns to its starting layout. All other variants and the roster are kept. Ctrl+Z undoes this.",
+  "Seule la variante ouverte revient à sa disposition initiale. Les autres variantes et la liste des joueurs sont conservées. Ctrl+Z annule cette action.",
+  "Solo la variante abierta vuelve a su distribución inicial. Las demás variantes y la lista de jugadores se conservan. Ctrl+Z deshace esta acción.",
+  "Somente a variante aberta volta à disposição inicial. As outras variantes e a lista de jogadores são mantidas. Ctrl+Z desfaz esta ação.",
+  "Chỉ biến thể đang mở được đặt lại về bố cục ban đầu. Các biến thể khác và danh sách người chơi được giữ nguyên. Ctrl+Z để hoàn tác.",
+  "열린 변형만 초기 배치로 돌아갑니다. 다른 변형과 플레이어 목록은 유지됩니다. Ctrl+Z로 되돌릴 수 있습니다."
+ ],
+ "Jede Season und jedes Layout behält seinen eigenen Kartenstand. Spieler, Gruppen und Prioritäten gelten für alle Varianten.": [
+  "Each season and layout keeps its own map. Players, groups and priorities are shared across all variants.",
+  "Chaque saison et disposition conserve sa propre carte. Les joueurs, groupes et priorités sont communs à toutes les variantes.",
+  "Cada temporada y distribución conserva su propio mapa. Los jugadores, grupos y prioridades se comparten entre todas las variantes.",
+  "Cada temporada e disposição mantém seu próprio mapa. Jogadores, grupos e prioridades são compartilhados entre todas as variantes.",
+  "Mỗi mùa và bố cục giữ bản đồ riêng. Người chơi, nhóm và mức ưu tiên được dùng chung cho mọi biến thể.",
+  "각 시즌과 배치는 별도의 지도를 유지합니다. 플레이어, 그룹, 우선순위는 모든 변형에서 공유됩니다."
+ ],
+ "Wechseln bewahrt deine Arbeit. Plan speichern sichert alle Varianten gemeinsam.": [
+  "Switching keeps your work. Save plan saves all variants together.",
+  "Changer de variante conserve votre travail. Enregistrer le plan sauvegarde toutes les variantes ensemble.",
+  "Cambiar de variante conserva tu trabajo. Guardar plano guarda todas las variantes juntas.",
+  "Trocar de variante preserva seu trabalho. Salvar plano salva todas as variantes juntas.",
+  "Chuyển đổi vẫn giữ nguyên công việc. Lưu bản thiết kế sẽ lưu tất cả biến thể cùng nhau.",
+  "전환해도 작업이 유지됩니다. 배치 저장은 모든 변형을 함께 저장합니다."
+ ],
+ "Eine Plan-Datei enthält alle Season- und Layout-Varianten. Beim Öffnen kehrst du zum zuletzt aktiven Kartenstand zurück.": [
+  "One plan file contains all season and layout variants. Opening it restores the map you last worked on.",
+  "Un fichier contient toutes les variantes de saison et de disposition. À l’ouverture, vous retrouvez la dernière carte active.",
+  "Un archivo contiene todas las variantes de temporada y distribución. Al abrirlo, vuelves al último mapa activo.",
+  "Um arquivo contém todas as variantes de temporada e disposição. Ao abri-lo, você volta ao último mapa ativo.",
+  "Một tệp chứa tất cả biến thể mùa và bố cục. Khi mở, bạn trở lại bản đồ hoạt động gần nhất.",
+  "파일 하나에 모든 시즌과 배치 변형이 포함됩니다. 열면 마지막으로 작업한 지도가 복원됩니다."
+ ],
+ "Alle Varianten gespeichert. Beim Öffnen wird auch die aktive Season und das aktive Layout wiederhergestellt.": [
+  "All variants saved. Opening the file also restores the active season and layout.",
+  "Toutes les variantes sont enregistrées. L’ouverture du fichier restaure aussi la saison et la disposition actives.",
+  "Todas las variantes guardadas. Al abrir el archivo también se restauran la temporada y la distribución activas.",
+  "Todas as variantes foram salvas. Ao abrir o arquivo, a temporada e a disposição ativas também são restauradas.",
+  "Đã lưu mọi biến thể. Khi mở tệp, mùa và bố cục đang hoạt động cũng được khôi phục.",
+  "모든 변형이 저장되었습니다. 파일을 열면 활성 시즌과 배치도 복원됩니다."
+ ],
+ "Alle Varianten geladen. Der zuletzt aktive Kartenstand ist geöffnet.": [
+  "All variants loaded. Your last active map is open.",
+  "Toutes les variantes sont chargées. La dernière carte active est ouverte.",
+  "Todas las variantes cargadas. Está abierto el último mapa activo.",
+  "Todas as variantes foram carregadas. O último mapa ativo está aberto.",
+  "Đã tải mọi biến thể. Bản đồ hoạt động gần nhất đang mở.",
+  "모든 변형을 불러왔습니다. 마지막 활성 지도가 열렸습니다."
+ ],
+ "Einzelplan geladen. Weitere Varianten stehen separat bereit.": [
+  "Single plan loaded. Other variants are available separately.",
+  "Plan individuel chargé. Les autres variantes sont disponibles séparément.",
+  "Plano individual cargado. Las demás variantes están disponibles por separado.",
+  "Plano individual carregado. As outras variantes estão disponíveis separadamente.",
+  "Đã tải bản thiết kế đơn. Các biến thể khác có sẵn riêng biệt.",
+  "단일 배치를 불러왔습니다. 다른 변형은 별도로 준비되어 있습니다."
+ ],
+ "Die Datei ersetzt alle aktuellen Varianten. Speichere deinen bisherigen Stand vorher. Mit Strg+Z kannst du das Öffnen rückgängig machen.": [
+  "The file replaces all current variants. Save your current work first. Ctrl+Z can undo opening the file.",
+  "Le fichier remplace toutes les variantes actuelles. Enregistrez votre travail avant de continuer. Ctrl+Z permet d’annuler l’ouverture.",
+  "El archivo reemplaza todas las variantes actuales. Guarda tu trabajo antes. Ctrl+Z permite deshacer la apertura.",
+  "O arquivo substitui todas as variantes atuais. Salve seu trabalho antes. Ctrl+Z permite desfazer a abertura.",
+  "Tệp sẽ thay thế mọi biến thể hiện tại. Hãy lưu công việc trước. Ctrl+Z có thể hoàn tác việc mở tệp.",
+  "파일이 현재의 모든 변형을 대체합니다. 현재 작업을 먼저 저장하세요. Ctrl+Z로 파일 열기를 되돌릴 수 있습니다."
+ ],
+ "Plan speichern sichert alle 21 Season- und Layout-Varianten mit ihren Objekten, Koordinaten und Zuweisungen. Spieler, Gruppen und Prioritäten gelten gemeinsam. PNG/SVG und CSV exportieren nur die geöffnete Variante.": [
+  "Save plan stores all 21 season and layout variants with their objects, coordinates and assignments. Players, groups and priorities are shared. PNG/SVG and CSV export only the open variant.",
+  "Enregistrer le plan sauvegarde les 21 variantes avec leurs objets, coordonnées et affectations. Joueurs, groupes et priorités sont communs. PNG/SVG et CSV exportent uniquement la variante ouverte.",
+  "Guardar plano almacena las 21 variantes con sus objetos, coordenadas y asignaciones. Los jugadores, grupos y prioridades se comparten. PNG/SVG y CSV exportan solo la variante abierta.",
+  "Salvar plano armazena as 21 variantes com seus objetos, coordenadas e atribuições. Jogadores, grupos e prioridades são compartilhados. PNG/SVG e CSV exportam apenas a variante aberta.",
+  "Lưu bản thiết kế lưu cả 21 biến thể mùa và bố cục cùng đối tượng, tọa độ và phân chỗ. Người chơi, nhóm và mức ưu tiên được dùng chung. PNG/SVG và CSV chỉ xuất biến thể đang mở.",
+  "배치 저장은 21개 시즌·배치 변형의 물체, 좌표, 배정을 모두 저장합니다. 플레이어, 그룹, 우선순위는 공유됩니다. PNG/SVG와 CSV는 열린 변형만 내보냅니다."
+ ],
+ "Die Plan-Datei ist zu groß (maximal 20 MB).": [
+  "The plan file is too large (maximum 20 MB).",
+  "Le fichier est trop volumineux (20 Mo maximum).",
+  "El archivo es demasiado grande (máximo 20 MB).",
+  "O arquivo é muito grande (máximo de 20 MB).",
+  "Tệp quá lớn (tối đa 20 MB).",
+  "파일이 너무 큽니다(최대 20MB)."
+ ],
+ "Das ist keine unterstützte Varianten-Datei.": [
+  "This variant file format is not supported.",
+  "Ce format de fichier de variantes n’est pas pris en charge.",
+  "Este formato de archivo de variantes no es compatible.",
+  "Este formato de arquivo de variantes não é compatível.",
+  "Định dạng tệp biến thể này không được hỗ trợ.",
+  "지원하지 않는 변형 파일 형식입니다."
+ ],
+ "Die Plan-Datei muss alle 21 Season- und Layout-Varianten enthalten.": [
+  "The plan file must contain all 21 season and layout variants.",
+  "Le fichier doit contenir les 21 variantes de saison et de disposition.",
+  "El archivo debe contener las 21 variantes de temporada y distribución.",
+  "O arquivo deve conter todas as 21 variantes de temporada e disposição.",
+  "Tệp phải chứa đủ 21 biến thể mùa và bố cục.",
+  "파일에는 21개 시즌·배치 변형이 모두 있어야 합니다."
+ ],
+ "Die aktive Variante fehlt in der Plan-Datei.": [
+  "The active variant is missing from the plan file.",
+  "La variante active est absente du fichier.",
+  "Falta la variante activa en el archivo.",
+  "A variante ativa está ausente no arquivo.",
+  "Tệp thiếu biến thể đang hoạt động.",
+  "파일에 활성 변형이 없습니다."
+ ],
+ "Eine Variante fehlt oder ist doppelt vorhanden.": [
+  "A variant is missing or duplicated.",
+  "Une variante est absente ou présente en double.",
+  "Falta una variante o hay una duplicada.",
+  "Uma variante está ausente ou duplicada.",
+  "Một biến thể bị thiếu hoặc trùng lặp.",
+  "변형이 없거나 중복되었습니다."
+ ],
+ "Ungültige Variante.": [
+  "Invalid variant.",
+  "Variante invalide.",
+  "Variante no válida.",
+  "Variante inválida.",
+  "Biến thể không hợp lệ.",
+  "잘못된 변형입니다."
  ]
 };
 let language='de';

@@ -1,12 +1,12 @@
 (function(){
 'use strict';
 const I=globalThis.HiveI18n,t=(key,params)=>I.t(key,params);
-const M=globalThis.HiveModel,$=id=>document.getElementById(id),svg=$('map'),stage=$('stage');
+const M=globalThis.HiveModel,W=globalThis.HiveWorkspace,$=id=>document.getElementById(id),svg=$('map'),stage=$('stage');
 // User-facing release: increment the final number for each later delivered update.
-const APP_VERSION='1.1.5';
+const APP_VERSION='1.1.6';
 const TOOL_SHORTCUTS={b:'base',m:'marshall',a:'center',t:'terrain',l:'beacon'};
 const shortcutFor=type=>Object.keys(TOOL_SHORTCUTS).find(key=>TOOL_SHORTCUTS[key]===type)?.toUpperCase();
-let state=M.makeLayout(),selectedId=null,pending=null,filter='all',dirty=false,undoStack=[],redoStack=[],drag=null,suppressClick=false,confirmAction=null,toastTimer=null;
+let workspace=W.createWorkspace(),state=W.activePlan(workspace),selectedId=null,pending=null,filter='all',dirty=false,undoStack=[],redoStack=[],drag=null,suppressClick=false,confirmAction=null,toastTimer=null;
 let selectedObjectIds=new Set(),mapMode='pan',fillArea=null,fillPreview=null;
 let organizerOpen=false,organizationTab='priority',selectedPlayers=new Set(),lastAutofillResult=null;
 const groupName=id=>t('Gruppe {n}',{n:id});
@@ -29,11 +29,23 @@ function toast(message,error=false){clearTimeout(toastTimer);$('toast').textCont
 function safely(action){try{return action();}catch(error){toast(error.message||t('Die Änderung konnte nicht übernommen werden.'),true);return null;}}
 function commit(next,message){
  if(JSON.stringify(next)===JSON.stringify(state))return false;
- lastAutofillResult=null;undoStack.push(M.clone(state));if(undoStack.length>70)undoStack.shift();redoStack=[];state=next;dirty=true;
- setMapSelection([...selectedObjectIds],selectedId);refreshFillPreview();
- render();if(message)toast(message);return true;
+ return commitWorkspace(W.updateWorkspace(workspace,next),message);
 }
-function restoreHistory(direction){lastAutofillResult=null;const source=direction==='undo'?undoStack:redoStack,target=direction==='undo'?redoStack:undoStack;if(!source.length)return;target.push(M.clone(state));state=source.pop();dirty=true;resetMapTools(true);$('drag-ghost').hidden=true;clearOrganizationDrop();render();}
+function commitWorkspace(next,message){
+ if(next===workspace)return false;
+ lastAutofillResult=null;undoStack.push(workspace);if(undoStack.length>70)undoStack.shift();redoStack=[];
+ workspace=next;state=W.activePlan(workspace);dirty=true;
+ setMapSelection([...selectedObjectIds],selectedId);refreshFillPreview();render();if(message)toast(message);return true;
+}
+function restoreHistory(direction){
+ lastAutofillResult=null;const source=direction==='undo'?undoStack:redoStack,target=direction==='undo'?redoStack:undoStack;if(!source.length)return;
+ const previous=state.season+':'+state.layout;target.push(workspace);workspace=source.pop();state=W.activePlan(workspace);dirty=true;
+ resetMapTools(true);$('drag-ghost').hidden=true;clearOrganizationDrop();render();if(previous!==state.season+':'+state.layout)fitMap();
+}
+function activateVariant(season,layout){
+ const next=W.switchVariant(workspace,season,layout);if(next===workspace)return;
+ resetMapTools(true);$('drag-ghost').hidden=true;clearOrganizationDrop();commitWorkspace(next);fitMap();
+}
 function confirm(title,message,action){confirmAction=action;$('confirm-title').textContent=title;$('confirm-message').textContent=message;$('confirm-dialog').showModal();}
 function closeDialog(id){$(id).close();if(id==='confirm-dialog')confirmAction=null;}
 function pointFromClient(clientX,clientY){const matrix=svg.getScreenCTM();if(!matrix)return {x:0,y:0};const p=new DOMPoint(clientX,clientY).matrixTransform(matrix.inverse());return {x:p.x,y:-p.y};}
@@ -202,7 +214,7 @@ function renderControls(){
  $('season-select').value=state.season;$('season-badge').textContent=state.season==='off'?'OFF':`S0${state.season}`;
  for(const option of $('season-select').options)option.textContent=option.value==='off'?t('Off Season'):t('Season {n}',{n:option.value});
  $('season-warning').hidden=!M.isDeveloping(state);
- $('season-help').textContent=t('Beim Wechsel wird die Aufstellung neu erstellt. Spieler und Gruppen bleiben erhalten.');
+ $('season-help').textContent=t('Jede Season und jedes Layout behält seinen eigenen Kartenstand. Spieler, Gruppen und Prioritäten gelten für alle Varianten.');
  $('anchor-title').textContent=ref;$('anchor-size-key').textContent=t(s4?'Zentrum 9 × 9':'Marshall 3 × 3');
  $('autofill-direction').textContent=t('Autofill: Prioritäten und Gruppendurchschnitt, von innen nach außen.');
  $('mode-help-note').textContent=s4?t('Alle Koordinaten bezeichnen das linke untere Feld. Verschieben verändert nur die gewählten Objekte. L4 zeigt 25 × 25 Felder je Beacon.'):t('Alle Koordinaten bezeichnen das linke untere Feld. Der Marshall bleibt der Bezugspunkt für Autofill.');
@@ -359,11 +371,8 @@ for(const tab of $('organizer').querySelectorAll('[data-tab]')){
 }
 $('clear-players').addEventListener('click',()=>{pending=null;ghost=null;drag=null;$('drag-ghost').hidden=true;commit(M.clearPlayers(state),t('Alle Spieler entfernt. Strg+Z stellt Spieler, Gruppen und Zuweisungen wieder her.'));});
 $('unassign-all').addEventListener('click',()=>{pending=null;ghost=null;drag=null;$('drag-ghost').hidden=true;clearOrganizationDrop();commit(M.unassignAll(state),t('Alle Plätze freigegeben. Spielerliste und Gruppen bleiben erhalten. Strg+Z macht die Änderung rückgängig.'));});
-$('season-select').addEventListener('change',e=>{
- const value=e.target.value;e.target.value=state.season;if(value===state.season)return;
- const apply=()=>{resetMapTools(true);commit(M.setSeason(state,value),t('Season geändert.'));fitMap();};
- if(dirty)confirm(t('Season wechseln?'),t('Die Season-Vorlage ersetzt die aktuelle Aufstellung und das Terrain. Spieler und Gruppen bleiben erhalten. Strg+Z macht den Wechsel rückgängig.'),apply);else safely(apply);
-});
+$('season-select').addEventListener('change',e=>{const value=e.target.value;e.target.value=state.season;safely(()=>activateVariant(value,state.layout));});
+$('layout-select').addEventListener('change',e=>{const value=e.target.value;e.target.value=state.layout;safely(()=>activateVariant(state.season,value));});
 $('inspector').addEventListener('submit',e=>{
  if(!['position-form','terrain-size-form','bulk-move-form'].includes(e.target.id))return;e.preventDefault();const o=selected();if(!o)return;
  safely(()=>{
@@ -430,7 +439,7 @@ $('autofill').addEventListener('click',()=>safely(()=>{
 function renderNamesPreview(){const n=$('names-input').value.split(/\r\n?|\n/).filter(x=>x.trim()).length;$('names-preview').textContent=n?t('Erkannte Namen: {n}',{n}):t('Noch keine Namen');}
 $('names-input').addEventListener('input',renderNamesPreview);
 $('names-form').addEventListener('submit',e=>{e.preventDefault();safely(()=>{const {state:next,added,skipped}=M.addPlayers(state,$('names-input').value);commit(next);$('names-input').value='';$('names-preview').textContent=t('Noch keine Namen');closeDialog('names-dialog');toast(t('{added} Spieler hinzugefügt. {skipped} doppelte Einträge übersprungen.',{added,skipped}));});});
-$('apply-layout').addEventListener('click',()=>{const kind=$('layout-select').value;confirm(t('Startaufstellung anwenden?'),kind==='empty'?t('Die Karte wird geleert. Deine Spielerliste und die Kartenkoordinaten bleiben erhalten.'):t('Die Positionen werden auf die Vorlage zurückgesetzt. Namen auf den ursprünglichen 100 Plätzen bleiben zugeordnet. Individuell ergänzte Elemente werden entfernt.'),()=>{resetMapTools(true);commit(M.makeLayout(kind,state));fitMap();});});
+$('apply-layout').addEventListener('click',()=>confirm(t('Aktuelle Variante zurücksetzen?'),t('Nur die geöffnete Variante wird auf ihre Startaufstellung zurückgesetzt. Alle anderen Varianten und die Spielerliste bleiben erhalten. Strg+Z macht dies rückgängig.'),()=>{resetMapTools(true);commit(M.makeLayout(state.layout,state));fitMap();}));
 $('confirm-yes').addEventListener('click',()=>{const action=confirmAction;closeDialog('confirm-dialog');if(action)safely(action);});
 $('confirm-dialog').addEventListener('cancel',()=>confirmAction=null);
 document.querySelectorAll('[data-close]').forEach(b=>b.addEventListener('click',()=>closeDialog(b.dataset.close)));
@@ -448,11 +457,16 @@ $('undo').addEventListener('click',()=>restoreHistory('undo'));$('redo').addEven
 $('open-plan').addEventListener('click',()=>$('plan-file').click());
 $('plan-file').addEventListener('change',async e=>{
  const file=e.target.files[0];e.target.value='';if(!file)return;
- try{if(file.size>2_000_000)throw new Error(t('Die Plan-Datei ist zu groß (maximal 2 MB).'));const raw=JSON.parse(await file.text()),next=M.validate(raw);const apply=()=>{resetMapTools(true);commit(next);dirty=false;render();fitMap();toast(t(raw.version<M.VERSION?'Älterer Plan auf ganze Felder umgestellt. Koordinaten beziehen sich jetzt auf das linke untere Feld.':'Plan geöffnet.'));};if(dirty)confirm(t('Plan öffnen?'),t('Die geladene Datei ersetzt den aktuellen Plan. Speichere deine Änderungen vorher, wenn du sie behalten möchtest.'),apply);else apply();}catch(error){toast(error instanceof SyntaxError?t('Die Datei enthält kein gültiges Plan-JSON.'):error.message,true);}
+ try{
+  if(file.size>W.MAX_FILE_BYTES)throw new Error(t('Die Plan-Datei ist zu groß (maximal 20 MB).'));
+  const raw=JSON.parse(await file.text()),next=W.readFile(raw),legacy=raw.schema===M.SCHEMA;
+  const apply=()=>{resetMapTools(true);commitWorkspace(next);dirty=false;render();fitMap();toast(t(legacy?'Einzelplan geladen. Weitere Varianten stehen separat bereit.':'Alle Varianten geladen. Der zuletzt aktive Kartenstand ist geöffnet.'));};
+  if(dirty)confirm(t('Plan öffnen?'),t('Die Datei ersetzt alle aktuellen Varianten. Speichere deinen bisherigen Stand vorher. Mit Strg+Z kannst du das Öffnen rückgängig machen.'),apply);else apply();
+ }catch(error){toast(error instanceof SyntaxError?t('Die Datei enthält kein gültiges Plan-JSON.'):error.message,true);}
 });
 function fileName(extension){return (state.title.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9_-]+/g,'-').replace(/^-|-$/g,'')||'hive-plan')+'.'+extension;}
 function download(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.style.display='none';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}
-function savePlan(){const valid=M.validate(state);download(new Blob([JSON.stringify({...valid,savedAt:new Date().toISOString()},null,2)],{type:'application/json'}),fileName('json'));dirty=false;renderControls();toast(t('Plan-Datei heruntergeladen. Mit „Öffnen“ kannst du sie später weiterbearbeiten.'));}
+function savePlan(){const valid=W.saveFile(workspace);download(new Blob([JSON.stringify(valid,null,2)],{type:'application/json'}),fileName('json'));dirty=false;renderControls();toast(t('Alle Varianten gespeichert. Beim Öffnen wird auch die aktive Season und das aktive Layout wiederhergestellt.'));}
 $('save-plan').addEventListener('click',()=>safely(savePlan));
 function csvExport(){
  const protect=value=>{let s=String(value??'');if(/^[=+@\-\t\r]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';};
@@ -506,7 +520,7 @@ document.addEventListener('keydown',e=>{
 window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue='';}});
 new ResizeObserver(()=>{updateView();renderMap();}).observe(stage);
 function applyLanguage(previousLabel){
- const drafts=Array.from(document.querySelectorAll('#anchor-form input,#inspector input,#plan-title,#layout-select')).filter(el=>el.id!=='object-name-edit'||el.value!==previousLabel).map(el=>({id:el.id,value:el.value,checked:el.checked}));
+ const drafts=Array.from(document.querySelectorAll('#anchor-form input,#inspector input,#plan-title')).filter(el=>el.id!=='object-name-edit'||el.value!==previousLabel).map(el=>({id:el.id,value:el.value,checked:el.checked}));
  I.apply(document);$('language-select').value=I.language;$('toast').hidden=true;
  render();renderNamesPreview();
  for(const draft of drafts){const el=$(draft.id);if(el){el.value=draft.value;el.checked=draft.checked;el.setCustomValidity?.('');}}
@@ -520,7 +534,7 @@ const context=document.modelContext;
 if(context?.registerTool){
  const life=new AbortController();window.addEventListener('pagehide',()=>life.abort(),{once:true});
  const register=tool=>{try{void Promise.resolve(context.registerTool(tool,{signal:life.signal})).catch(()=>{});}catch{}};
- register({name:'read_hive_plan',title:'Hive-Plan lesen',description:'Returns the current players, placements and calculated coordinates.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true,untrustedContentHint:true},execute(){return {title:state.title,season:state.season,groups:state.groups,priorityLabels:state.priorityLabels,origin:state.origin,players:state.players,objects:state.objects.map(o=>({...o,name:M.objectLabel(state,o),coordinates:M.coords(state,o),coordinateReference:'bottom-left-tile'}))};}});
+ register({name:'read_hive_plan',title:'Hive-Plan lesen',description:'Returns the current players, placements and calculated coordinates.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true,untrustedContentHint:true},execute(){return {title:state.title,season:state.season,layout:state.layout,variantCount:workspace.variants.length,groups:state.groups,priorityLabels:state.priorityLabels,origin:state.origin,players:state.players,objects:state.objects.map(o=>({...o,name:M.objectLabel(state,o),coordinates:M.coords(state,o),coordinateReference:'bottom-left-tile'}))};}});
  register({name:'add_hive_players',title:'Spieler hinzufügen',description:'Adds names to the player list. Existing names are preserved and duplicates skipped.',inputSchema:{type:'object',properties:{names:{type:'array',items:{type:'string',minLength:1,maxLength:80},minItems:1,maxItems:300}},required:['names'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:true},execute(input){if(!input||!Array.isArray(input.names)||!input.names.length||input.names.length>300||input.names.some(n=>typeof n!=='string'||!n.trim()||n.includes('\n')||n.length>80))throw new Error(t('Ungültige oder doppelte Spieler.'));const r=M.addPlayers(state,input.names.join('\n'));commit(r.state);return {added:r.added,skipped:r.skipped,total:state.players.length};}});
  register({name:'set_hive_center_coordinates',title:'Zentrumskoordinaten setzen',description:'Aligns the whole plan using the bottom-left tile of the active reference (Alliance Center or Marshall). Every object must remain within the 1000 by 1000 world.',inputSchema:{type:'object',properties:{x:{type:'integer',minimum:0,maximum:999},y:{type:'integer',minimum:0,maximum:999}},required:['x','y'],additionalProperties:false},annotations:{readOnlyHint:false},execute(input){if(!input)throw new Error(t('Bitte gültige Koordinaten eingeben.'));commit(M.setOrigin(state,input.x,input.y));return {origin:state.origin};}});
  register({name:'assign_hive_players',title:'Spieler auf freie Plätze setzen',description:'Assigns existing players to existing empty bases in one batch. Fails atomically if any assignment is invalid.',inputSchema:{type:'object',properties:{assignments:{type:'array',items:{type:'object',properties:{playerId:{type:'string'},baseId:{type:'string'}},required:['playerId','baseId'],additionalProperties:false},minItems:1,maxItems:300}},required:['assignments'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:true},execute(input){if(!input||!Array.isArray(input.assignments)||!input.assignments.length||input.assignments.length>300)throw new Error(t('Eine Spielerzuweisung ist ungültig oder doppelt.'));let next=state;const ids=new Set();for(const a of input.assignments){if(!a||ids.has(a.playerId))throw new Error(t('Eine Spielerzuweisung ist ungültig oder doppelt.'));ids.add(a.playerId);next=M.assign(next,a.playerId,a.baseId);}commit(next);return {assigned:input.assignments.length};}});

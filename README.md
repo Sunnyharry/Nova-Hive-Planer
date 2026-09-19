@@ -1,6 +1,6 @@
 # Nova Hive Planner
 
-Current application release: **1.1.5**. Increase the final number once per subsequent delivered update (1.1.6, 1.1.7, …); see `AGENTS.md`. The JSON schema version remains independent.
+Current application release: **1.1.6**. Increase the final number once per subsequent delivered update (1.1.7, 1.1.8, …); see `AGENTS.md`. The JSON schema version remains independent.
 
 A client-side Last War hive editor with English, German, French, Spanish, Portuguese, Vietnamese and Korean interfaces. Open `dist/index.html` in a modern browser, or serve the `dist` directory as static files. No dependencies, external assets, database or application login are required. The hosted Site has its own owner access policy.
 
@@ -14,7 +14,9 @@ Download `nova-hive-planner.html` from this repository and open it in a modern b
 
 The season selector is at the top of the right panel. Off Season uses a central Marshall with bases around it and supports bases, Marshall and terrain only. Season 4 retains the Alliance Center, four beacon players and light ranges. Seasons 1, 2, 3, 5 and 6 provide basic layouts with a prominent localized **Under development** banner above the map; they do not implement seasonal special mechanics.
 
-Changing season recreates the current spaced/compact template and removes custom geometry, including terrain. The displayed note explains this, and an unsaved plan triggers confirmation. Player names, priorities, custom priority labels and group memberships remain; assignments are mapped to matching seats where available. Undo restores the complete preceding plan. An explicitly empty layout remains empty until a template or objects are added.
+The season and layout dropdowns switch directly between **21 independent variants**: seven seasons × spaced, compact and empty layouts. Switching preserves the previous variant and restores the destination's exact objects, terrain connections, coordinates, player assignments, light settings and title. An edited empty layout remains an edited empty layout. Variants that have not been edited retain their initial template; no switch recreates an existing map.
+
+**Reset current variant** is a separate, confirmed action. It resets only the open variant to its template, keeping the other 20 variants and the roster. Undo restores the whole preceding workspace, including which variant was active. Player names, priorities, custom priority labels and friend groups are shared across all variants. Removing a player clears their assignments in every variant; **Remove all players from Hive** affects only the currently open variant.
 
 The world contains exactly **1000×1000 tiles**, numbered **0–999** on each axis. Every displayed, entered and exported object coordinate identifies its **bottom-left tile**. A 3×3 base at X820/Y920 occupies X820–822 and Y920–922. Bases and Marshall use 3×3 cells, the Alliance Center uses 9×9, and default L4 coverage remains 25×25 centered on the beacon. Positive X is right and positive Y is up.
 
@@ -60,7 +62,11 @@ Choose **Fill area**, draw a rectangle and select **0, 1 or 2 tiles** between ba
 
 ## Persistence and validation
 
-Plans are stored in explicit JSON files, not browser or cloud storage. Only the interface language is remembered on the device. Version-5 plans enforce the finite world and integer bottom-left tile coordinates. Versions 1–4 load through migration: buildings retain their geometry, and terrain moves at most half a tile per axis to align with the tile grid; existing integer terrain corner values are retained. Terrain connections, assignments, priorities and spacing remain. A legacy plan extending outside X/Y 0–999 is rejected without changing the current plan. The import message explains the new coordinate reference. Version-4 plans already store terrain connections and per-base area-fill spacing. Version-3 plans retain season, groups, player priorities and custom priority labels. Version-2 plans retain their season, groups, geometry and assignments and migrate all players to P2. Version-1 plans migrate to Season 4 with empty groups and P2 players, retaining names, geometry and assignments. Switching language preserves plan data and history; default map labels, help, errors and image/CSV export labels use the active language. Player names and custom labels stay as entered. CSV exports include group membership, numeric priority and its label.
+Plans are stored in explicit JSON files, not browser or cloud storage. Only the interface language is remembered on the device. **Save plan** saves the entire workspace, including all 21 variants and the active season/layout. **Open** validates every variant before replacing any data, then returns to the saved active variant. Unsaved work requires replacement confirmation; cancelling keeps all variants unchanged. Undo can restore the entire workspace that was open before the import. Files are limited to 20 MB, with the existing 800-object limit per variant and 300-player shared roster limit.
+
+The workspace file uses `nova-hive-workspace` version 1 and embeds geometry at plan version 5. The previous `nova-hive-planner` single-plan formats remain supported: their original season, layout and geometry become the active variant, with fresh templates for other variants. Older files contain only the single map that was saved. Versions 1–4 still migrate to the integer grid; out-of-world legacy plans are rejected without changing current work. Groups, priorities, assignments and terrain connections are retained where present.
+
+Switching language preserves all variants and history; default labels, help, errors and export labels use the active language. Player names and custom labels stay as entered. PNG/SVG and CSV export only the active variant. CSV includes group membership, priority and its label.
 
 Names are escaped in SVG/HTML, and CSV exports guard spreadsheet formula prefixes. JSON imports validate schema, season rules, memberships, priorities, priority labels, assignments, geometry and collisions before changing the plan.
 
@@ -69,15 +75,18 @@ Run the automated checks from the project root:
 ```
 node --check dist/i18n.js
 node --check dist/model.js
+node --check dist/workspace.js
 node --check dist/app.js
 node test/model.test.cjs
 node test/season-groups.test.cjs
 node test/priority.test.cjs
 node test/map-editing.test.cjs
 node test/world-grid.test.cjs
+node test/workspace.test.cjs
+node test/save-open-handlers.test.cjs
 node test/i18n.test.cjs
 ```
 
-These cover layout geometry, imports, all season modes, priority-aware grouped autofill, averages competing with individuals, fixed anchors, split-group reporting, exact bottom-left terrain placement, union outlines and holes, terrain connections and persistence, atomic multiple-object movement, all three fill spacings, obstacle avoidance and object limits, clearing with intact undo snapshots, finite-world boundaries for every object type, fixed unselected world positions when moving a reference, legacy file migration, and all 386 localized messages in seven languages. Interface bindings and local assets were statically audited. Browser interaction and visual checks were not run in this update.
+These cover layout geometry, imports, all season modes, priority-aware grouped autofill, averages competing with individuals, fixed anchors, split-group reporting, exact bottom-left terrain placement, union outlines and holes, terrain connections and persistence, atomic multiple-object movement, all three fill spacings, obstacle avoidance and object limits, clearing with intact undo snapshots, finite-world boundaries for every object type, fixed unselected world positions when moving a reference, legacy file migration, and all 405 localized messages in seven languages. Workspace tests cover all 21 variants, independent geometry and assignments, shared organization, legacy imports and malformed-file rejection. An additional test executes the actual Save/Open, confirmation, dropdown, reset and undo/redo handlers with rendering stubbed; it checks that a custom empty map returns exactly. Interface bindings and local assets were statically audited. Visual browser checks were not run in this update.
 
 Optional WebMCP tools register only when `document.modelContext` supports them and use the same model and state as the visible planner. Their browser registration has not been tested.
