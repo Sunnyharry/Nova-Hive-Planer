@@ -57,3 +57,6 @@ button.danger-solid{background:#8c333b;border-color:#be555d;color:#fff0ef;flex-s
 .terrain-position-form{padding-top:16px;margin-top:15px;border-top:1px solid var(--border)}.terrain-position-form h3{font-size:.875rem;margin:0;color:#dfc3c4}.multi-inspector .full{white-space:normal;line-height:1.4}.terrain-compound text{pointer-events:none}.terrain-compound:hover>path:nth-of-type(2){stroke:#efbbc0;stroke-width:.13}
 @media(max-width:1200px){.map-editor-tools{padding:0 14px 12px}}
 @media(max-width:640px){.map-editor-tools .tool-group{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));width:100%}.map-editor-tools .tool-group button{padding:9px 5px;font-size:.8rem;overflow-wrap:anywhere}.area-fill-options>label{min-width:130px}.area-fill-actions{flex:1}.map-workspace:has(.area-fill-options:not([hidden])){height:840px}}
+
+/* Keep the finite-world controls readable on narrow screens. */
+.zoom-controls{max-width:calc(100% - 24px);flex-wrap:wrap}.map-scale{max-width:calc(100% - 24px)}@media(max-width:600px){.zoom-controls{bottom:48px}.map-scale{font-size:12px}}

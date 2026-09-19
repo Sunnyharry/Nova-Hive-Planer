@@ -3,7 +3,7 @@
 const I=globalThis.HiveI18n,t=(key,params)=>I.t(key,params);
 const M=globalThis.HiveModel,$=id=>document.getElementById(id),svg=$('map'),stage=$('stage');
 // User-facing release: increment the final number for each later delivered update.
-const APP_VERSION='1.1.4';
+const APP_VERSION='1.1.5';
 const TOOL_SHORTCUTS={b:'base',m:'marshall',a:'center',t:'terrain',l:'beacon'};
 const shortcutFor=type=>Object.keys(TOOL_SHORTCUTS).find(key=>TOOL_SHORTCUTS[key]===type)?.toUpperCase();
 let state=M.makeLayout(),selectedId=null,pending=null,filter='all',dirty=false,undoStack=[],redoStack=[],drag=null,suppressClick=false,confirmAction=null,toastTimer=null;
@@ -40,9 +40,17 @@ function pointFromClient(clientX,clientY){const matrix=svg.getScreenCTM();if(!ma
 function onStage(clientX,clientY){if(organizerOpen){const d=$('organizer').getBoundingClientRect();if(clientX>=d.left&&clientX<=d.right&&clientY>=d.top&&clientY<=d.bottom)return false;}const r=svg.getBoundingClientRect();return clientX>=r.left&&clientX<=r.right&&clientY>=r.top&&clientY<=r.bottom;}
 function hitAt(point){return [...state.objects].reverse().find(o=>{const r=M.rect(o);return point.x>=r.left&&point.x<=r.right&&point.y>=r.bottom&&point.y<=r.top;})??null;}
 function viewBox(){const r=stage.getBoundingClientRect(),w=Math.max(r.width,200)/camera.scale,h=Math.max(r.height,200)/camera.scale;return {x:camera.x-w/2,y:camera.y-h/2,w,h};}
-function updateView(){const b=viewBox();svg.setAttribute('viewBox',`${b.x} ${b.y} ${b.w} ${b.h}`);$('zoom-label').textContent=`${Math.round(camera.scale/fitScale*100)}%`;}
-function fitMap(){const r=stage.getBoundingClientRect(),b=M.bounds(state);camera.x=(b.left+b.right)/2;camera.y=-(b.bottom+b.top)/2;camera.scale=Math.max(2,Math.min((r.width-50)/(b.right-b.left+5),(r.height-70)/(b.top-b.bottom+5),36));fitScale=camera.scale;updateView();renderMap();}
-function zoom(factor,clientX,clientY){const r=svg.getBoundingClientRect(),x=clientX??r.left+r.width/2,y=clientY??r.top+r.height/2,before=pointFromClient(x,y);camera.scale=Math.max(1.25,Math.min(115,camera.scale*factor));updateView();const after=pointFromClient(x,y);camera.x+=before.x-after.x;camera.y-=before.y-after.y;updateView();renderMap();}
+function worldFitScale(){const r=stage.getBoundingClientRect();return Math.max(.08,Math.min((Math.max(r.width,200)-32)/M.WORLD_SIZE,(Math.max(r.height,200)-32)/M.WORLD_SIZE));}
+function updateView(){
+ camera.scale=Math.max(worldFitScale(),Math.min(115,camera.scale));
+ const view=viewBox(),world=M.worldBounds(state),margin=12/camera.scale;
+ const clamp=(value,size,min,max)=>size>=max-min+2*margin?(min+max)/2:Math.max(min-margin+size/2,Math.min(max+margin-size/2,value));
+ camera.x=clamp(camera.x,view.w,world.left,world.right);camera.y=clamp(camera.y,view.h,-world.top,-world.bottom);
+ const b=viewBox();svg.setAttribute('viewBox',`${b.x} ${b.y} ${b.w} ${b.h}`);$('zoom-label').textContent=`${Math.round(camera.scale/fitScale*100)}%`;
+}
+function fitWorld(){const b=M.worldBounds(state);camera.x=(b.left+b.right)/2;camera.y=-(b.bottom+b.top)/2;camera.scale=worldFitScale();updateView();renderMap();}
+function fitMap(){const r=stage.getBoundingClientRect(),b=M.bounds(state);camera.x=(b.left+b.right)/2;camera.y=-(b.bottom+b.top)/2;camera.scale=Math.max(worldFitScale(),Math.min((r.width-50)/(b.right-b.left+5),(r.height-70)/(b.top-b.bottom+5),36));fitScale=camera.scale;updateView();renderMap();}
+function zoom(factor,clientX,clientY){const r=svg.getBoundingClientRect(),x=clientX??r.left+r.width/2,y=clientY??r.top+r.height/2,before=pointFromClient(x,y);camera.scale=Math.max(worldFitScale(),Math.min(115,camera.scale*factor));updateView();const after=pointFromClient(x,y);camera.x+=before.x-after.x;camera.y-=before.y-after.y;updateView();renderMap();}
 function wrapName(value,width,size){
  const fontPx=size*100;metrics.font=`550 ${fontPx}px system-ui, sans-serif`;
  const fits=s=>metrics.measureText(s).width<=width*100;
@@ -62,9 +70,9 @@ function nameSvg(name,width,height,y,fill='#e0edf8',initial=.56){
  const start=y-(lines.length-1)*size*1.18/2;
  return `<text class="map-name" fill="${fill}" font-size="${size.toFixed(3)}" font-weight="550" text-anchor="middle">${lines.map((s,i)=>`<tspan x="0" y="${(start+i*size*1.18).toFixed(3)}">${esc(s)}</tspan>`).join('')}</text>`;
 }
-function definitions(){return `<defs><pattern id="small-grid" x="-.5" y="-.5" width="1" height="1" patternUnits="userSpaceOnUse"><path d="M1 0H0V1" fill="none" stroke="#263b50" stroke-width=".025"/></pattern><pattern id="big-grid" x="-.5" y="-.5" width="5" height="5" patternUnits="userSpaceOnUse"><rect width="5" height="5" fill="url(#small-grid)"/><path d="M5 0H0V5" fill="none" stroke="#345169" stroke-width=".04"/></pattern><pattern id="terrain-hatch" width=".55" height=".55" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width=".55" height=".55" fill="#342d36"/><path d="M0 0V.55" stroke="#714e54" stroke-width=".1"/></pattern></defs>`;}
+function definitions(){const b=M.worldBounds(state);return `<defs><clipPath id="world-clip"><rect x="${b.left}" y="${-b.top}" width="1000" height="1000"/></clipPath><pattern id="world-grid" x="${b.left}" y="${-b.top}" width="50" height="50" patternUnits="userSpaceOnUse"><path d="M50 0H0V50" fill="none" stroke="#3c5a70" stroke-width=".6"/></pattern><pattern id="medium-grid" x="${b.left}" y="${-b.top}" width="5" height="5" patternUnits="userSpaceOnUse"><path d="M5 0H0V5" fill="none" stroke="#345169" stroke-width=".08"/></pattern><pattern id="small-grid" x="-.5" y="-.5" width="1" height="1" patternUnits="userSpaceOnUse"><path d="M1 0H0V1" fill="none" stroke="#263b50" stroke-width=".025"/></pattern><pattern id="big-grid" x="-.5" y="-.5" width="5" height="5" patternUnits="userSpaceOnUse"><rect width="5" height="5" fill="url(#small-grid)"/><path d="M5 0H0V5" fill="none" stroke="#345169" stroke-width=".04"/></pattern><pattern id="terrain-hatch" width=".55" height=".55" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width=".55" height=".55" fill="#342d36"/><path d="M0 0V.55" stroke="#714e54" stroke-width=".1"/></pattern></defs>`;}
 function objectSvg(o,exporting=false){
- const q=o.type==='terrain'?M.terrainCornerCoords(state,o):M.coords(state,o),name=M.objectLabel(state,o),active=!exporting&&selectedObjectIds.has(o.id),classes=`object-${o.type}${active?' map-object-selected':''}`;
+ const q=M.coords(state,o),name=M.objectLabel(state,o),active=!exporting&&selectedObjectIds.has(o.id),classes=`object-${o.type}${active?' map-object-selected':''}`;
  const attr=`data-object="${esc(o.id)}" class="${classes}" transform="translate(${o.x} ${-o.y})" role="button" aria-label="${esc(name)}, X ${q.x}, Y ${q.y}"`;
  let content='';
  if(o.type==='center'){
@@ -89,7 +97,7 @@ function terrainHandles(o){
 }
 function compoundTerrainSvg(parts,exporting=false){
  const primary=parts[0],geometry=M.terrainUnionGeometry(parts),active=!exporting&&parts.some(o=>selectedObjectIds.has(o.id)),stroke=active?(ghost?.invalid?'#ff9691':'#b4ffec'):'#a8787d';
- const fill=geometry.slices.map(r=>`M${r.left} ${-r.top}H${r.right}V${-r.bottom}H${r.left}Z`).join(' '),outline=geometry.edges.map(([x1,y1,x2,y2])=>`M${x1} ${-y1}L${x2} ${-y2}`).join(' '),label=parts.reduce((best,o)=>o.w*o.h>best.w*best.h?o:best),name=M.objectLabel(state,primary),r=M.objectBounds(parts),x=state.origin.x+r.left-state.origin.mapX,y=state.origin.y+r.bottom-state.origin.mapY;
+ const fill=geometry.slices.map(r=>`M${r.left} ${-r.top}H${r.right}V${-r.bottom}H${r.left}Z`).join(' '),outline=geometry.edges.map(([x1,y1,x2,y2])=>`M${x1} ${-y1}L${x2} ${-y2}`).join(' '),label=parts.reduce((best,o)=>o.w*o.h>best.w*best.h?o:best),name=M.objectLabel(state,primary),r=M.objectBounds(parts),x=state.origin.x+r.left+.5-state.origin.mapX,y=state.origin.y+r.bottom+.5-state.origin.mapY;
  return `<g data-object="${esc(primary.id)}" class="object-terrain terrain-compound" role="button" aria-label="${esc(name)}, ${h('Linke untere Ecke')}, X ${num(x)}, Y ${num(y)}"><title>${esc(name)} · ${h('Verbundene Terrainfläche')} · X ${num(x)} / Y ${num(y)}</title><path d="${fill}" fill="url(#terrain-hatch)"/><path d="${outline}" fill="none" stroke="${stroke}" stroke-width="${active?.16:.09}" pointer-events="none"/><g transform="translate(${label.x} ${-label.y})" pointer-events="none">${nameSvg(name,label.w-.25,Math.max(.3,label.h-.6),0,'#f0c4c4',.6)}</g></g>`;
 }
 function scene(exporting=false){
@@ -98,7 +106,7 @@ function scene(exporting=false){
  if(M.isSeason4(state)&&state.showLight)for(const o of displayObjects)if(o.type==='base'&&o.beacon)s+=`<rect x="${o.x-o.lightSize/2}" y="${-o.y-o.lightSize/2}" width="${o.lightSize}" height="${o.lightSize}" fill="${color(o)}" fill-opacity=".045" stroke="${color(o)}" stroke-opacity=".8" stroke-width=".09" pointer-events="none"/>`;
  const drawn=new Set();for(const o of displayObjects){if(o.terrainGroup){if(drawn.has(o.terrainGroup))continue;drawn.add(o.terrainGroup);s+=compoundTerrainSvg(displayObjects.filter(q=>q.terrainGroup===o.terrainGroup),exporting);}else s+=objectSvg(o,exporting);}
  const terrainSelection=!exporting&&selectedObjectIds.size===1&&(drag?.kind==='resize'&&ghost?ghost.o:selected());
- if(!state.objects.some(o=>o.type===M.anchorType(state)))s+=`<g transform="translate(${state.origin.mapX} ${-state.origin.mapY})" pointer-events="none"><path d="M-1 0H1M0-1V1" stroke="#c6d9e7" stroke-width=".07" stroke-dasharray=".2 .15"/><text x="1.3" y=".15" font-size=".55" fill="#91adbf">${h('Ursprung X {x} / Y {y}',{x:state.origin.x,y:state.origin.y})}</text></g>`;
+ if(!state.objects.some(o=>o.type===M.anchorType(state)))s+=`<g transform="translate(${state.origin.mapX-(M.isSeason4(state)?4:1)} ${-state.origin.mapY+(M.isSeason4(state)?4:1)})" pointer-events="none"><path d="M-1 0H1M0-1V1" stroke="#c6d9e7" stroke-width=".07" stroke-dasharray=".2 .15"/><text x="1.3" y=".15" font-size=".55" fill="#91adbf">${h('Ursprung X {x} / Y {y}',M.referenceCoords(state))}</text></g>`;
  if(!exporting&&ghost?.o){const g=ghost.o,stroke=ghost.invalid?'#ff9691':'#adffe8';s+=`<rect x="${g.x-g.w/2}" y="${-g.y-g.h/2}" width="${g.w}" height="${g.h}" fill="${stroke}" fill-opacity=".15" stroke="${stroke}" stroke-width=".12" stroke-dasharray=".25 .12" pointer-events="none"/>`;const q=g.type==='terrain'?M.terrainCornerCoords({...state,objects:state.objects.map(o=>o.id===g.id?g:o)},g):M.coords(state,g);s+=`<text x="${g.x}" y="${-g.y-g.h/2-.45}" text-anchor="middle" font-size=".6" fill="${stroke}" pointer-events="none">${drag?.kind==='resize'?`${g.w} × ${g.h} · `:''}X ${num(q.x)} / Y ${num(q.y)}</text>`;}
  if(!exporting&&ghost?.objects){const stroke=ghost.invalid?'#ff9691':'#adffe8';for(const o of ghost.objects)if(!o.terrainGroup)s+=`<rect x="${o.x-o.w/2}" y="${-o.y-o.h/2}" width="${o.w}" height="${o.h}" fill="none" stroke="${stroke}" stroke-width=".15" stroke-dasharray=".3 .15" pointer-events="none"/>`;}
  if(!exporting){
@@ -110,8 +118,9 @@ function scene(exporting=false){
  return s;
 }
 function renderMap(){
- const b=viewBox();svg.innerHTML=definitions()+`<rect x="${b.x-5}" y="${b.y-5}" width="${b.w+10}" height="${b.h+10}" fill="url(#big-grid)" pointer-events="none"/>`+scene();
- svg.classList.toggle('adding',!!pending||mapMode==='fill'||mapMode==='select');svg.classList.toggle('moving',!!drag&&drag.kind!=='roster');updateView();
+ updateView();const b=M.worldBounds(state),grid=camera.scale>=5?'big-grid':camera.scale>=1.5?'medium-grid':'world-grid',labelSize=13/camera.scale,pad=8/camera.scale;
+ svg.innerHTML=definitions()+`<rect x="${b.left}" y="${-b.top}" width="1000" height="1000" fill="#0b1726" pointer-events="none"/><rect x="${b.left}" y="${-b.top}" width="1000" height="1000" fill="url(#${grid})" stroke="#5a819d" stroke-width="1.5" vector-effect="non-scaling-stroke" pointer-events="none"/><g clip-path="url(#world-clip)">${scene()}</g><g fill="#b9d0df" font-size="${labelSize}" pointer-events="none"><text x="${b.left+pad}" y="${-b.bottom-pad}">X 0 · Y 0</text><text x="${b.right-pad}" y="${-b.top+pad+labelSize}" text-anchor="end">X 999 · Y 999</text></g>`;
+ svg.classList.toggle('adding',!!pending||mapMode==='fill'||mapMode==='select');svg.classList.toggle('moving',!!drag&&drag.kind!=='roster');
 }
 function priorityText(level){return `P${level} · ${M.priorityLabel(state,level)}`;}
 function playerBadges(p){const g=M.groupForPlayer(state,p.id),level=M.priorityOf(p);return `<span class="player-badges"><span class="priority-pill priority-${level}" title="${esc(priorityText(level))}">P${level}</span>${g?`<span class="group-pill">${esc(groupName(g.id))}</span>`:''}</span>`;}
@@ -154,9 +163,9 @@ function togglePlayerSelection(id){if(selectedPlayers.has(id))selectedPlayers.de
 function clearOrganizationDrop(){document.querySelectorAll('[data-org-drop].drop-active').forEach(el=>el.classList.remove('drop-active'));}
 function organizationDropAt(x,y){if(!organizerOpen)return null;const target=document.elementFromPoint(x,y)?.closest('[data-org-drop]');return target&&$('organizer').contains(target)?target:null;}
 function organizePlayers(ids,type,value){const next=type==='priority'?M.setPlayerPriorities(state,ids,value):M.setPlayerGroups(state,ids,value||null);commit(next,t('{n} Spieler zugewiesen.',{n:ids.length}));renderSelection();}
-function terrainPositionForm(o){
- const q=M.terrainCornerCoords(state,o);
- return `<form id="terrain-position-form" class="terrain-position-form"><h3>${h('Linke untere Ecke')}</h3><div class="inline-fields"><label>X<input id="terrain-corner-x" type="number" step="0.5" min="0" max="999999" value="${q.x}" required></label><label>Y<input id="terrain-corner-y" type="number" step="0.5" min="0" max="999999" value="${q.y}" required></label></div><button type="submit" class="full">${h('Ecke positionieren')}</button><p class="field-help">${h('X und Y setzen die linke untere Ecke der Fläche. Breite und Höhe wachsen von dort nach rechts und oben.')}</p></form>`;
+function objectPositionForm(o){
+ const q=M.coords(state,o),r=o.terrainGroup?M.objectBounds(M.terrainParts(state,o)):M.rect(o),maxX=M.WORLD_SIZE-(r.right-r.left),maxY=M.WORLD_SIZE-(r.top-r.bottom);
+ return `<form id="position-form" class="terrain-position-form"><h3>${h('Linke untere Ecke')}</h3><div class="inline-fields"><label>X<input id="object-x" type="number" step="1" min="0" max="${maxX}" value="${q.x}" required></label><label>Y<input id="object-y" type="number" step="1" min="0" max="${maxY}" value="${q.y}" required></label></div><button type="submit" class="full">${h('Position übernehmen')}</button><p class="field-help">${h('Ganzzahlige X/Y-Koordinaten des linken unteren Feldes. Das gesamte Objekt bleibt innerhalb von 0–999.')}</p></form>`;
 }
 function bulkMoveForm(){return `<form id="bulk-move-form"><div class="inline-fields"><label>${h('Verschiebung X')}<input id="selection-dx" type="number" step="1" value="0" required></label><label>${h('Verschiebung Y')}<input id="selection-dy" type="number" step="1" value="0" required></label></div><button type="submit" class="full">${h('Auswahl verschieben')}</button></form>`;}
 function renderInspector(){
@@ -164,7 +173,7 @@ function renderInspector(){
  if(objects.length>1){
   const allTerrain=objects.every(q=>q.type==='terrain'),compound=allTerrain&&o?.terrainGroup&&objects.every(q=>q.terrainGroup===o.terrainGroup),bounds=M.objectBounds(objects);
   $('selection-type').textContent=compound?t('Verbundene Terrainfläche'):t('{n} Elemente',{n:objects.length});
-  $('inspector').innerHTML=`<div class="selection-form multi-inspector"><p class="field-help">${h('Ziehe ein markiertes Element, um die gesamte Auswahl zu verschieben.')}</p>${compound?`<label>${h('Bezeichnung')}<input id="terrain-group-name" value="${esc(M.objectLabel(state,o))}" maxlength="80"></label><p class="field-help">${h('{n} Teile · Außenmaß {w} × {h}',{n:objects.length,w:bounds.right-bounds.left,h:bounds.top-bounds.bottom})}</p>${terrainPositionForm(o)}<p class="field-help">${h('Bei verbundenem Terrain bezieht sich die Ecke auf den äußeren Rahmen.')}</p>`:bulkMoveForm()}${allTerrain?`${!compound?`<button id="connect-terrains" class="full">${h('Terrain verbinden')}</button>`:''}${objects.some(q=>q.terrainGroup)?`<button id="disconnect-terrains" class="full">${h('Terrain trennen')}</button>`:''}`:''}<button id="delete-selected" class="danger full">${h('Auswahl entfernen')}</button><button id="clear-map-selection" class="full">${h('Auswahl aufheben')}</button></div>`;return;
+  $('inspector').innerHTML=`<div class="selection-form multi-inspector"><p class="field-help">${h('Ziehe ein markiertes Element, um die gesamte Auswahl zu verschieben.')}</p>${compound?`<label>${h('Bezeichnung')}<input id="terrain-group-name" value="${esc(M.objectLabel(state,o))}" maxlength="80"></label><p class="field-help">${h('{n} Teile · Außenmaß {w} × {h}',{n:objects.length,w:bounds.right-bounds.left,h:bounds.top-bounds.bottom})}</p>${objectPositionForm(o)}<p class="field-help">${h('Bei verbundenem Terrain beziehen sich die Koordinaten auf das linke untere Feld des äußeren Rahmens.')}</p>`:bulkMoveForm()}${allTerrain?`${!compound?`<button id="connect-terrains" class="full">${h('Terrain verbinden')}</button>`:''}${objects.some(q=>q.terrainGroup)?`<button id="disconnect-terrains" class="full">${h('Terrain trennen')}</button>`:''}`:''}<button id="delete-selected" class="danger full">${h('Auswahl entfernen')}</button><button id="clear-map-selection" class="full">${h('Auswahl aufheben')}</button></div>`;return;
  }
  if(!o){$('inspector').innerHTML=`<div class="selection-empty"><span aria-hidden="true">⌖</span><p>${h('Wähle eine Basis, den Marshall oder ein anderes Element auf der Karte.')}</p></div>`;return;}
  $('selection-type').textContent=typeName(o);
@@ -179,7 +188,7 @@ function renderInspector(){
   if(terrains.length>1)s+=`<label>${h('Terrainfläche auswählen')}<select id="terrain-select">${terrains.map((t,i)=>`<option value="${esc(t.id)}" ${t.id===o.id?'selected':''}>${i+1}. ${esc(M.objectLabel(state,t))} · ${t.w} × ${t.h}</option>`).join('')}</select></label>`;
   s+=`<form id="terrain-size-form" class="terrain-size-form"><h3>${h('Größe ändern')}</h3><div class="inline-fields"><label>${h('Breite (Felder)')}<input id="terrain-width" type="number" min="1" max="60" step="1" value="${o.w}" required></label><label>${h('Höhe (Felder)')}<input id="terrain-height" type="number" min="1" max="60" step="1" value="${o.h}" required></label></div><button class="full" type="submit">${h('Größe übernehmen')}</button><p class="field-help">${h('Je 1–60 Felder. Die linke untere Ecke bleibt bei Größenänderungen fest. Terrain darf anderes Terrain überlappen. Gebäude bleiben frei.')}</p></form>`;
  }
- if(o.type==='terrain')s+=terrainPositionForm(o);else s+=`<form id="position-form"><div class="inline-fields"><label>${h('Karten-X')}<input id="object-x" type="number" value="${q.x}" step="${o.type==='terrain'?.5:1}" required></label><label>${h('Karten-Y')}<input id="object-y" type="number" value="${q.y}" step="${o.type==='terrain'?.5:1}" required></label></div><p class="relative-coords">${h('Zum Mittelpunkt: X {x} / Y {y}',{x:num(o.x-state.origin.mapX),y:num(o.y-state.origin.mapY)})}</p><button class="full" type="submit">${h('Position übernehmen')}</button></form>`;
+ s+=objectPositionForm(o);
  if(o.type==='base'&&M.isSeason4(state)){
   s+=`<label class="check-label"><input id="beacon-enabled" type="checkbox" ${o.beacon?'checked':''}> ${h('Dieser Spieler ist ein Beacon')}</label>`;
   if(o.beacon)s+=`<div class="inline-fields"><label>${h('Markierung')}<select id="beacon-letter">${Array.from('ABCDEFGHIJKLMNOPQRSTUVWXYZ').map(c=>`<option ${c===o.beacon?'selected':''} ${state.objects.some(a=>a.id!==o.id&&a.beacon===c)?'disabled':''}>${c}</option>`).join('')}</select></label><label>${h('Elektriker')}<input id="electricians" type="number" min="0" max="100" step="1" value="${o.electricians}"></label></div><label>${h('L4-Lichtbreite in Feldern')}<input id="light-size" type="number" min="1" max="101" step="1" value="${o.lightSize}"></label>`;
@@ -196,10 +205,10 @@ function renderControls(){
  $('season-help').textContent=t('Beim Wechsel wird die Aufstellung neu erstellt. Spieler und Gruppen bleiben erhalten.');
  $('anchor-title').textContent=ref;$('anchor-size-key').textContent=t(s4?'Zentrum 9 × 9':'Marshall 3 × 3');
  $('autofill-direction').textContent=t('Autofill: Prioritäten und Gruppendurchschnitt, von innen nach außen.');
- $('mode-help-note').textContent=s4?t('Ohne Zentrum bleibt der Koordinatenursprung erhalten. Beim Verschieben des Zentrums werden die Spielerkoordinaten neu berechnet. L4 zeigt geometrisch 25 × 25 Felder je Beacon. Buffs am Rand im Spiel prüfen.'):t('Der Marshall ist der Bezugspunkt für Koordinaten und Autofill. Ohne Marshall bleibt der markierte Ursprung erhalten.');
+ $('mode-help-note').textContent=s4?t('Alle Koordinaten bezeichnen das linke untere Feld. Verschieben verändert nur die gewählten Objekte. L4 zeigt 25 × 25 Felder je Beacon.'):t('Alle Koordinaten bezeichnen das linke untere Feld. Der Marshall bleibt der Bezugspunkt für Autofill.');
  document.querySelectorAll('[data-s4-only]').forEach(el=>el.hidden=!s4);
  $('clear-players').disabled=!state.players.length;
- $('plan-title').value=state.title;$('anchor-x').value=state.origin.x;$('anchor-y').value=state.origin.y;$('show-light').checked=state.showLight;$('layout-select').value=state.layout;
+ $('plan-title').value=state.title;$('anchor-x').value=M.referenceCoords(state).x;$('anchor-y').value=M.referenceCoords(state).y;$('anchor-x').max=$('anchor-y').max=M.isSeason4(state)?991:997;$('show-light').checked=state.showLight;$('layout-select').value=state.layout;
  const bases=state.objects.filter(o=>o.type==='base'),assigned=bases.filter(o=>o.playerId).length,beacons=bases.filter(o=>o.beacon).length;
  $('unassign-all').disabled=!assigned;
  $('app-version').textContent=t('Version {version}',{version:APP_VERSION});
@@ -208,7 +217,7 @@ function renderControls(){
  $('save-status').textContent=t(dirty?'Ungespeicherte Änderungen':'Plan bereit');$('save-status').style.color=dirty?'#e6c97d':'';
  $('undo').disabled=!undoStack.length;$('redo').disabled=!redoStack.length;
  renderAutofill();
- $('anchor-help').textContent=t('Alle Koordinaten beziehen sich auf {name}. X steigt nach rechts, Y nach oben.',{name:ref});
+ $('anchor-help').textContent=t('Verschiebt den gesamten Plan anhand von {name}. Einzelne Objekte verschiebst du über ihre Auswahl.',{name:ref});
  document.querySelectorAll('[data-tool]').forEach(b=>{
   b.classList.toggle('active',pending?.kind==='object'&&pending.tool===b.dataset.tool);
   const key=shortcutFor(b.dataset.tool),name=t({base:'Basis',marshall:'Marshall',center:'Allianzzentrum',terrain:'Terrain',beacon:'Beacon'}[b.dataset.tool]);
@@ -268,7 +277,7 @@ function previewAt(point){
   try{for(const o of objects)M.assertPlacement(state,o,ignored);}catch{invalid=true;}
   ghost={objects,invalid};renderMap();return;
  }
- if(pending?.kind==='object'){const o={...pending.o,x:M.snap(point.x,pending.o.w),y:M.snap(point.y,pending.o.h)};ghost={o,invalid:!!M.collision(state,o)};renderMap();}
+ if(pending?.kind==='object'){const o={...pending.o,x:M.snap(point.x,pending.o.w),y:M.snap(point.y,pending.o.h)};let invalid=false;try{M.assertPlacement(state,o);}catch{invalid=true;}ghost={o,invalid};renderMap();}
 }
 svg.addEventListener('pointerdown',e=>{
  if(e.button!==0||drag)return;e.preventDefault();svg.focus({preventScroll:true});lastPoint=pointFromClient(e.clientX,e.clientY);
@@ -356,13 +365,12 @@ $('season-select').addEventListener('change',e=>{
  if(dirty)confirm(t('Season wechseln?'),t('Die Season-Vorlage ersetzt die aktuelle Aufstellung und das Terrain. Spieler und Gruppen bleiben erhalten. Strg+Z macht den Wechsel rückgängig.'),apply);else safely(apply);
 });
 $('inspector').addEventListener('submit',e=>{
- if(!['position-form','terrain-size-form','terrain-position-form','bulk-move-form'].includes(e.target.id))return;e.preventDefault();const o=selected();if(!o)return;
+ if(!['position-form','terrain-size-form','bulk-move-form'].includes(e.target.id))return;e.preventDefault();const o=selected();if(!o)return;
  safely(()=>{
   if(e.target.id==='bulk-move-form')return moveSelection(Number($('selection-dx').value),Number($('selection-dy').value));
-  if(e.target.id==='terrain-position-form')return commit(M.setTerrainCorner(state,o.id,Number($('terrain-corner-x').value),Number($('terrain-corner-y').value)),t('Terrain-Ecke positioniert.'));
   if(e.target.id==='terrain-size-form')return commit(M.updateObject(state,o.id,{w:Number($('terrain-width').value),h:Number($('terrain-height').value)}),t('Terraingröße angepasst.'));
   const x=Number($('object-x').value),y=Number($('object-y').value);if(!Number.isFinite(x)||!Number.isFinite(y))throw new Error(t('Bitte gültige Koordinaten eingeben.'));
-  if(o.type===M.anchorType(state))commit(M.setOrigin(state,x,y));else{const q=M.positionFromCoords(state,x,y);commit(M.moveObject(state,o.id,q.x,q.y));}
+  commit(M.setObjectCorner(state,o.id,x,y));
  });
 });
 $('inspector').addEventListener('change',e=>{
@@ -435,12 +443,12 @@ $('apply-area-fill').addEventListener('click',()=>safely(()=>{
 }));
 document.querySelectorAll('[data-tool]').forEach(b=>b.addEventListener('click',()=>armObject(b.dataset.tool)));
 $('cancel-placement').addEventListener('click',clearPending);$('show-help').addEventListener('click',()=>$('help-dialog').showModal());
-$('zoom-in').addEventListener('click',()=>zoom(1.25));$('zoom-out').addEventListener('click',()=>zoom(.8));$('fit-map').addEventListener('click',fitMap);
+$('zoom-in').addEventListener('click',()=>zoom(1.25));$('zoom-out').addEventListener('click',()=>zoom(.8));$('fit-map').addEventListener('click',fitMap);$('fit-world').addEventListener('click',fitWorld);
 $('undo').addEventListener('click',()=>restoreHistory('undo'));$('redo').addEventListener('click',()=>restoreHistory('redo'));
 $('open-plan').addEventListener('click',()=>$('plan-file').click());
 $('plan-file').addEventListener('change',async e=>{
  const file=e.target.files[0];e.target.value='';if(!file)return;
- try{if(file.size>2_000_000)throw new Error(t('Die Plan-Datei ist zu groß (maximal 2 MB).'));const next=M.validate(JSON.parse(await file.text()));const apply=()=>{resetMapTools(true);commit(next);dirty=false;render();fitMap();toast(t('Plan geöffnet.'));};if(dirty)confirm(t('Plan öffnen?'),t('Die geladene Datei ersetzt den aktuellen Plan. Speichere deine Änderungen vorher, wenn du sie behalten möchtest.'),apply);else apply();}catch(error){toast(error instanceof SyntaxError?t('Die Datei enthält kein gültiges Plan-JSON.'):error.message,true);}
+ try{if(file.size>2_000_000)throw new Error(t('Die Plan-Datei ist zu groß (maximal 2 MB).'));const raw=JSON.parse(await file.text()),next=M.validate(raw);const apply=()=>{resetMapTools(true);commit(next);dirty=false;render();fitMap();toast(t(raw.version<M.VERSION?'Älterer Plan auf ganze Felder umgestellt. Koordinaten beziehen sich jetzt auf das linke untere Feld.':'Plan geöffnet.'));};if(dirty)confirm(t('Plan öffnen?'),t('Die geladene Datei ersetzt den aktuellen Plan. Speichere deine Änderungen vorher, wenn du sie behalten möchtest.'),apply);else apply();}catch(error){toast(error instanceof SyntaxError?t('Die Datei enthält kein gültiges Plan-JSON.'):error.message,true);}
 });
 function fileName(extension){return (state.title.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9_-]+/g,'-').replace(/^-|-$/g,'')||'hive-plan')+'.'+extension;}
 function download(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.style.display='none';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}
@@ -456,10 +464,10 @@ function exportTextSize(text,width,size){metrics.font='100px system-ui, sans-ser
 function exportSvg(){
  const b=M.bounds(state),w=Math.max(b.right-b.left+8,36),h=Math.max(b.top-b.bottom+15,36),left=(b.left+b.right-w)/2,top=-b.top-9,scale=Math.min(80,5800/Math.max(w,h));
  const bases=state.objects.filter(o=>o.type==='base'),assigned=bases.filter(o=>o.playerId).length;
- const summary=t('{assigned} / {total} Plätze vergeben · {name} X {x} / Y {y}',{assigned,total:bases.length,name:referenceName(),x:state.origin.x,y:state.origin.y});
- const legend=t(M.isSeason4(state)?'Basis 3 × 3 · Zentrum 9 × 9 · Koordinaten der Gebäudemitte · X nach rechts, Y nach oben':'Basis 3 × 3 · Marshall 3 × 3 · Koordinaten der Gebäudemitte · X nach rechts, Y nach oben');
+ const summary=t('{assigned} / {total} Plätze vergeben · {name} X {x} / Y {y}',{assigned,total:bases.length,name:referenceName(),...M.referenceCoords(state)});
+ const legend=t(M.isSeason4(state)?'Basis 3 × 3 · Zentrum 9 × 9 · Koordinaten: linkes unteres Feld · Welt 1000 × 1000':'Basis 3 × 3 · Marshall 3 × 3 · Koordinaten: linkes unteres Feld · Welt 1000 × 1000');
  const footnote=(M.isSeason4(state)?t(state.showLight?'Lichtflächen gemäß eingestellter Breite. L4-Standard: 25 × 25 Kartenfelder.':'Lichtflächen ausgeblendet.')+' · ':'')+t('Erstellt {date}',{date:new Date().toLocaleDateString(I.language)});
- const source=`<svg xmlns="http://www.w3.org/2000/svg" width="${Math.ceil(w*scale)}" height="${Math.ceil(h*scale)}" viewBox="${left} ${top} ${w} ${h}"><style>text{font-family:system-ui,-apple-system,Segoe UI,sans-serif}</style>${definitions()}<rect x="${left}" y="${top}" width="${w}" height="${h}" fill="#0b1726"/><text x="${left+2}" y="${top+2.6}" fill="#61ddcc" font-size="${exportTextSize('NOVA HIVE PLANNER · '+seasonName()+(M.isDeveloping(state)?' · '+t('Noch in Bearbeitung'):''),w-4,.65)}" font-weight="650">NOVA HIVE PLANNER · ${esc(seasonName())}${M.isDeveloping(state)?' · '+t('Noch in Bearbeitung'):''}</text><text x="${left+2}" y="${top+4.8}" fill="#eef7ff" font-size="${Math.min(1.4,(w-4)/(Math.max(1,state.title.length)*.65))}" font-weight="750">${esc(state.title)}</text><text x="${left+2}" y="${top+6.4}" fill="#9db9cc" font-size="${exportTextSize(summary,w-4,.55)}">${esc(summary)}</text><rect x="${left+1}" y="${top+8}" width="${w-2}" height="${h-12}" fill="url(#big-grid)"/>${scene(true)}<text x="${left+2}" y="${top+h-2.6}" font-size="${exportTextSize(legend,w-4,.52)}" fill="#b5ccda">${esc(legend)}</text><text x="${left+2}" y="${top+h-1.3}" font-size="${exportTextSize(footnote,w-4,.44)}" fill="#7896ac">${esc(footnote)}</text></svg>`;
+ const source=`<svg xmlns="http://www.w3.org/2000/svg" width="${Math.ceil(w*scale)}" height="${Math.ceil(h*scale)}" viewBox="${left} ${top} ${w} ${h}"><style>text{font-family:system-ui,-apple-system,Segoe UI,sans-serif}</style>${definitions()}<rect x="${left}" y="${top}" width="${w}" height="${h}" fill="#0b1726"/><text x="${left+2}" y="${top+2.6}" fill="#61ddcc" font-size="${exportTextSize('NOVA HIVE PLANNER · '+seasonName()+(M.isDeveloping(state)?' · '+t('Noch in Bearbeitung'):''),w-4,.65)}" font-weight="650">NOVA HIVE PLANNER · ${esc(seasonName())}${M.isDeveloping(state)?' · '+t('Noch in Bearbeitung'):''}</text><text x="${left+2}" y="${top+4.8}" fill="#eef7ff" font-size="${Math.min(1.4,(w-4)/(Math.max(1,state.title.length)*.65))}" font-weight="750">${esc(state.title)}</text><text x="${left+2}" y="${top+6.4}" fill="#9db9cc" font-size="${exportTextSize(summary,w-4,.55)}">${esc(summary)}</text><rect x="${left+1}" y="${top+8}" width="${w-2}" height="${h-12}" fill="url(#big-grid)"/><g clip-path="url(#world-clip)">${scene(true)}</g><text x="${left+2}" y="${top+h-2.6}" font-size="${exportTextSize(legend,w-4,.52)}" fill="#b5ccda">${esc(legend)}</text><text x="${left+2}" y="${top+h-1.3}" font-size="${exportTextSize(footnote,w-4,.44)}" fill="#7896ac">${esc(footnote)}</text></svg>`;
  return {source,width:Math.ceil(w*scale),height:Math.ceil(h*scale)};
 }
 async function exportFile(format){
@@ -512,9 +520,9 @@ const context=document.modelContext;
 if(context?.registerTool){
  const life=new AbortController();window.addEventListener('pagehide',()=>life.abort(),{once:true});
  const register=tool=>{try{void Promise.resolve(context.registerTool(tool,{signal:life.signal})).catch(()=>{});}catch{}};
- register({name:'read_hive_plan',title:'Hive-Plan lesen',description:'Returns the current players, placements and calculated coordinates.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true,untrustedContentHint:true},execute(){return {title:state.title,season:state.season,groups:state.groups,priorityLabels:state.priorityLabels,origin:state.origin,players:state.players,objects:state.objects.map(o=>({...o,name:M.objectLabel(state,o),coordinates:o.type==='terrain'?M.terrainCornerCoords(state,o):M.coords(state,o),coordinateReference:o.type==='terrain'?'bottom-left':'center'}))};}});
+ register({name:'read_hive_plan',title:'Hive-Plan lesen',description:'Returns the current players, placements and calculated coordinates.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true,untrustedContentHint:true},execute(){return {title:state.title,season:state.season,groups:state.groups,priorityLabels:state.priorityLabels,origin:state.origin,players:state.players,objects:state.objects.map(o=>({...o,name:M.objectLabel(state,o),coordinates:M.coords(state,o),coordinateReference:'bottom-left-tile'}))};}});
  register({name:'add_hive_players',title:'Spieler hinzufügen',description:'Adds names to the player list. Existing names are preserved and duplicates skipped.',inputSchema:{type:'object',properties:{names:{type:'array',items:{type:'string',minLength:1,maxLength:80},minItems:1,maxItems:300}},required:['names'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:true},execute(input){if(!input||!Array.isArray(input.names)||!input.names.length||input.names.length>300||input.names.some(n=>typeof n!=='string'||!n.trim()||n.includes('\n')||n.length>80))throw new Error(t('Ungültige oder doppelte Spieler.'));const r=M.addPlayers(state,input.names.join('\n'));commit(r.state);return {added:r.added,skipped:r.skipped,total:state.players.length};}});
- register({name:'set_hive_center_coordinates',title:'Zentrumskoordinaten setzen',description:'Sets the world coordinates of the active reference (Alliance Center in Season 4, Marshall in other modes). Recalculates all player coordinates without moving the drawn layout.',inputSchema:{type:'object',properties:{x:{type:'integer',minimum:0,maximum:999999},y:{type:'integer',minimum:0,maximum:999999}},required:['x','y'],additionalProperties:false},annotations:{readOnlyHint:false},execute(input){if(!input)throw new Error(t('Bitte gültige Koordinaten eingeben.'));commit(M.setOrigin(state,input.x,input.y));return {origin:state.origin};}});
+ register({name:'set_hive_center_coordinates',title:'Zentrumskoordinaten setzen',description:'Aligns the whole plan using the bottom-left tile of the active reference (Alliance Center or Marshall). Every object must remain within the 1000 by 1000 world.',inputSchema:{type:'object',properties:{x:{type:'integer',minimum:0,maximum:999},y:{type:'integer',minimum:0,maximum:999}},required:['x','y'],additionalProperties:false},annotations:{readOnlyHint:false},execute(input){if(!input)throw new Error(t('Bitte gültige Koordinaten eingeben.'));commit(M.setOrigin(state,input.x,input.y));return {origin:state.origin};}});
  register({name:'assign_hive_players',title:'Spieler auf freie Plätze setzen',description:'Assigns existing players to existing empty bases in one batch. Fails atomically if any assignment is invalid.',inputSchema:{type:'object',properties:{assignments:{type:'array',items:{type:'object',properties:{playerId:{type:'string'},baseId:{type:'string'}},required:['playerId','baseId'],additionalProperties:false},minItems:1,maxItems:300}},required:['assignments'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:true},execute(input){if(!input||!Array.isArray(input.assignments)||!input.assignments.length||input.assignments.length>300)throw new Error(t('Eine Spielerzuweisung ist ungültig oder doppelt.'));let next=state;const ids=new Set();for(const a of input.assignments){if(!a||ids.has(a.playerId))throw new Error(t('Eine Spielerzuweisung ist ungültig oder doppelt.'));ids.add(a.playerId);next=M.assign(next,a.playerId,a.baseId);}commit(next);return {assigned:input.assignments.length};}});
 }
 })();

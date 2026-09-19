@@ -25,8 +25,8 @@ for(const season of M.SEASONS)for(const kind of ['compact','spaced']){
 let off=M.setOrigin(M.setSeason(M.makeLayout(),'off'),601,709);
 const guard=off.objects.find(o=>o.type==='marshall'),base=off.objects.find(o=>o.type==='base');
 const moved=M.moveObject(off,guard.id,1,0);
-assert.deepEqual(M.coords(moved,moved.objects.find(o=>o.id===guard.id)),{x:601,y:709});
-assert.equal(M.coords(moved,base).x,M.coords(off,base).x-1);
+assert.deepEqual(M.coords(moved,moved.objects.find(o=>o.id===guard.id)),{x:602,y:709});
+assert.equal(M.coords(moved,base).x,M.coords(off,base).x);
 assert.equal(M.anchorType(moved),'marshall');
 const noGuard=M.removeObject(moved,guard.id);assert.deepEqual(noGuard.origin,moved.origin);
 const shifted=M.setOrigin(moved,700,800);

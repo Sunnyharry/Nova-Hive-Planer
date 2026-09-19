@@ -1,16 +1,16 @@
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 vm.runInThisContext(fs.readFileSync('dist/model.js','utf8'));const M=globalThis.HiveModel;
 const roundTrip=s=>assert.deepEqual(M.validate(JSON.parse(JSON.stringify(s))),s);
-const terrain=(s,x,y,w,h)=>({...M.makeObject(s,'terrain'),x:x+w/2,y:y+h/2,w,h});
+const terrain=(s,x,y,w,h)=>({...M.makeObject(s,'terrain'),x:x+(w-1)/2,y:y+(h-1)/2,w,h});
 
 // The exact requested corner is independent of dimensions and of a moved coordinate origin.
 for(const [w,h] of [[5,5],[5,6],[4,4],[1,1],[60,60]]){
  let s=M.makeLayout('empty');const o=terrain(s,0,0,w,h);s=M.addObject(s,o);s=M.setTerrainCorner(s,o.id,820,920);
- let placed=s.objects[0];assert.deepEqual(M.terrainCornerCoords(s,placed),{x:820,y:920});assert.equal(placed.x,320+w/2);assert.equal(placed.y,420+h/2);
+ let placed=s.objects[0];assert.deepEqual(M.terrainCornerCoords(s,placed),{x:820,y:920});assert.equal(placed.x,320+(w-1)/2);assert.equal(placed.y,420+(h-1)/2);
  s=M.updateObject(s,o.id,{w:6,h:9});assert.deepEqual(M.terrainCornerCoords(s,s.objects[0]),{x:820,y:920});roundTrip(s);
  s=M.moveObject(s,o.id,s.objects[0].x+1,s.objects[0].y-1);assert.deepEqual(M.terrainCornerCoords(s,s.objects[0]),{x:821,y:919});roundTrip(s);
 }
-let shifted=M.makeLayout('empty');shifted.origin={x:810,y:900,mapX:100,mapY:-40};let so=terrain(shifted,130,10,5,6);shifted=M.addObject(shifted,so);shifted=M.setTerrainCorner(shifted,so.id,820,920);assert.deepEqual(M.rect(shifted.objects[0]),{left:110,right:115,bottom:-20,top:-14});roundTrip(shifted);
+let shifted=M.makeLayout('empty');shifted.origin={x:810,y:900,mapX:100,mapY:-40};let so=terrain(shifted,130,10,5,6);shifted=M.addObject(shifted,so);shifted=M.setTerrainCorner(shifted,so.id,820,920);assert.deepEqual(M.rect(shifted.objects[0]),{left:109.5,right:114.5,bottom:-20.5,top:-14.5});roundTrip(shifted);
 assert.throws(()=>M.setTerrainCorner(shifted,so.id,820.25,920));assert.throws(()=>M.setTerrainCorner(shifted,so.id,Infinity,920));
 const invalid=M.clone(shifted);invalid.objects[0].x+=.01;assert.throws(()=>M.validate(invalid));
 
@@ -38,7 +38,7 @@ let result=M.moveObjects(batch,[{id:ba.id,x:3,y:0},{id:bb.id,x:6,y:0}]);assert.d
 assert.throws(()=>M.moveObjects(batch,[{id:ba.id,x:27,y:0},{id:bb.id,x:30,y:0}]));assert.deepEqual(batch,snapshot);
 assert.throws(()=>M.moveObjects(batch,[{id:ba.id,x:.5,y:0}]));
 let anchored=M.makeLayout('empty'),center=M.makeObject(anchored,'center',0,0);anchored=M.addObject(anchored,center);let base=M.makeObject(anchored,'base',8,0);anchored=M.addObject(anchored,base);
-const withCenter=M.moveObjects(anchored,[{id:center.id,x:4,y:4},{id:base.id,x:12,y:4}]);assert.deepEqual(M.coords(withCenter,withCenter.objects[0]),{x:500,y:500});assert.deepEqual(M.coords(withCenter,withCenter.objects[1]),{x:508,y:500});roundTrip(withCenter);
+const withCenter=M.moveObjects(anchored,[{id:center.id,x:4,y:4},{id:base.id,x:12,y:4}]);assert.deepEqual(M.coords(withCenter,withCenter.objects[0]),{x:500,y:500});assert.deepEqual(M.coords(withCenter,withCenter.objects[1]),{x:511,y:503});roundTrip(withCenter);
 
 // All spacing options produce bounded, non-overlapping bases and preserve occupied objects.
 for(const gap of [0,1,2]){
@@ -53,5 +53,5 @@ let obstacles=M.makeLayout('empty');obstacles=M.addObject(obstacles,M.makeObject
 for(const gap of [0,1,2]){const r=M.fillBases(obstacles,{left:-15.5,right:15.5,bottom:-15.5,top:15.5},gap);assert.ok(r.added>0&&r.skipped>0);for(const o of r.state.objects)assert.equal(M.collision(r.state,o),null);assert.deepEqual(obstacles,prior);roundTrip(r.state);}
 const tiny=M.fillBases(M.makeLayout('empty'),{left:0,right:2,bottom:0,top:2},0);assert.equal(tiny.added,0);
 const huge=M.fillBases(M.makeLayout('empty'),{left:-5000,right:5000,bottom:-5000,top:5000},0);assert.equal(huge.added,800);assert.ok(huge.limited);roundTrip(huge.state);
-const legacy=M.addPlayers(M.makeLayout(),'P1\nP2').state;legacy.version=3;legacy.players[0].priority=1;legacy.priorityLabels=['Core','',''];const loaded=M.validate(legacy);assert.equal(loaded.version,4);assert.equal(loaded.players[0].priority,1);assert.deepEqual(loaded.priorityLabels,legacy.priorityLabels);
+const legacy=M.addPlayers(M.makeLayout(),'P1\nP2').state;legacy.version=3;legacy.players[0].priority=1;legacy.priorityLabels=['Core','',''];const loaded=M.validate(legacy);assert.equal(loaded.version,M.VERSION);assert.equal(loaded.players[0].priority,1);assert.deepEqual(loaded.priorityLabels,legacy.priorityLabels);
 console.log('Passed: exact 820/920 corner, rectangular resizing, union outlines and holes, compound movement/persistence, atomic selection movement, anchor coordinates, all three fill spacings, obstacle skipping and limits, v3 migration.');

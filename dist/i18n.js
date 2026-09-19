@@ -2955,6 +2955,142 @@ const messages={
   "Escolha Preencher área, desenhe um retângulo e defina 0, 1 ou 2 células de espaço. A prévia mostra as posições livres. Confirme com Criar bases; depois Autofill pode atribuir os jogadores. Ctrl + Z desfaz toda a etapa.",
   "Chọn Lấp đầy vùng, vẽ hình chữ nhật và đặt khoảng cách 0, 1 hoặc 2 ô. Xem trước hiển thị các vị trí căn cứ còn trống. Nhấn Tạo căn cứ để áp dụng; sau đó dùng Tự điền để xếp người chơi. Ctrl + Z hoàn tác toàn bộ bước này.",
   "영역 채우기를 선택하고 사각형을 그린 뒤 간격을 0, 1, 2칸 중 선택하세요. 미리보기에 가능한 빈 기지 자리가 표시됩니다. 기지 생성으로 적용한 뒤 자동 배치로 플레이어를 배정할 수 있습니다. Ctrl + Z로 전체 작업을 되돌릴 수 있습니다."
+ ],
+ "1000 × 1000 Felder · X/Y 0–999": [
+  "1000 × 1000 tiles · X/Y 0–999",
+  "1000 × 1000 cases · X/Y 0–999",
+  "1000 × 1000 casillas · X/Y 0–999",
+  "1000 × 1000 células · X/Y 0–999",
+  "1000 × 1000 ô · X/Y 0–999",
+  "1000 × 1000칸 · X/Y 0–999"
+ ],
+ "Weltkarte": [
+  "World map",
+  "Carte du monde",
+  "Mapa del mundo",
+  "Mapa do mundo",
+  "Bản đồ thế giới",
+  "세계 지도"
+ ],
+ "Kartenkoordinaten des linken unteren Feldes": [
+  "Map coordinates of the bottom-left tile",
+  "Coordonnées de la case en bas à gauche",
+  "Coordenadas de la casilla inferior izquierda",
+  "Coordenadas da célula inferior esquerda",
+  "Tọa độ ô dưới cùng bên trái",
+  "왼쪽 아래 칸의 지도 좌표"
+ ],
+ "Gesamten Hive ausrichten": [
+  "Align entire Hive",
+  "Repositionner tout le Hive",
+  "Reubicar todo el Hive",
+  "Reposicionar todo o Hive",
+  "Định vị toàn bộ Hive",
+  "Hive 전체 위치 설정"
+ ],
+ "Ganzzahlige X/Y-Koordinaten des linken unteren Feldes. Das gesamte Objekt bleibt innerhalb von 0–999.": [
+  "Whole-number X/Y coordinates of the bottom-left tile. The entire object must stay within 0–999.",
+  "Coordonnées X/Y entières de la case en bas à gauche. Tout l’objet doit rester entre 0 et 999.",
+  "Coordenadas X/Y enteras de la casilla inferior izquierda. Todo el objeto debe quedar entre 0 y 999.",
+  "Coordenadas X/Y inteiras da célula inferior esquerda. O objeto inteiro deve ficar entre 0 e 999.",
+  "Tọa độ X/Y nguyên của ô dưới cùng bên trái. Toàn bộ đối tượng phải nằm trong phạm vi 0–999.",
+  "왼쪽 아래 칸의 X/Y 정수 좌표입니다. 물체 전체가 0–999 범위 안에 있어야 합니다."
+ ],
+ "Bei verbundenem Terrain beziehen sich die Koordinaten auf das linke untere Feld des äußeren Rahmens.": [
+  "For connected terrain, coordinates refer to the bottom-left tile of its outer bounding rectangle.",
+  "Pour un terrain connecté, les coordonnées désignent la case en bas à gauche du rectangle qui l’englobe.",
+  "En terrenos unidos, las coordenadas indican la casilla inferior izquierda del rectángulo exterior.",
+  "Em terrenos conectados, as coordenadas indicam a célula inferior esquerda do retângulo externo.",
+  "Với địa hình đã nối, tọa độ chỉ ô dưới cùng bên trái của khung chữ nhật bao ngoài.",
+  "연결된 지형은 전체를 둘러싼 사각형의 왼쪽 아래 칸을 좌표로 사용합니다."
+ ],
+ "Verschiebt den gesamten Plan anhand von {name}. Einzelne Objekte verschiebst du über ihre Auswahl.": [
+  "Moves the entire plan using {name} as the reference. Select an object to move it individually.",
+  "Déplace tout le plan en prenant {name} comme référence. Sélectionnez un objet pour le déplacer seul.",
+  "Mueve todo el plano tomando {name} como referencia. Selecciona un objeto para moverlo individualmente.",
+  "Move todo o plano usando {name} como referência. Selecione um objeto para movê-lo individualmente.",
+  "Di chuyển toàn bộ bản thiết kế theo {name}. Chọn một đối tượng để di chuyển riêng.",
+  "{name}을 기준으로 전체 배치를 옮깁니다. 개별 물체를 옮기려면 해당 물체를 선택하세요."
+ ],
+ "Alle Koordinaten bezeichnen das linke untere Feld. Verschieben verändert nur die gewählten Objekte. L4 zeigt 25 × 25 Felder je Beacon.": [
+  "All coordinates refer to the bottom-left tile. Moving objects changes only the selection. L4 covers 25 × 25 tiles per beacon.",
+  "Toutes les coordonnées désignent la case en bas à gauche. Le déplacement ne concerne que les objets sélectionnés. L4 couvre 25 × 25 cases par balise.",
+  "Todas las coordenadas indican la casilla inferior izquierda. Solo se mueven los objetos seleccionados. L4 cubre 25 × 25 casillas por baliza.",
+  "Todas as coordenadas indicam a célula inferior esquerda. Apenas os objetos selecionados se movem. L4 cobre 25 × 25 células por sinalizador.",
+  "Mọi tọa độ đều chỉ ô dưới cùng bên trái. Chỉ các đối tượng được chọn mới di chuyển. L4 phủ 25 × 25 ô cho mỗi đèn hiệu.",
+  "모든 좌표는 왼쪽 아래 칸을 나타냅니다. 선택한 물체만 이동합니다. L4는 비컨마다 25 × 25칸을 표시합니다."
+ ],
+ "Alle Koordinaten bezeichnen das linke untere Feld. Der Marshall bleibt der Bezugspunkt für Autofill.": [
+  "All coordinates refer to the bottom-left tile. The Marshall remains the reference for Autofill.",
+  "Toutes les coordonnées désignent la case en bas à gauche. Le Marshall reste la référence du remplissage automatique.",
+  "Todas las coordenadas indican la casilla inferior izquierda. El Marshall sigue siendo la referencia de Autofill.",
+  "Todas as coordenadas indicam a célula inferior esquerda. O Marshall continua sendo a referência do Autofill.",
+  "Mọi tọa độ đều chỉ ô dưới cùng bên trái. Marshall vẫn là tâm tham chiếu cho Tự điền.",
+  "모든 좌표는 왼쪽 아래 칸을 나타냅니다. 자동 배치는 계속 Marshall을 기준으로 합니다."
+ ],
+ "X und Y müssen ganze Zahlen von 0 bis 999 sein.": [
+  "X and Y must be whole numbers from 0 to 999.",
+  "X et Y doivent être des nombres entiers de 0 à 999.",
+  "X e Y deben ser números enteros de 0 a 999.",
+  "X e Y devem ser números inteiros de 0 a 999.",
+  "X và Y phải là số nguyên từ 0 đến 999.",
+  "X와 Y는 0부터 999까지의 정수여야 합니다."
+ ],
+ "Objekte müssen auf ganzen Kartenfeldern stehen.": [
+  "Objects must align with whole map tiles.",
+  "Les objets doivent être alignés sur des cases entières.",
+  "Los objetos deben alinearse con casillas enteras.",
+  "Os objetos devem se alinhar a células inteiras.",
+  "Đối tượng phải khớp với các ô nguyên trên bản đồ.",
+  "물체는 지도 칸에 정확히 맞춰야 합니다."
+ ],
+ "Das gesamte Objekt muss innerhalb der Karte liegen (X/Y 0–999).": [
+  "The entire object must fit inside the map (X/Y 0–999).",
+  "L’objet entier doit tenir dans la carte (X/Y 0–999).",
+  "Todo el objeto debe quedar dentro del mapa (X/Y 0–999).",
+  "O objeto inteiro deve ficar dentro do mapa (X/Y 0–999).",
+  "Toàn bộ đối tượng phải nằm trong bản đồ (X/Y 0–999).",
+  "물체 전체가 지도 안에 있어야 합니다(X/Y 0–999)."
+ ],
+ "Der ältere Plan liegt außerhalb der neuen Karte (X/Y 0–999) und wurde nicht geladen.": [
+  "The older plan extends beyond the new map (X/Y 0–999) and was not loaded.",
+  "L’ancien plan dépasse la nouvelle carte (X/Y 0–999) et n’a pas été chargé.",
+  "El plano antiguo supera los límites del nuevo mapa (X/Y 0–999) y no se ha cargado.",
+  "O plano antigo ultrapassa o novo mapa (X/Y 0–999) e não foi carregado.",
+  "Bản thiết kế cũ nằm ngoài bản đồ mới (X/Y 0–999) nên chưa được tải.",
+  "이전 배치가 새 지도 범위(X/Y 0–999)를 벗어나 불러오지 않았습니다."
+ ],
+ "Älterer Plan auf ganze Felder umgestellt. Koordinaten beziehen sich jetzt auf das linke untere Feld.": [
+  "Older plan aligned to whole tiles. Coordinates now refer to the bottom-left tile.",
+  "Ancien plan aligné sur des cases entières. Les coordonnées désignent maintenant la case en bas à gauche.",
+  "Plano antiguo ajustado a casillas enteras. Las coordenadas ahora indican la casilla inferior izquierda.",
+  "Plano antigo alinhado a células inteiras. As coordenadas agora indicam a célula inferior esquerda.",
+  "Bản thiết kế cũ đã được căn theo ô nguyên. Tọa độ giờ chỉ ô dưới cùng bên trái.",
+  "이전 배치를 정수 칸에 맞췄습니다. 좌표는 이제 왼쪽 아래 칸을 나타냅니다."
+ ],
+ "Wähle ein Objekt und gib rechts die X/Y-Koordinaten seines linken unteren Feldes ein. Mit „Gesamten Hive ausrichten“ verschiebst du alle Positionen gemeinsam. Die Welt umfasst 1000 × 1000 Felder (0–999).": [
+  "Select an object and enter the X/Y coordinates of its bottom-left tile on the right. Align entire Hive moves all positions together. The world has 1000 × 1000 tiles (0–999).",
+  "Sélectionnez un objet et saisissez à droite les coordonnées X/Y de sa case en bas à gauche. Repositionner tout le Hive déplace toutes les positions ensemble. Le monde comporte 1000 × 1000 cases (0–999).",
+  "Selecciona un objeto e introduce a la derecha las coordenadas X/Y de su casilla inferior izquierda. Reubicar todo el Hive mueve todas las posiciones a la vez. El mundo tiene 1000 × 1000 casillas (0–999).",
+  "Selecione um objeto e insira à direita as coordenadas X/Y da célula inferior esquerda. Reposicionar todo o Hive move todas as posições juntas. O mundo tem 1000 × 1000 células (0–999).",
+  "Chọn đối tượng rồi nhập tọa độ X/Y của ô dưới cùng bên trái ở bảng bên phải. Định vị toàn bộ Hive di chuyển mọi vị trí cùng nhau. Thế giới có 1000 × 1000 ô (0–999).",
+  "물체를 선택하고 오른쪽에서 왼쪽 아래 칸의 X/Y 좌표를 입력하세요. Hive 전체 위치 설정은 모든 위치를 함께 옮깁니다. 세계 지도는 1000 × 1000칸입니다(0–999)."
+ ],
+ "Basis 3 × 3 · Zentrum 9 × 9 · Koordinaten: linkes unteres Feld · Welt 1000 × 1000": [
+  "Base 3 × 3 · Center 9 × 9 · Coordinates: bottom-left tile · World 1000 × 1000",
+  "Base 3 × 3 · Centre 9 × 9 · Coordonnées : case en bas à gauche · Monde 1000 × 1000",
+  "Base 3 × 3 · Centro 9 × 9 · Coordenadas: casilla inferior izquierda · Mundo 1000 × 1000",
+  "Base 3 × 3 · Centro 9 × 9 · Coordenadas: célula inferior esquerda · Mundo 1000 × 1000",
+  "Căn cứ 3 × 3 · Trung tâm 9 × 9 · Tọa độ: ô dưới cùng bên trái · Thế giới 1000 × 1000",
+  "기지 3 × 3 · 센터 9 × 9 · 좌표: 왼쪽 아래 칸 · 세계 1000 × 1000"
+ ],
+ "Basis 3 × 3 · Marshall 3 × 3 · Koordinaten: linkes unteres Feld · Welt 1000 × 1000": [
+  "Base 3 × 3 · Marshall 3 × 3 · Coordinates: bottom-left tile · World 1000 × 1000",
+  "Base 3 × 3 · Marshall 3 × 3 · Coordonnées : case en bas à gauche · Monde 1000 × 1000",
+  "Base 3 × 3 · Marshall 3 × 3 · Coordenadas: casilla inferior izquierda · Mundo 1000 × 1000",
+  "Base 3 × 3 · Marshall 3 × 3 · Coordenadas: célula inferior esquerda · Mundo 1000 × 1000",
+  "Căn cứ 3 × 3 · Marshall 3 × 3 · Tọa độ: ô dưới cùng bên trái · Thế giới 1000 × 1000",
+  "기지 3 × 3 · Marshall 3 × 3 · 좌표: 왼쪽 아래 칸 · 세계 1000 × 1000"
  ]
 };
 let language='de';
