@@ -1,9 +1,9 @@
 (function(){
 'use strict';
-const I=globalThis.HiveI18n,t=(key,params)=>I.t(key,params);
+const T=globalThis.HiveThemes??{svg:s=>s,init(){}},I=globalThis.HiveI18n,t=(key,params)=>I.t(key,params);
 const M=globalThis.HiveModel,W=globalThis.HiveWorkspace,$=id=>document.getElementById(id),svg=$('map'),stage=$('stage');
 // User-facing release: increment the final number for each later delivered update.
-const APP_VERSION='1.1.13';
+const APP_VERSION='1.1.14';
 const TOOL_SHORTCUTS={b:'base',m:'marshall',a:'center',t:'terrain',l:'beacon'};
 const shortcutFor=type=>Object.keys(TOOL_SHORTCUTS).find(key=>TOOL_SHORTCUTS[key]===type)?.toUpperCase();
 let workspace=W.createWorkspace(),state=W.activePlan(workspace),selectedId=null,pending=null,filter='all',dirty=false,undoStack=[],redoStack=[],drag=null,suppressClick=false,confirmAction=null,toastTimer=null;
@@ -87,7 +87,7 @@ function nameSvg(name,width,height,y,fill='#e0edf8',initial=.56){
 function definitions(){const b=M.worldBounds(state);return `<defs><clipPath id="world-clip"><rect x="${b.left}" y="${-b.top}" width="1000" height="1000"/></clipPath><pattern id="world-grid" x="${b.left}" y="${-b.top}" width="50" height="50" patternUnits="userSpaceOnUse"><path d="M50 0H0V50" fill="none" stroke="#3c5a70" stroke-width=".6"/></pattern><pattern id="medium-grid" x="${b.left}" y="${-b.top}" width="5" height="5" patternUnits="userSpaceOnUse"><path d="M5 0H0V5" fill="none" stroke="#345169" stroke-width=".08"/></pattern><pattern id="small-grid" x="-.5" y="-.5" width="1" height="1" patternUnits="userSpaceOnUse"><path d="M1 0H0V1" fill="none" stroke="#263b50" stroke-width=".025"/></pattern><pattern id="big-grid" x="-.5" y="-.5" width="5" height="5" patternUnits="userSpaceOnUse"><rect width="5" height="5" fill="url(#small-grid)"/><path d="M5 0H0V5" fill="none" stroke="#345169" stroke-width=".04"/></pattern><pattern id="terrain-hatch" width=".55" height=".55" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width=".55" height=".55" fill="#342d36"/><path d="M0 0V.55" stroke="#714e54" stroke-width=".1"/></pattern></defs>`;}
 function objectSvg(o,exporting=false){
  const q=M.coords(state,o),name=M.objectLabel(state,o),alliance=M.allianceOf(o),tint=M.ALLIANCE_COLORS[alliance-1],active=!exporting&&selectedObjectIds.has(o.id),classes=`object-${o.type}${active?' map-object-selected':''}`;
- const attr=`data-object="${esc(o.id)}" class="${classes}" transform="translate(${o.x} ${-o.y})" role="button" aria-label="${esc(name)}, X ${q.x}, Y ${q.y}"`;
+ const attr=`${['terrain','stronghold','city','missile'].includes(o.type)?'data-theme-preserve="true" ':''}data-object="${esc(o.id)}" class="${classes}" transform="translate(${o.x} ${-o.y})" role="button" aria-label="${esc(name)}, X ${q.x}, Y ${q.y}"`;
  let content='';
  if(o.type==='center'){
   content=`<rect x="-4.5" y="-4.5" width="9" height="9" fill="${alliance===1?'#27374b':tint+'30'}" stroke="${alliance===1?'#b1c5d7':tint}" stroke-width=".12"/><text y="-1.05" text-anchor="middle" fill="#edf5fc" font-size="1.55" font-weight="750">AC</text>${nameSvg(name,8,1,.55,'#d7e5f1',.65)}<text x="0" y="1.8" text-anchor="middle" fill="#afc7d7" font-size=".53">X ${num(q.x)}   Y ${num(q.y)}</text><text y="3.2" text-anchor="middle" fill="#8ca7bd" font-size=".48">${h('9 × 9 Felder')}</text>`;
@@ -126,12 +126,12 @@ function terrainColorField(o){return `<label>${h('Terrainfarbe')}<input id="terr
 function compoundTerrainSvg(parts,exporting=false){
  const primary=parts[0],geometry=M.terrainUnionGeometry(parts),active=!exporting&&parts.some(o=>selectedObjectIds.has(o.id)),stroke=active?(ghost?.invalid?'#ff9691':'#b4ffec'):primary.color??'#a8787d';
  const fill=geometry.slices.map(r=>`M${r.left} ${-r.top}H${r.right}V${-r.bottom}H${r.left}Z`).join(' '),outline=geometry.edges.map(([x1,y1,x2,y2])=>`M${x1} ${-y1}L${x2} ${-y2}`).join(' '),label=parts.reduce((best,o)=>o.w*o.h>best.w*best.h?o:best),name=M.objectLabel(state,primary),r=M.objectBounds(parts),x=state.origin.x+r.left+.5-state.origin.mapX,y=state.origin.y+r.bottom+.5-state.origin.mapY;
- return `<g data-object="${esc(primary.id)}" class="object-terrain terrain-compound" role="button" aria-label="${esc(name)}, ${h('Linke untere Ecke')}, X ${num(x)}, Y ${num(y)}"><title>${esc(name)} · ${h('Verbundene Terrainfläche')} · X ${num(x)} / Y ${num(y)}</title><path d="${fill}" fill="${primary.color??'url(#terrain-hatch)'}"/><path d="${outline}" fill="none" stroke="${stroke}" stroke-width="${active?.16:.09}" pointer-events="none"/><g transform="translate(${label.x} ${-label.y})" pointer-events="none">${nameSvg(name,label.w-.25,Math.max(.3,label.h-.6),0,terrainInk(primary),.6)}</g></g>`;
+ return `<g data-theme-preserve="true" data-object="${esc(primary.id)}" class="object-terrain terrain-compound" role="button" aria-label="${esc(name)}, ${h('Linke untere Ecke')}, X ${num(x)}, Y ${num(y)}"><title>${esc(name)} · ${h('Verbundene Terrainfläche')} · X ${num(x)} / Y ${num(y)}</title><path d="${fill}" fill="${primary.color??'url(#terrain-hatch)'}"/><path d="${outline}" fill="none" stroke="${stroke}" stroke-width="${active?.16:.09}" pointer-events="none"/><g transform="translate(${label.x} ${-label.y})" pointer-events="none">${nameSvg(name,label.w-.25,Math.max(.3,label.h-.6),0,terrainInk(primary),.6)}</g></g>`;
 }
 function scene(exporting=false){
  let s='';
  const displayObjects=state.objects.map(o=>!exporting&&ghost?.objects?.find(g=>g.id===o.id)||(!exporting&&drag?.kind==='resize'&&ghost?.o?.id===o.id?ghost.o:o));
- for(const o of displayObjects)if(M.coreSize(o))s+=`<rect data-object="${esc(o.id)}" x="${o.x-o.w/2}" y="${-o.y-o.h/2}" width="${o.w}" height="${o.h}" fill="#765638" fill-opacity=".5" stroke="#ad865f" stroke-width=".06"/>`;
+ for(const o of displayObjects)if(M.coreSize(o))s+=`<rect data-theme-preserve="true" data-object="${esc(o.id)}" x="${o.x-o.w/2}" y="${-o.y-o.h/2}" width="${o.w}" height="${o.h}" fill="#765638" fill-opacity=".5" stroke="#ad865f" stroke-width=".06"/>`;
  if(M.isSeason4(state)&&state.showLight)for(const o of displayObjects)if(o.type==='base'&&o.beacon)s+=`<rect x="${o.x-o.lightSize/2}" y="${-o.y-o.lightSize/2}" width="${o.lightSize}" height="${o.lightSize}" fill="${color(o)}" fill-opacity=".045" stroke="${color(o)}" stroke-opacity=".8" stroke-width=".09" pointer-events="none"/>`;
  const drawn=new Set();for(const o of displayObjects.filter(o=>o.type!=='missile')){if(o.terrainGroup){if(drawn.has(o.terrainGroup))continue;drawn.add(o.terrainGroup);s+=compoundTerrainSvg(displayObjects.filter(q=>q.terrainGroup===o.terrainGroup),exporting);}else s+=objectSvg(o,exporting);}
  for(const o of displayObjects)if(o.type==='missile')s+=objectSvg(o,exporting);
@@ -150,7 +150,7 @@ function scene(exporting=false){
 }
 function renderMap(){
  updateView();const b=M.worldBounds(state),grid=camera.scale>=5?'big-grid':camera.scale>=1.5?'medium-grid':'world-grid',labelSize=13/camera.scale,pad=8/camera.scale;
- svg.innerHTML=definitions()+`<rect x="${b.left}" y="${-b.top}" width="1000" height="1000" fill="#0b1726" pointer-events="none"/><rect x="${b.left}" y="${-b.top}" width="1000" height="1000" fill="url(#${grid})" stroke="#5a819d" stroke-width="1.5" vector-effect="non-scaling-stroke" pointer-events="none"/><g clip-path="url(#world-clip)">${scene()}</g><g fill="#b9d0df" font-size="${labelSize}" pointer-events="none"><text x="${b.left+pad}" y="${-b.bottom-pad}">X 0 · Y 0</text><text x="${b.right-pad}" y="${-b.top+pad+labelSize}" text-anchor="end">X 999 · Y 999</text></g>`;
+ svg.innerHTML=T.svg(definitions()+`<rect x="${b.left}" y="${-b.top}" width="1000" height="1000" fill="#0b1726" pointer-events="none"/><rect x="${b.left}" y="${-b.top}" width="1000" height="1000" fill="url(#${grid})" stroke="#5a819d" stroke-width="1.5" vector-effect="non-scaling-stroke" pointer-events="none"/><g clip-path="url(#world-clip)">${scene()}</g><g fill="#b9d0df" font-size="${labelSize}" pointer-events="none"><text x="${b.left+pad}" y="${-b.bottom-pad}">X 0 · Y 0</text><text x="${b.right-pad}" y="${-b.top+pad+labelSize}" text-anchor="end">X 999 · Y 999</text></g>`);
  svg.classList.toggle('adding',!!pending||mapMode==='fill'||mapMode==='select');svg.classList.toggle('moving',!!drag&&drag.kind!=='roster');
 }
 function priorityText(level){return `P${level} · ${M.priorityLabel(state,level)}`;}
@@ -540,7 +540,7 @@ function exportSvg(){
  const footnote=(M.isSeason4(state)?t(state.showLight?'Lichtflächen gemäß eingestellter Breite. L4-Standard: 25 × 25 Kartenfelder.':'Lichtflächen ausgeblendet.')+' · ':'')+t('Erstellt {date}',{date:new Date().toLocaleDateString(I.language)});
  const allianceLegend=[1,2,3,4,5].map((id,i)=>`<text x="${left+2+i*(w-4)/5}" y="${top+h-3.7}" fill="${M.ALLIANCE_COLORS[id-1]}" font-size="${exportTextSize(allianceName(id),(w-4)/5-.3,.42)}">${esc(allianceName(id))}</text>`).join('');
  const source=`<svg xmlns="http://www.w3.org/2000/svg" width="${Math.ceil(w*scale)}" height="${Math.ceil(h*scale)}" viewBox="${left} ${top} ${w} ${h}"><style>text{font-family:system-ui,-apple-system,Segoe UI,sans-serif}</style>${definitions()}<rect x="${left}" y="${top}" width="${w}" height="${h}" fill="#0b1726"/><text x="${left+2}" y="${top+2.6}" fill="#61ddcc" font-size="${exportTextSize('NOVA HIVE PLANNER · '+seasonName()+(M.isDeveloping(state)?' · '+t('Noch in Bearbeitung'):''),w-4,.65)}" font-weight="650">NOVA HIVE PLANNER · ${esc(seasonName())}${M.isDeveloping(state)?' · '+t('Noch in Bearbeitung'):''}</text><text x="${left+2}" y="${top+4.8}" fill="#eef7ff" font-size="${Math.min(1.4,(w-4)/(Math.max(1,state.title.length)*.65))}" font-weight="750">${esc(state.title)}</text><text x="${left+2}" y="${top+6.4}" fill="#9db9cc" font-size="${exportTextSize(summary,w-4,.55)}">${esc(summary)}</text><rect x="${left+1}" y="${top+8}" width="${w-2}" height="${h-12}" fill="url(#big-grid)"/><g clip-path="url(#world-clip)">${scene(true)}</g>${allianceLegend}<text x="${left+2}" y="${top+h-2.6}" font-size="${exportTextSize(legend,w-4,.52)}" fill="#b5ccda">${esc(legend)}</text><text x="${left+2}" y="${top+h-1.3}" font-size="${exportTextSize(footnote,w-4,.44)}" fill="#7896ac">${esc(footnote)}</text></svg>`;
- return {source,width:Math.ceil(w*scale),height:Math.ceil(h*scale)};
+ return {source:T.svg(source),width:Math.ceil(w*scale),height:Math.ceil(h*scale)};
 }
 async function exportFile(format){
  try{
@@ -592,7 +592,7 @@ $('language-select').addEventListener('change',e=>{const previousLabel=selected(
 document.addEventListener('invalid',e=>{const el=e.target;if(!el.setCustomValidity)return;el.setCustomValidity('');el.setCustomValidity(t(el.validity.valueMissing?'Bitte dieses Feld ausfüllen.':'Bitte einen gültigen Wert eingeben.'));},true);
 document.addEventListener('input',e=>e.target.setCustomValidity?.(''));
 globalThis.HiveArchiveBridge={getWorkspace:()=>W.saveFile(workspace),isDirty:()=>dirty,markSaved:()=>{dirty=false;renderControls();},load:raw=>{const next=W.readFile(raw);resetMapTools(true);commitWorkspace(next);dirty=false;render();fitMap();},confirm:action=>{if(dirty)confirm(t('Gespeicherte Karte laden?'),t('Nicht gespeicherte Änderungen werden ersetzt.'),action);else action();},requestConfirm:confirm,toast};
-I.apply(document);$('language-select').value=I.language;render();requestAnimationFrame(fitMap);
+T.init('theme-select',renderMap);I.apply(document);$('language-select').value=I.language;render();requestAnimationFrame(fitMap);
 // Optional structured tools use exactly the same state and actions as the visible planner.
 const context=document.modelContext;
 if(context?.registerTool){
