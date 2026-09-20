@@ -2,9 +2,9 @@
    Internal SVG geometry uses centers; even dimensions have half-tile centers. */
 (function(root){
 'use strict';
-const SCHEMA='nova-hive-planner',VERSION=6,WORLD_SIZE=1000;
+const SCHEMA='nova-hive-planner',VERSION=7,WORLD_SIZE=1000;
 const t=(key,params={})=>globalThis.HiveI18n?.t(key,params)??key.replace(/\{(\w+)\}/g,(_,k)=>String(params[k]??'{'+k+'}'));
-const DEFAULT_NAMES={center:'Allianzzentrum',marshall:'Marshall’s Guard',terrain:'Terrain'};
+const DEFAULT_NAMES={center:'Allianzzentrum',marshall:'Marshall’s Guard',terrain:'Terrain',stronghold:'Stronghold',city:'Stadt'};
 const PRIORITY_DEFAULTS=['Zuverlässiger Kern','Aktiv','Casual'];
 const priorityOf=player=>player?.priority??2;
 const priorityLabel=(state,level,alliance=activeAlliance(state))=>priorityLabelsFor(state,alliance)[level-1]||t(PRIORITY_DEFAULTS[level-1]);
@@ -38,6 +38,9 @@ function resetAllianceLayout(state){
 }
 function snap(value,size=3){const offset=size%2===0?.5:0;return Math.round(value-offset)+offset;}
 function rect(o){return {left:o.x-o.w/2,right:o.x+o.w/2,bottom:o.y-o.h/2,top:o.y+o.h/2};}
+const coreSize=o=>o.type==='stronghold'?5:o.type==='city'?7:null;
+const solidFootprint=o=>coreSize(o)?{...o,w:coreSize(o),h:coreSize(o)}:o;
+const blocks=(a,b)=>!(a.type==='terrain'&&b.type==='terrain')&&overlaps(solidFootprint(a),solidFootprint(b));
 function overlaps(a,b){const A=rect(a),B=rect(b);return A.left<B.right-1e-8&&A.right>B.left+1e-8&&A.bottom<B.top-1e-8&&A.top>B.bottom+1e-8;}
 function worldBounds(state){const left=state.origin.mapX-state.origin.x-.5,bottom=state.origin.mapY-state.origin.y-.5;return {left,right:left+WORLD_SIZE,bottom,top:bottom+WORLD_SIZE};}
 function referenceCoords(state){const half=isSeason4(state)?4:1,p=referencePoint(state);return {x:state.origin.x+p.x-state.origin.mapX-half,y:state.origin.y+p.y-state.origin.mapY-half};}
@@ -122,7 +125,7 @@ function setSeason(state,season){
 }
 function collision(state,o,ignoreId=o.id){
  const ignored=ignoreId instanceof Set?ignoreId:new Set([ignoreId]);
- return state.objects.find(other=>!ignored.has(other.id)&&!(o.type==='terrain'&&other.type==='terrain')&&overlaps(o,other))??null;
+ return state.objects.find(other=>!ignored.has(other.id)&&blocks(o,other))??null;
 }
 function assertPlacement(state,o,ignoreId=o.id){
  if(!isSeason4(state)&&(o.type==='center'||o.beacon))throw new Error(t('Allianzzentrum und Beacons sind nur in Season 4 verfügbar.'));
@@ -146,7 +149,7 @@ function moveObjects(state,entries){
  const candidates=entries.map(e=>{const old=state.objects.find(o=>o.id===e.id);if(e.x!==snap(e.x,old.w)||e.y!==snap(e.y,old.h))throw new Error(t('Ungültige Objektposition.'));return {...old,x:e.x,y:e.y};});
  for(const candidate of candidates)if(candidate.terrainGroup){const old=state.objects.find(o=>o.id===candidate.id),dx=candidate.x-old.x,dy=candidate.y-old.y;for(const part of terrainParts(state,old)){const moved=candidates.find(o=>o.id===part.id);if(!moved||moved.x-part.x!==dx||moved.y-part.y!==dy)throw new Error(t('Verbundene Terrainflächen müssen gemeinsam verschoben werden.'));}}
  for(const candidate of candidates)assertPlacement(state,candidate,ids);
- for(let i=0;i<candidates.length;i++)for(let j=0;j<i;j++)if(!(candidates[i].type==='terrain'&&candidates[j].type==='terrain')&&overlaps(candidates[i],candidates[j]))throw new Error(t('Die ausgewählten Elemente überschneiden sich nach dem Verschieben.'));
+ for(let i=0;i<candidates.length;i++)for(let j=0;j<i;j++)if(blocks(candidates[i],candidates[j]))throw new Error(t('Die ausgewählten Elemente überschneiden sich nach dem Verschieben.'));
  const next=clone(state);for(const candidate of candidates)Object.assign(next.objects.find(o=>o.id===candidate.id),candidate);
  const anchor=candidates.find(o=>o.type===anchorType(state)&&allianceOf(o)===1);if(anchor)followReference(next,anchor);
  return next;
@@ -158,7 +161,8 @@ function makeObjectLocal(state,type,x=0,y=0){
  if(type==='beacon'||type==='base')return {id:uid('base'),type:'base',x:snap(x),y:snap(y),w:3,h:3,slot:Math.max(0,...allianceObjects(state).filter(o=>o.type==='base').map(o=>o.slot))+1,playerId:null,beacon:type==='beacon'?nextBeacon(state):null,lightSize:25,electricians:40};
  if(type==='center')return {id:uid('center'),type,name:'Allianzzentrum',x:snap(x,9),y:snap(y,9),w:9,h:9};
  if(type==='marshall')return {id:uid('marshall'),type,name:'Marshall’s Guard',x:snap(x),y:snap(y),w:3,h:3};
- if(type==='terrain')return {id:uid('terrain'),type,name:'Terrain',x:snap(x,4),y:snap(y,4),w:4,h:4};
+ if(type==='stronghold'||type==='city'){const size=type==='stronghold'?13:15;return {id:uid(type),type,name:DEFAULT_NAMES[type],x:snap(x,size),y:snap(y,size),w:size,h:size};}
+ if(type==='terrain')return {id:uid('terrain'),type,name:'Terrain',x:snap(x,4),y:snap(y,4),w:4,h:4,color:'#a8787d'};
  throw new Error(t('Unbekanntes Element.'));
 }
 function addObject(state,o){
@@ -223,7 +227,7 @@ function planBaseFill(state,area,gap=0){
  }
  const xs=axis(cx,x0,x1),ys=axis(cy,y0,y1).sort((a,b)=>(a-cy)**2-(b-cy)**2||b-a),positions=[],buckets=new Map();let skipped=0,limited=false;
  // Only nearby obstacles need inspection, even for large selected areas.
- for(const original of state.objects){const o=original.type==='base'?{...original,w:original.w+2*gap,h:original.h+2*gap}:original,r=rect(o);for(let gx=Math.floor(r.left/16);gx<=Math.floor(r.right/16);gx++)for(let gy=Math.floor(r.bottom/16);gy<=Math.floor(r.top/16);gy++){const key=gx+','+gy;if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(original);}}
+ for(const original of state.objects){const o=original.type==='base'?{...original,w:original.w+2*gap,h:original.h+2*gap}:solidFootprint(original),r=rect(o);for(let gx=Math.floor(r.left/16);gx<=Math.floor(r.right/16);gx++)for(let gy=Math.floor(r.bottom/16);gy<=Math.floor(r.top/16);gy++){const key=gx+','+gy;if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(original);}}
  // Apply the same narrow central seam when filling in multiple passes.
  const centralPair=(a,b,center)=>anchor?.type==='center'&&gap===2&&Math.abs(a-center)===2&&a+b===2*center&&a!==b;
  // Merge distance-sorted columns with a small heap instead of sorting up to
@@ -235,7 +239,7 @@ function planBaseFill(state,area,gap=0){
  while(heap.length){
   const {x,y,i}=pop();if(i+1<ys.length)push(x,i+1);
   const candidate={x,y,w:3,h:3},nearby=new Set();for(let gx=Math.floor((x-1.5)/16);gx<=Math.floor((x+1.5)/16);gx++)for(let gy=Math.floor((y-1.5)/16);gy<=Math.floor((y+1.5)/16);gy++)for(const o of buckets.get(gx+','+gy)??[])nearby.add(o);
-  if([...nearby].some(o=>overlaps(candidate,o.type==='base'?{...o,w:o.w+2*(centralPair(x,o.x,cx)?1:gap),h:o.h+2*(centralPair(y,o.y,cy)?1:gap)}:o))){skipped++;continue;}
+  if([...nearby].some(o=>overlaps(candidate,o.type==='base'?{...o,w:o.w+2*(centralPair(x,o.x,cx)?1:gap),h:o.h+2*(centralPair(y,o.y,cy)?1:gap)}:solidFootprint(o)))){skipped++;continue;}
   if(positions.length>=capacity){limited=true;break;}
   positions.push({x:x||0,y:y||0});
  }
@@ -410,6 +414,7 @@ function setOrigin(state,x,y){
 function updateObject(state,id,patch){
  const next=clone(state),obj=next.objects.find(o=>o.id===id);if(!obj)throw new Error(t('Element nicht gefunden.'));if(!owns(state,obj))throw new Error(t('Wähle zuerst die passende Allianz.'));
  if(obj.type==='terrain'){
+  if(patch.color!==undefined){if(typeof patch.color!=='string'||!/^#[0-9a-f]{6}$/i.test(patch.color))throw new Error(t('Ungültige Terrainfarbe.'));for(const part of terrainParts(next,obj))part.color=patch.color.toLowerCase();}
   if(obj.terrainGroup&&(patch.w!==undefined||patch.h!==undefined))throw new Error(t('Löse die Terrainverbindung, um einzelne Teile zu vergrößern.'));
   const oldRect=rect(obj);
   if(patch.w!==undefined){if(!Number.isInteger(patch.w)||!finite(patch.w,1,60))throw new Error(t('Breite: 1 bis 60 Felder.'));obj.w=patch.w;}
@@ -452,7 +457,7 @@ function bounds(state,includeLight=state.showLight){
  const rs=all.map(rect);return {left:Math.min(...rs.map(r=>r.left)),right:Math.max(...rs.map(r=>r.right)),bottom:Math.min(...rs.map(r=>r.bottom)),top:Math.max(...rs.map(r=>r.top))};
 }
 function validate(raw){
- if(!raw||raw.schema!==SCHEMA||![1,2,3,4,5,VERSION].includes(raw.version))throw new Error(t('Das ist keine unterstützte Hive-Plan-Datei.'));
+ if(!raw||raw.schema!==SCHEMA||![1,2,3,4,5,6,VERSION].includes(raw.version))throw new Error(t('Das ist keine unterstützte Hive-Plan-Datei.'));
  if(typeof raw.title!=='string'||raw.title.length>80)throw new Error(t('Ungültiger Planname.'));
  if(!raw.origin||!['x','y','mapX','mapY'].every(k=>Number.isSafeInteger(raw.origin[k])))throw new Error(t('Ungültiger Koordinatenursprung.'));
  if(!finite(raw.origin.x,0,999999)||!finite(raw.origin.y,0,999999)||!finite(raw.origin.mapX,-1000000000,1000000000)||!finite(raw.origin.mapY,-1000000000,1000000000))throw new Error(t('Ungültiger Koordinatenursprung.'));
@@ -480,8 +485,8 @@ function validate(raw){
  if(!isSeason4(state))state.showLight=false;
  const objIds=new Set(),centers=new Set(),marshalls=new Set(),terrainOwners=new Map();
  for(const o of raw.objects){
-  if(!o||!validAlliance(allianceOf(o))||!validId(o.id)||objIds.has(o.id)||!['base','center','marshall','terrain'].includes(o.type)||!finite(o.x,-1000001000,1000001000)||!finite(o.y,-1000001000,1000001000))throw new Error(t('Ungültiges Kartenelement.'));
-  objIds.add(o.id);const fixed=o.type==='center'?9:3,w=o.type==='terrain'?o.w:fixed,h=o.type==='terrain'?o.h:fixed;
+  if(!o||!validAlliance(allianceOf(o))||!validId(o.id)||objIds.has(o.id)||!['base','center','marshall','terrain','stronghold','city'].includes(o.type)||!finite(o.x,-1000001000,1000001000)||!finite(o.y,-1000001000,1000001000))throw new Error(t('Ungültiges Kartenelement.'));
+  objIds.add(o.id);const fixed=o.type==='center'?9:o.type==='stronghold'?13:o.type==='city'?15:3,w=o.type==='terrain'?o.w:fixed,h=o.type==='terrain'?o.h:fixed;
   const terrainPosition=o.type==='terrain'&&(raw.version<5?(Number.isInteger(o.x*2)&&Number.isInteger(o.y*2)):(o.x===snap(o.x,w)&&o.y===snap(o.y,h)));
   if(!Number.isInteger(w)||!Number.isInteger(h)||!finite(w,1,60)||!finite(h,1,60)||o.w!==w||o.h!==h||!(o.type==='terrain'?terrainPosition:(o.x===snap(o.x,w)&&o.y===snap(o.y,h))))throw new Error(t('Ungültige Größe oder Position eines Elements.'));
   const q={id:o.id,type:o.type,x:o.x,y:o.y,w,h,...(o.alliance===undefined?{}:{alliance:o.alliance})};
@@ -495,6 +500,7 @@ function validate(raw){
    Object.assign(q,{slot:o.slot,playerId:o.playerId,beacon:o.beacon,lightSize:o.lightSize,electricians:o.electricians});
    if(o.spacing!==undefined){if(!Number.isInteger(o.spacing)||o.spacing<0||o.spacing>2)throw new Error(t('Ungültiger Füllbereich oder Basisabstand.'));q.spacing=o.spacing;}
   }else{if(typeof o.name!=='string'||o.name.length>80)throw new Error(t('Ungültiger Elementname.'));q.name=o.name;if(o.customName!==undefined){if(typeof o.customName!=='boolean')throw new Error(t('Ungültiger Elementname.'));q.customName=o.customName;}if(o.type==='terrain'&&o.terrainGroup!==undefined){if(!validId(o.terrainGroup))throw new Error(t('Ungültige Terrain-Gruppe.'));q.terrainGroup=o.terrainGroup;}}
+  if(o.type==='terrain'&&o.color!==undefined){if(typeof o.color!=='string'||!/^#[0-9a-f]{6}$/i.test(o.color))throw new Error(t('Ungültige Terrainfarbe.'));q.color=o.color.toLowerCase();}
   if(o.type==='center'){if(centers.has(allianceOf(o)))throw new Error(t('Zentrum oder Marshall mehrfach vorhanden.'));centers.add(allianceOf(o));}
   if(allianceOf(o)===1&&o.type===anchorType(state)&&(o.x!==state.origin.mapX||o.y!==state.origin.mapY))throw new Error(t('Mittelpunkt und Koordinatenursprung stimmen nicht überein.'));
   if(o.type==='marshall'){if(marshalls.has(allianceOf(o)))throw new Error(t('Zentrum oder Marshall mehrfach vorhanden.'));marshalls.add(allianceOf(o));}
@@ -505,5 +511,5 @@ function validate(raw){
  for(const group of new Set(state.objects.filter(o=>o.terrainGroup).map(o=>o.terrainGroup)))if(!terrainsConnected(state.objects.filter(o=>o.terrainGroup===group)))throw new Error(t('Ungültige Terrain-Gruppe.'));
  return state;
 }
-root.HiveModel={ALLIANCE_COLORS,allianceOf,activeAlliance,owns,allianceObjects,alliancePlayers,allianceGroups,priorityLabelsFor,referencePoint,setAlliance,resetAllianceLayout,SCHEMA,VERSION,WORLD_SIZE,worldBounds,referenceCoords,assertWorldPlacement,setObjectCorner,PRIORITY_DEFAULTS,priorityOf,priorityLabel,setPlayerPriorities,setPriorityLabel,setPlayerGroups,groupPriority,SEASONS,emptyGroups,isSeason4,isDeveloping,anchorType,setSeason,groupForPlayer,setPlayerGroup,clearPlayers,areNeighbors,groupComponents,terrainResizeCandidate,resizeTerrain,terrainCornerCoords,terrainPositionFromCornerCoords,setTerrainCorner,connectTerrains,disconnectTerrains,terrainTouching,terrainsConnected,terrainParts,expandObjectIds,objectBounds,terrainUnionGeometry,planBaseFill,fillBases,moveObjects,removeObjects,COLORS,clone,uid,normalizeName,snap,rect,overlaps,coords,positionFromCoords,playerFor,objectForPlayer,objectLabel,makeLayout,collision,assertPlacement,moveObject,nextBeacon,makeObject,addObject,removeObject,parsePlayerFile,decodePlayerFile,importPlayers,addPlayers,autofillOptions,autofill,assign,unassign,unassignAll,removePlayer,setOrigin,updateObject,coverage,bounds,validate};
+root.HiveModel={coreSize,solidFootprint,blocks,ALLIANCE_COLORS,allianceOf,activeAlliance,owns,allianceObjects,alliancePlayers,allianceGroups,priorityLabelsFor,referencePoint,setAlliance,resetAllianceLayout,SCHEMA,VERSION,WORLD_SIZE,worldBounds,referenceCoords,assertWorldPlacement,setObjectCorner,PRIORITY_DEFAULTS,priorityOf,priorityLabel,setPlayerPriorities,setPriorityLabel,setPlayerGroups,groupPriority,SEASONS,emptyGroups,isSeason4,isDeveloping,anchorType,setSeason,groupForPlayer,setPlayerGroup,clearPlayers,areNeighbors,groupComponents,terrainResizeCandidate,resizeTerrain,terrainCornerCoords,terrainPositionFromCornerCoords,setTerrainCorner,connectTerrains,disconnectTerrains,terrainTouching,terrainsConnected,terrainParts,expandObjectIds,objectBounds,terrainUnionGeometry,planBaseFill,fillBases,moveObjects,removeObjects,COLORS,clone,uid,normalizeName,snap,rect,overlaps,coords,positionFromCoords,playerFor,objectForPlayer,objectLabel,makeLayout,collision,assertPlacement,moveObject,nextBeacon,makeObject,addObject,removeObject,parsePlayerFile,decodePlayerFile,importPlayers,addPlayers,autofillOptions,autofill,assign,unassign,unassignAll,removePlayer,setOrigin,updateObject,coverage,bounds,validate};
 })(globalThis);

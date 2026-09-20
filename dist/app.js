@@ -3,7 +3,7 @@
 const I=globalThis.HiveI18n,t=(key,params)=>I.t(key,params);
 const M=globalThis.HiveModel,W=globalThis.HiveWorkspace,$=id=>document.getElementById(id),svg=$('map'),stage=$('stage');
 // User-facing release: increment the final number for each later delivered update.
-const APP_VERSION='1.1.9';
+const APP_VERSION='1.1.10';
 const TOOL_SHORTCUTS={b:'base',m:'marshall',a:'center',t:'terrain',l:'beacon'};
 const shortcutFor=type=>Object.keys(TOOL_SHORTCUTS).find(key=>TOOL_SHORTCUTS[key]===type)?.toUpperCase();
 let workspace=W.createWorkspace(),state=W.activePlan(workspace),selectedId=null,pending=null,filter='all',dirty=false,undoStack=[],redoStack=[],drag=null,suppressClick=false,confirmAction=null,toastTimer=null;
@@ -19,7 +19,7 @@ const esc=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>
 const h=(key,params)=>esc(t(key,params));
 const num=n=>Number.isInteger(n)?String(n):String(Math.round(n*10)/10);
 const color=o=>M.allianceOf(o)!==1?M.ALLIANCE_COLORS[M.allianceOf(o)-1]:M.COLORS[((o.beacon?.charCodeAt(0)??65)-65)%M.COLORS.length];
-const typeName=o=>t({base:o?.beacon?'Beacon':'Basis',center:'Zentrum',marshall:'Marshall',terrain:'Terrain'}[o?.type]??'');
+const typeName=o=>t({base:o?.beacon?'Beacon':'Basis',center:'Zentrum',marshall:'Marshall',terrain:'Terrain',stronghold:'Stronghold',city:'Stadt'}[o?.type]??'');
 const selected=()=>state.objects.find(o=>o.id===selectedId)??null;
 const selectedObjects=()=>state.objects.filter(o=>selectedObjectIds.has(o.id));
 function setMapSelection(ids,primary=null){selectedObjectIds=new Set(M.expandObjectIds(state,ids).filter(id=>state.objects.some(o=>o.id===id&&M.owns(state,o))));selectedId=selectedObjectIds.has(primary)?primary:selectedObjectIds.values().next().value??null;}
@@ -91,8 +91,10 @@ function objectSvg(o,exporting=false){
  let content='';
  if(o.type==='center'){
   content=`<rect x="-4.5" y="-4.5" width="9" height="9" fill="${alliance===1?'#27374b':tint+'30'}" stroke="${alliance===1?'#b1c5d7':tint}" stroke-width=".12"/><text y="-1.05" text-anchor="middle" fill="#edf5fc" font-size="1.55" font-weight="750">AC</text>${nameSvg(name,8,1,.55,'#d7e5f1',.65)}<text x="0" y="1.8" text-anchor="middle" fill="#afc7d7" font-size=".53">X ${num(q.x)}   Y ${num(q.y)}</text><text y="3.2" text-anchor="middle" fill="#8ca7bd" font-size=".48">${h('9 × 9 Felder')}</text>`;
+ }else if(M.coreSize(o)){
+  const c=M.coreSize(o);content=`<rect x="${-c/2}" y="${-c/2}" width="${c}" height="${c}" fill="#725039" stroke="#edc096" stroke-width=".15"/>${nameSvg(name,c-.3,1,-.6,'#fff2d7',.7)}<text y=".6" text-anchor="middle" fill="#fff2d7" font-size=".42">${c} × ${c}</text><text y="1.4" text-anchor="middle" fill="#fff2d7" font-size=".38">X ${num(q.x)} / Y ${num(q.y)}</text>`;
  }else if(o.type==='terrain'){
-  content=`<rect x="${-o.w/2}" y="${-o.h/2}" width="${o.w}" height="${o.h}" fill="url(#terrain-hatch)" stroke="#a8787d" stroke-width=".09"/>${nameSvg(name,o.w-.25,Math.max(.3,o.h-.8),-.05,'#f0c4c4',.6)}<text y="${o.h/2-.2}" text-anchor="middle" fill="#d29fa6" font-size=".35">${o.w} × ${o.h}</text>`;
+  content=`<rect x="${-o.w/2}" y="${-o.h/2}" width="${o.w}" height="${o.h}" fill="${o.color??'url(#terrain-hatch)'}" stroke="${o.color??'#a8787d'}" stroke-width=".09"/>${nameSvg(name,o.w-.25,Math.max(.3,o.h-.8),-.05,terrainInk(o),.6)}<text y="${o.h/2-.2}" text-anchor="middle" fill="${terrainInk(o)}" font-size=".35">${o.w} × ${o.h}</text>`;
  }else{
   const beacon=o.type==='base'&&o.beacon,guard=o.type==='marshall',stroke=alliance!==1?tint:guard?'#f3cd6a':beacon?color(o):'#5b829f',fill=alliance!==1?tint+'28':guard?'#51432b':beacon?'#173540':o.playerId?'#223f57':'#152c40';
   content=`<rect x="-1.5" y="-1.5" width="3" height="3" fill="${fill}" stroke="${stroke}" stroke-width="${(beacon||guard) ? .09 : .055}"/>`;
@@ -116,14 +118,17 @@ function fillAreaHandles(area){
   return `<g class="fill-area-handle" data-fill-resize="${c}" role="button" tabindex="0" aria-label="${h('Füllbereich: {corner}',{corner:t(label)})}"><title>${h('Füllbereich: {corner}',{corner:t(label)})}</title><rect x="${x-size/2}" y="${-y-size/2}" width="${size}" height="${size}" rx="${3/camera.scale}" fill="#ffe1a0" stroke="#9e7631" stroke-width="${stroke}"/><text x="${x}" y="${-y+5/camera.scale}" text-anchor="middle" font-size="${16/camera.scale}" font-weight="800" fill="#50390e">${{nw:'↖',ne:'↗',sw:'↙',se:'↘'}[c]}</text></g>`;
  }).join('');
 }
+function terrainInk(o){const c=o.color;if(!c)return '#f0c4c4';const v=[1,3,5].map(i=>parseInt(c.slice(i,i+2),16));return v[0]*.299+v[1]*.587+v[2]*.114>145?'#14232c':'#ffffff';}
+function terrainColorField(o){return `<label>${h('Terrainfarbe')}<input id="terrain-color" type="color" value="${o.color??'#a8787d'}"></label>`;}
 function compoundTerrainSvg(parts,exporting=false){
- const primary=parts[0],geometry=M.terrainUnionGeometry(parts),active=!exporting&&parts.some(o=>selectedObjectIds.has(o.id)),stroke=active?(ghost?.invalid?'#ff9691':'#b4ffec'):'#a8787d';
+ const primary=parts[0],geometry=M.terrainUnionGeometry(parts),active=!exporting&&parts.some(o=>selectedObjectIds.has(o.id)),stroke=active?(ghost?.invalid?'#ff9691':'#b4ffec'):primary.color??'#a8787d';
  const fill=geometry.slices.map(r=>`M${r.left} ${-r.top}H${r.right}V${-r.bottom}H${r.left}Z`).join(' '),outline=geometry.edges.map(([x1,y1,x2,y2])=>`M${x1} ${-y1}L${x2} ${-y2}`).join(' '),label=parts.reduce((best,o)=>o.w*o.h>best.w*best.h?o:best),name=M.objectLabel(state,primary),r=M.objectBounds(parts),x=state.origin.x+r.left+.5-state.origin.mapX,y=state.origin.y+r.bottom+.5-state.origin.mapY;
- return `<g data-object="${esc(primary.id)}" class="object-terrain terrain-compound" role="button" aria-label="${esc(name)}, ${h('Linke untere Ecke')}, X ${num(x)}, Y ${num(y)}"><title>${esc(name)} · ${h('Verbundene Terrainfläche')} · X ${num(x)} / Y ${num(y)}</title><path d="${fill}" fill="url(#terrain-hatch)"/><path d="${outline}" fill="none" stroke="${stroke}" stroke-width="${active?.16:.09}" pointer-events="none"/><g transform="translate(${label.x} ${-label.y})" pointer-events="none">${nameSvg(name,label.w-.25,Math.max(.3,label.h-.6),0,'#f0c4c4',.6)}</g></g>`;
+ return `<g data-object="${esc(primary.id)}" class="object-terrain terrain-compound" role="button" aria-label="${esc(name)}, ${h('Linke untere Ecke')}, X ${num(x)}, Y ${num(y)}"><title>${esc(name)} · ${h('Verbundene Terrainfläche')} · X ${num(x)} / Y ${num(y)}</title><path d="${fill}" fill="${primary.color??'url(#terrain-hatch)'}"/><path d="${outline}" fill="none" stroke="${stroke}" stroke-width="${active?.16:.09}" pointer-events="none"/><g transform="translate(${label.x} ${-label.y})" pointer-events="none">${nameSvg(name,label.w-.25,Math.max(.3,label.h-.6),0,terrainInk(primary),.6)}</g></g>`;
 }
 function scene(exporting=false){
  let s='';
  const displayObjects=state.objects.map(o=>!exporting&&ghost?.objects?.find(g=>g.id===o.id)||(!exporting&&drag?.kind==='resize'&&ghost?.o?.id===o.id?ghost.o:o));
+ for(const o of displayObjects)if(M.coreSize(o))s+=`<rect data-object="${esc(o.id)}" x="${o.x-o.w/2}" y="${-o.y-o.h/2}" width="${o.w}" height="${o.h}" fill="#765638" fill-opacity=".5" stroke="#ad865f" stroke-width=".06"/>`;
  if(M.isSeason4(state)&&state.showLight)for(const o of displayObjects)if(o.type==='base'&&o.beacon)s+=`<rect x="${o.x-o.lightSize/2}" y="${-o.y-o.lightSize/2}" width="${o.lightSize}" height="${o.lightSize}" fill="${color(o)}" fill-opacity=".045" stroke="${color(o)}" stroke-opacity=".8" stroke-width=".09" pointer-events="none"/>`;
  const drawn=new Set();for(const o of displayObjects){if(o.terrainGroup){if(drawn.has(o.terrainGroup))continue;drawn.add(o.terrainGroup);s+=compoundTerrainSvg(displayObjects.filter(q=>q.terrainGroup===o.terrainGroup),exporting);}else s+=objectSvg(o,exporting);}
  const terrainSelection=!exporting&&selectedObjectIds.size===1&&(drag?.kind==='resize'&&ghost?ghost.o:selected());
@@ -195,7 +200,7 @@ function renderInspector(){
  if(objects.length>1){
   const allTerrain=objects.every(q=>q.type==='terrain'),compound=allTerrain&&o?.terrainGroup&&objects.every(q=>q.terrainGroup===o.terrainGroup),bounds=M.objectBounds(objects);
   $('selection-type').textContent=compound?t('Verbundene Terrainfläche'):t('{n} Elemente',{n:objects.length});
-  $('inspector').innerHTML=`<div class="selection-form multi-inspector"><p class="field-help">${h('Ziehe ein markiertes Element, um die gesamte Auswahl zu verschieben.')}</p>${compound?`<label>${h('Bezeichnung')}<input id="terrain-group-name" value="${esc(M.objectLabel(state,o))}" maxlength="80"></label><p class="field-help">${h('{n} Teile · Außenmaß {w} × {h}',{n:objects.length,w:bounds.right-bounds.left,h:bounds.top-bounds.bottom})}</p>${objectPositionForm(o)}<p class="field-help">${h('Bei verbundenem Terrain beziehen sich die Koordinaten auf das linke untere Feld des äußeren Rahmens.')}</p>`:bulkMoveForm()}${allTerrain?`${!compound?`<button id="connect-terrains" class="full">${h('Terrain verbinden')}</button>`:''}${objects.some(q=>q.terrainGroup)?`<button id="disconnect-terrains" class="full">${h('Terrain trennen')}</button>`:''}`:''}<button id="delete-selected" class="danger full">${h('Auswahl entfernen')}</button><button id="clear-map-selection" class="full">${h('Auswahl aufheben')}</button></div>`;return;
+  $('inspector').innerHTML=`<div class="selection-form multi-inspector"><p class="field-help">${h('Ziehe ein markiertes Element, um die gesamte Auswahl zu verschieben.')}</p>${compound?`<label>${h('Bezeichnung')}<input id="terrain-group-name" value="${esc(M.objectLabel(state,o))}" maxlength="80"></label><p class="field-help">${h('{n} Teile · Außenmaß {w} × {h}',{n:objects.length,w:bounds.right-bounds.left,h:bounds.top-bounds.bottom})}</p>${terrainColorField(o)}${objectPositionForm(o)}<p class="field-help">${h('Bei verbundenem Terrain beziehen sich die Koordinaten auf das linke untere Feld des äußeren Rahmens.')}</p>`:bulkMoveForm()}${allTerrain?`${!compound?`<button id="connect-terrains" class="full">${h('Terrain verbinden')}</button>`:''}${objects.some(q=>q.terrainGroup)?`<button id="disconnect-terrains" class="full">${h('Terrain trennen')}</button>`:''}`:''}<button id="delete-selected" class="danger full">${h('Auswahl entfernen')}</button><button id="clear-map-selection" class="full">${h('Auswahl aufheben')}</button></div>`;return;
  }
  if(!o){$('inspector').innerHTML=`<div class="selection-empty"><span aria-hidden="true">⌖</span><p>${h('Wähle eine Basis, den Marshall oder ein anderes Element auf der Karte.')}</p></div>`;return;}
  $('selection-type').textContent=allianceName(M.allianceOf(o))+' · '+typeName(o);
@@ -205,11 +210,13 @@ function renderInspector(){
   if(player){s+=`<label>${h('Priority')}<select id="inspector-priority">${[1,2,3].map(level=>`<option value="${level}" ${M.priorityOf(player)===level?'selected':''}>${esc(priorityText(level))}</option>`).join('')}</select></label><label>${h('Name bearbeiten')}<input id="player-name-edit" value="${esc(player.name)}" maxlength="80"></label><label>${h('Gruppe')}<select id="inspector-group"><option value="">${h('Keine Gruppe')}</option>${Array.from({length:10},(_,i)=>`<option value="${i+1}" ${M.groupForPlayer(state,player.id)?.id===i+1?'selected':''}>${esc(groupName(i+1))}</option>`).join('')}</select></label>`;}
  }else s+=`<label>${h('Bezeichnung')}<input id="object-name-edit" value="${esc(M.objectLabel(state,o))}" maxlength="80"></label>`;
  if(o.type==='terrain'){
+  s+=terrainColorField(o);
   s+=`<p class="field-help resize-hint">${h('Zum Ändern der Größe an den Eckpfeilen auf der Karte ziehen.')}</p>`;
   const terrains=[...new Map(M.allianceObjects(state).filter(q=>q.type==='terrain').map(q=>[q.terrainGroup??q.id,q])).values()];
   if(terrains.length>1)s+=`<label>${h('Terrainfläche auswählen')}<select id="terrain-select">${terrains.map((t,i)=>`<option value="${esc(t.id)}" ${t.id===o.id?'selected':''}>${i+1}. ${esc(M.objectLabel(state,t))} · ${t.w} × ${t.h}</option>`).join('')}</select></label>`;
   s+=`<form id="terrain-size-form" class="terrain-size-form"><h3>${h('Größe ändern')}</h3><div class="inline-fields"><label>${h('Breite (Felder)')}<input id="terrain-width" type="number" min="1" max="60" step="1" value="${o.w}" required></label><label>${h('Höhe (Felder)')}<input id="terrain-height" type="number" min="1" max="60" step="1" value="${o.h}" required></label></div><button class="full" type="submit">${h('Größe übernehmen')}</button><p class="field-help">${h('Je 1–60 Felder. Die linke untere Ecke bleibt bei Größenänderungen fest. Terrain darf anderes Terrain überlappen. Gebäude bleiben frei.')}</p></form>`;
  }
+ if(M.coreSize(o))s+=`<p class="field-help">${h('Schlamm {size} × {size}: bebaubar. Fester Kern {core} × {core}.',{size:o.w,core:M.coreSize(o)})}</p>`;
  s+=objectPositionForm(o);
  if(o.type==='base'&&M.isSeason4(state)){
   s+=`<label class="check-label"><input id="beacon-enabled" type="checkbox" ${o.beacon?'checked':''}> ${h('Dieser Spieler ist ein Beacon')}</label>`;
@@ -432,6 +439,7 @@ $('inspector').addEventListener('change',e=>{
   }
   if(id==='inspector-priority'&&o.playerId)return commit(M.setPlayerPriorities(state,[o.playerId],Number(e.target.value)));
   if(id==='inspector-group'&&o.playerId)return commit(M.setPlayerGroup(state,o.playerId,e.target.value?Number(e.target.value):null));
+  if(id==='terrain-color')return commit(M.updateObject(state,o.id,{color:e.target.value}));
   if(id==='terrain-group-name'){let next=state;for(const part of M.terrainParts(state,o))next=M.updateObject(next,part.id,{name:e.target.value});return commit(next);}
   if(id==='object-name-edit')return commit(M.updateObject(state,o.id,{name:e.target.value}));
   if(id==='beacon-enabled')return commit(M.updateObject(state,o.id,{beacon:e.target.checked?M.nextBeacon(state):null}));
@@ -575,6 +583,7 @@ function applyLanguage(previousLabel){
 $('language-select').addEventListener('change',e=>{const previousLabel=selected()?M.objectLabel(state,selected()):null;if(I.setLanguage(e.target.value))applyLanguage(previousLabel);});
 document.addEventListener('invalid',e=>{const el=e.target;if(!el.setCustomValidity)return;el.setCustomValidity('');el.setCustomValidity(t(el.validity.valueMissing?'Bitte dieses Feld ausfüllen.':'Bitte einen gültigen Wert eingeben.'));},true);
 document.addEventListener('input',e=>e.target.setCustomValidity?.(''));
+globalThis.HiveArchiveBridge={getWorkspace:()=>W.saveFile(workspace),isDirty:()=>dirty,markSaved:()=>{dirty=false;renderControls();},load:raw=>{const next=W.readFile(raw);resetMapTools(true);commitWorkspace(next);dirty=false;render();fitMap();},confirm:action=>{if(dirty)confirm(t('Gespeicherte Karte laden?'),t('Nicht gespeicherte Änderungen werden ersetzt.'),action);else action();},requestConfirm:confirm,toast};
 I.apply(document);$('language-select').value=I.language;render();requestAnimationFrame(fitMap);
 // Optional structured tools use exactly the same state and actions as the visible planner.
 const context=document.modelContext;
