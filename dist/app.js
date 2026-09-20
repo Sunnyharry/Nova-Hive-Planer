@@ -3,7 +3,7 @@
 const I=globalThis.HiveI18n,t=(key,params)=>I.t(key,params);
 const M=globalThis.HiveModel,W=globalThis.HiveWorkspace,$=id=>document.getElementById(id),svg=$('map'),stage=$('stage');
 // User-facing release: increment the final number for each later delivered update.
-const APP_VERSION='1.1.11';
+const APP_VERSION='1.1.12';
 const TOOL_SHORTCUTS={b:'base',m:'marshall',a:'center',t:'terrain',l:'beacon'};
 const shortcutFor=type=>Object.keys(TOOL_SHORTCUTS).find(key=>TOOL_SHORTCUTS[key]===type)?.toUpperCase();
 let workspace=W.createWorkspace(),state=W.activePlan(workspace),selectedId=null,pending=null,filter='all',dirty=false,undoStack=[],redoStack=[],drag=null,suppressClick=false,confirmAction=null,toastTimer=null;
@@ -95,6 +95,7 @@ function objectSvg(o,exporting=false){
   const f=M.solidFootprint(o),dx=f.x-o.x,dy=o.y-f.y,scale=Math.min(1,f.w/5,f.h/5);content=`<rect x="${dx-f.w/2}" y="${dy-f.h/2}" width="${f.w}" height="${f.h}" fill="#725039" stroke="#edc096" stroke-width=".15"/><g transform="translate(${dx} ${dy}) scale(${scale})">${nameSvg(name,f.w/scale-.3,1,-.6,'#fff2d7',.7)}<text y=".6" text-anchor="middle" fill="#fff2d7" font-size=".42">${f.w} × ${f.h}</text><text y="1.4" text-anchor="middle" fill="#fff2d7" font-size=".38">X ${num(q.x)} / Y ${num(q.y)}</text></g>`;
  }else if(o.type==='missile'){
   const scale=Math.min(1,o.w/10,o.h/5);content=`<rect x="${-o.w/2}" y="${-o.h/2}" width="${o.w}" height="${o.h}" fill="#ef4444" fill-opacity=".13" stroke="#ff6565" stroke-width=".18" stroke-dasharray=".65 .3" pointer-events="stroke"/><g transform="translate(0 ${-o.h/2+Math.min(1,o.h*.25)}) scale(${scale})" pointer-events="all"><rect x="-4.8" y="-.8" width="9.6" height="1.8" rx=".15" fill="#561f28"/>${nameSvg(name,9,.7,-.1,'#ffc9c9',.6)}<text y=".65" text-anchor="middle" fill="#ffc9c9" font-size=".4">${o.w} × ${o.h} · X ${num(q.x)} / Y ${num(q.y)}</text></g>`;
+  content+=`<g class="missile-handle" transform="scale(${Math.min(1,o.w/3,o.h/3)})" pointer-events="all"><title>${h('Warnsymbol ziehen, um die Raketenfläche zu verschieben.')}</title><circle r="1.35" fill="#481c25" stroke="#ff7777" stroke-width=".09"/><path d="M0-1.05L1.08.87H-1.08Z" fill="#ffd56a"/><path d="M0-.45V.2" stroke="#482b17" stroke-width=".17" stroke-linecap="round"/><circle cy=".53" r=".1" fill="#482b17"/></g>`;
  }else if(o.type==='terrain'){
   content=`<rect x="${-o.w/2}" y="${-o.h/2}" width="${o.w}" height="${o.h}" fill="${o.color??'url(#terrain-hatch)'}" stroke="${o.color??'#a8787d'}" stroke-width=".09"/>${nameSvg(name,o.w-.25,Math.max(.3,o.h-.8),-.05,terrainInk(o),.6)}<text y="${o.h/2-.2}" text-anchor="middle" fill="${terrainInk(o)}" font-size=".35">${o.w} × ${o.h}</text>`;
  }else{
