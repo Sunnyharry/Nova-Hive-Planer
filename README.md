@@ -1,10 +1,14 @@
 # Nova Hive Planner
 
-Current application release: **1.1.12**. Increase the final number once per subsequent delivered update (1.1.13, 1.1.14, …); see `AGENTS.md`. The JSON schema version remains independent.
+Current application release: **1.1.13**. Increase the final number once per subsequent delivered update (1.1.14, 1.1.15, …); see `AGENTS.md`. The JSON schema version remains independent.
 
 A client-side Last War hive editor with English, German, French, Spanish, Portuguese, Vietnamese and Korean interfaces. Open `dist/index.html` in a modern browser, or serve the `dist` directory as static files. The editor has no package dependencies or application login. Named map storage and sharing use the separate online document service; local editing and JSON files remain available offline. The hosted Site has its own owner access policy.
 
 The editor supports editable 100-seat templates with one-tile gaps or no gaps, TXT / semicolon CSV imports, individual and multiple-object movement, connected terrain shapes, rectangular base-area filling, priority-aware grouped autofill, multi-select organization, undo/redo, JSON save/load, and SVG, PNG and CSV exports. Player names and their calculated X/Y coordinates appear inside each base.
+
+## Viewer share address
+
+New viewer links use `https://sunnyharry.github.io/Nova-Hive-Planer/viewer/?plan=<id>`, avoiding the account surname in the shared browser address. The static `viewer/` frontend is mirrored to GitHub Pages and reads the same public map ID through the existing CORS-enabled read-only API. Old viewer links remain valid. Saved maps, archive keys, permissions and IDs are unchanged. This changes the shared address, not the storage hostname: the existing API hostname remains visible in source/network requests. When updating the viewer, keep `viewer/index.html`, `viewer/viewer.css` and `viewer/viewer.js` aligned with the service frontend; the GitHub copy uses relative asset URLs, the shared `dist` model/i18n, and an absolute public API URL.
 
 ## Named map archive and viewer
 
