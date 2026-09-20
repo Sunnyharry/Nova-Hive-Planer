@@ -3,7 +3,7 @@
 const I=globalThis.HiveI18n,t=(key,params)=>I.t(key,params);
 const M=globalThis.HiveModel,W=globalThis.HiveWorkspace,$=id=>document.getElementById(id),svg=$('map'),stage=$('stage');
 // User-facing release: increment the final number for each later delivered update.
-const APP_VERSION='1.1.10';
+const APP_VERSION='1.1.11';
 const TOOL_SHORTCUTS={b:'base',m:'marshall',a:'center',t:'terrain',l:'beacon'};
 const shortcutFor=type=>Object.keys(TOOL_SHORTCUTS).find(key=>TOOL_SHORTCUTS[key]===type)?.toUpperCase();
 let workspace=W.createWorkspace(),state=W.activePlan(workspace),selectedId=null,pending=null,filter='all',dirty=false,undoStack=[],redoStack=[],drag=null,suppressClick=false,confirmAction=null,toastTimer=null;
@@ -19,7 +19,7 @@ const esc=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>
 const h=(key,params)=>esc(t(key,params));
 const num=n=>Number.isInteger(n)?String(n):String(Math.round(n*10)/10);
 const color=o=>M.allianceOf(o)!==1?M.ALLIANCE_COLORS[M.allianceOf(o)-1]:M.COLORS[((o.beacon?.charCodeAt(0)??65)-65)%M.COLORS.length];
-const typeName=o=>t({base:o?.beacon?'Beacon':'Basis',center:'Zentrum',marshall:'Marshall',terrain:'Terrain',stronghold:'Stronghold',city:'Stadt'}[o?.type]??'');
+const typeName=o=>t({base:o?.beacon?'Beacon':'Basis',center:'Zentrum',marshall:'Marshall',terrain:'Terrain',stronghold:'Stronghold',city:'Stadt',missile:'Missile'}[o?.type]??'');
 const selected=()=>state.objects.find(o=>o.id===selectedId)??null;
 const selectedObjects=()=>state.objects.filter(o=>selectedObjectIds.has(o.id));
 function setMapSelection(ids,primary=null){selectedObjectIds=new Set(M.expandObjectIds(state,ids).filter(id=>state.objects.some(o=>o.id===id&&M.owns(state,o))));selectedId=selectedObjectIds.has(primary)?primary:selectedObjectIds.values().next().value??null;}
@@ -92,7 +92,9 @@ function objectSvg(o,exporting=false){
  if(o.type==='center'){
   content=`<rect x="-4.5" y="-4.5" width="9" height="9" fill="${alliance===1?'#27374b':tint+'30'}" stroke="${alliance===1?'#b1c5d7':tint}" stroke-width=".12"/><text y="-1.05" text-anchor="middle" fill="#edf5fc" font-size="1.55" font-weight="750">AC</text>${nameSvg(name,8,1,.55,'#d7e5f1',.65)}<text x="0" y="1.8" text-anchor="middle" fill="#afc7d7" font-size=".53">X ${num(q.x)}   Y ${num(q.y)}</text><text y="3.2" text-anchor="middle" fill="#8ca7bd" font-size=".48">${h('9 × 9 Felder')}</text>`;
  }else if(M.coreSize(o)){
-  const c=M.coreSize(o);content=`<rect x="${-c/2}" y="${-c/2}" width="${c}" height="${c}" fill="#725039" stroke="#edc096" stroke-width=".15"/>${nameSvg(name,c-.3,1,-.6,'#fff2d7',.7)}<text y=".6" text-anchor="middle" fill="#fff2d7" font-size=".42">${c} × ${c}</text><text y="1.4" text-anchor="middle" fill="#fff2d7" font-size=".38">X ${num(q.x)} / Y ${num(q.y)}</text>`;
+  const f=M.solidFootprint(o),dx=f.x-o.x,dy=o.y-f.y,scale=Math.min(1,f.w/5,f.h/5);content=`<rect x="${dx-f.w/2}" y="${dy-f.h/2}" width="${f.w}" height="${f.h}" fill="#725039" stroke="#edc096" stroke-width=".15"/><g transform="translate(${dx} ${dy}) scale(${scale})">${nameSvg(name,f.w/scale-.3,1,-.6,'#fff2d7',.7)}<text y=".6" text-anchor="middle" fill="#fff2d7" font-size=".42">${f.w} × ${f.h}</text><text y="1.4" text-anchor="middle" fill="#fff2d7" font-size=".38">X ${num(q.x)} / Y ${num(q.y)}</text></g>`;
+ }else if(o.type==='missile'){
+  const scale=Math.min(1,o.w/10,o.h/5);content=`<rect x="${-o.w/2}" y="${-o.h/2}" width="${o.w}" height="${o.h}" fill="#ef4444" fill-opacity=".13" stroke="#ff6565" stroke-width=".18" stroke-dasharray=".65 .3" pointer-events="stroke"/><g transform="translate(0 ${-o.h/2+Math.min(1,o.h*.25)}) scale(${scale})" pointer-events="all"><rect x="-4.8" y="-.8" width="9.6" height="1.8" rx=".15" fill="#561f28"/>${nameSvg(name,9,.7,-.1,'#ffc9c9',.6)}<text y=".65" text-anchor="middle" fill="#ffc9c9" font-size=".4">${o.w} × ${o.h} · X ${num(q.x)} / Y ${num(q.y)}</text></g>`;
  }else if(o.type==='terrain'){
   content=`<rect x="${-o.w/2}" y="${-o.h/2}" width="${o.w}" height="${o.h}" fill="${o.color??'url(#terrain-hatch)'}" stroke="${o.color??'#a8787d'}" stroke-width=".09"/>${nameSvg(name,o.w-.25,Math.max(.3,o.h-.8),-.05,terrainInk(o),.6)}<text y="${o.h/2-.2}" text-anchor="middle" fill="${terrainInk(o)}" font-size=".35">${o.w} × ${o.h}</text>`;
  }else{
@@ -130,7 +132,8 @@ function scene(exporting=false){
  const displayObjects=state.objects.map(o=>!exporting&&ghost?.objects?.find(g=>g.id===o.id)||(!exporting&&drag?.kind==='resize'&&ghost?.o?.id===o.id?ghost.o:o));
  for(const o of displayObjects)if(M.coreSize(o))s+=`<rect data-object="${esc(o.id)}" x="${o.x-o.w/2}" y="${-o.y-o.h/2}" width="${o.w}" height="${o.h}" fill="#765638" fill-opacity=".5" stroke="#ad865f" stroke-width=".06"/>`;
  if(M.isSeason4(state)&&state.showLight)for(const o of displayObjects)if(o.type==='base'&&o.beacon)s+=`<rect x="${o.x-o.lightSize/2}" y="${-o.y-o.lightSize/2}" width="${o.lightSize}" height="${o.lightSize}" fill="${color(o)}" fill-opacity=".045" stroke="${color(o)}" stroke-opacity=".8" stroke-width=".09" pointer-events="none"/>`;
- const drawn=new Set();for(const o of displayObjects){if(o.terrainGroup){if(drawn.has(o.terrainGroup))continue;drawn.add(o.terrainGroup);s+=compoundTerrainSvg(displayObjects.filter(q=>q.terrainGroup===o.terrainGroup),exporting);}else s+=objectSvg(o,exporting);}
+ const drawn=new Set();for(const o of displayObjects.filter(o=>o.type!=='missile')){if(o.terrainGroup){if(drawn.has(o.terrainGroup))continue;drawn.add(o.terrainGroup);s+=compoundTerrainSvg(displayObjects.filter(q=>q.terrainGroup===o.terrainGroup),exporting);}else s+=objectSvg(o,exporting);}
+ for(const o of displayObjects)if(o.type==='missile')s+=objectSvg(o,exporting);
  const terrainSelection=!exporting&&selectedObjectIds.size===1&&(drag?.kind==='resize'&&ghost?ghost.o:selected());
  if(!M.allianceObjects(state).some(o=>o.type===M.anchorType(state)))s+=`<g transform="translate(${state.origin.mapX-(M.isSeason4(state)?4:1)} ${-state.origin.mapY+(M.isSeason4(state)?4:1)})" pointer-events="none"><path d="M-1 0H1M0-1V1" stroke="#c6d9e7" stroke-width=".07" stroke-dasharray=".2 .15"/><text x="1.3" y=".15" font-size=".55" fill="#91adbf">${h('Ursprung X {x} / Y {y}',M.referenceCoords(state))}</text></g>`;
  if(!exporting&&ghost?.o){const g=ghost.o,stroke=ghost.invalid?'#ff9691':'#adffe8';s+=`<rect x="${g.x-g.w/2}" y="${-g.y-g.h/2}" width="${g.w}" height="${g.h}" fill="${stroke}" fill-opacity=".15" stroke="${stroke}" stroke-width=".12" stroke-dasharray=".25 .12" pointer-events="none"/>`;const q=g.type==='terrain'?M.terrainCornerCoords({...state,objects:state.objects.map(o=>o.id===g.id?g:o)},g):M.coords(state,g);s+=`<text x="${g.x}" y="${-g.y-g.h/2-.45}" text-anchor="middle" font-size=".6" fill="${stroke}" pointer-events="none">${drag?.kind==='resize'?`${g.w} × ${g.h} · `:''}X ${num(q.x)} / Y ${num(q.y)}</text>`;}
@@ -141,7 +144,7 @@ function scene(exporting=false){
   if(fillPreview)for(const o of fillPreview.positions)s+=`<rect x="${o.x-1.5}" y="${-o.y-1.5}" width="3" height="3" fill="#78d7bf" fill-opacity=".20" stroke="#9ee6cb" stroke-width=".08" pointer-events="none"/>`;
   if(fillArea&&mapMode==='fill'&&drag?.kind!=='selectbox')s+=fillAreaHandles(fillArea);
  }
- if(terrainSelection?.type==='terrain'&&!terrainSelection.terrainGroup&&!pending&&mapMode!=='fill')s+=terrainHandles(terrainSelection);
+ if(M.resizable(terrainSelection)&&!pending&&mapMode!=='fill')s+=terrainHandles(terrainSelection);
  return s;
 }
 function renderMap(){
@@ -216,7 +219,10 @@ function renderInspector(){
   if(terrains.length>1)s+=`<label>${h('Terrainfläche auswählen')}<select id="terrain-select">${terrains.map((t,i)=>`<option value="${esc(t.id)}" ${t.id===o.id?'selected':''}>${i+1}. ${esc(M.objectLabel(state,t))} · ${t.w} × ${t.h}</option>`).join('')}</select></label>`;
   s+=`<form id="terrain-size-form" class="terrain-size-form"><h3>${h('Größe ändern')}</h3><div class="inline-fields"><label>${h('Breite (Felder)')}<input id="terrain-width" type="number" min="1" max="60" step="1" value="${o.w}" required></label><label>${h('Höhe (Felder)')}<input id="terrain-height" type="number" min="1" max="60" step="1" value="${o.h}" required></label></div><button class="full" type="submit">${h('Größe übernehmen')}</button><p class="field-help">${h('Je 1–60 Felder. Die linke untere Ecke bleibt bei Größenänderungen fest. Terrain darf anderes Terrain überlappen. Gebäude bleiben frei.')}</p></form>`;
  }
- if(M.coreSize(o))s+=`<p class="field-help">${h('Schlamm {size} × {size}: bebaubar. Fester Kern {core} × {core}.',{size:o.w,core:M.coreSize(o)})}</p>`;
+ if(M.coreSize(o)||o.type==='missile'){
+  const fields=(prefix,w,h)=>`<div class="inline-fields"><label>${hLabel('Breite (Felder)')}<input id="${prefix}-width" type="number" min="1" max="1000" step="1" value="${w}" required></label><label>${hLabel('Höhe (Felder)')}<input id="${prefix}-height" type="number" min="1" max="1000" step="1" value="${h}" required></label></div>`,hLabel=key=>h(key);
+  s+=`<form id="object-size-form" class="terrain-size-form"><h3>${h(M.coreSize(o)?'Äußere Schlammfläche':'Missile-Bereich')}</h3>${fields('object',o.w,o.h)}${M.coreSize(o)?`<h3>${h('Fester Kern')}</h3>${fields('core',M.coreSize(o),M.coreHeight(o))}`:''}<button class="full" type="submit">${h('Größe übernehmen')}</button><p class="field-help">${h('Die linke untere Ecke bleibt bei Größenänderungen über diese Felder fest.')}</p><p class="field-help">${h(M.coreSize(o)?'Der Kern liegt auf ganzen Feldern möglichst mittig. Nur der Kern blockiert Gebäude.':'Rote Markierung ohne Kollisionen. Andere Objekte bleiben frei platzierbar.')}</p><p class="field-help">${h('Zum Ändern der Größe an den Eckpfeilen auf der Karte ziehen.')}</p></form>`;
+ }
  s+=objectPositionForm(o);
  if(o.type==='base'&&M.isSeason4(state)){
   s+=`<label class="check-label"><input id="beacon-enabled" type="checkbox" ${o.beacon?'checked':''}> ${h('Dieser Spieler ist ein Beacon')}</label>`;
@@ -342,7 +348,7 @@ svg.addEventListener('pointerdown',e=>{
  const box=mapMode==='fill'||e.shiftKey||(!id&&(mapMode==='select'||e.ctrlKey||e.metaKey));
  if(fillHandle&&fillArea&&mapMode==='fill'){drag={kind:'fill-resize',original:{...fillArea},corner:fillHandle.dataset.fillResize,point:lastPoint,clientX:e.clientX,clientY:e.clientY,moved:false};renderFillControls();}
  else if(box){const previousArea=fillArea;fillArea=null;fillPreview=null;ghost=null;drag={kind:'selectbox',fill:mapMode==='fill',previousArea,start:lastPoint,current:lastPoint,clientX:e.clientX,clientY:e.clientY,moved:false,additive:e.ctrlKey||e.metaKey};renderControls();}
- else if(handle&&selected()?.type==='terrain'&&selectedObjectIds.size===1&&!selected().terrainGroup){drag={kind:'resize',id:selectedId,original:M.clone(selected()),corner:handle.dataset.resize,point:lastPoint,clientX:e.clientX,clientY:e.clientY,moved:false};}
+ else if(handle&&M.resizable(selected())&&selectedObjectIds.size===1){drag={kind:'resize',id:selectedId,original:M.clone(selected()),corner:handle.dataset.resize,point:lastPoint,clientX:e.clientX,clientY:e.clientY,moved:false};}
  else if(id){
   if(e.ctrlKey||e.metaKey){selectObject(id,false,true);return;}
   if(!selectedObjectIds.has(id))setMapSelection([id],id);else selectedId=id;
@@ -364,7 +370,7 @@ svg.addEventListener('pointerup',e=>{
  if(drag.moved&&(drag.kind==='fill-resize'||drag.kind==='selectbox'&&drag.fill))safely(()=>updateFillDrag(pointFromClient(e.clientX,e.clientY)));
  if(drag.moved&&['resize','object'].includes(drag.kind))previewAt(pointFromClient(e.clientX,e.clientY));
  const d=drag,g=ghost;drag=null;ghost=null;if(svg.hasPointerCapture(e.pointerId))svg.releasePointerCapture(e.pointerId);
- if(d.kind==='resize'&&d.moved&&g)safely(()=>commit(M.resizeTerrain(state,d.id,d.corner,g.point.x,g.point.y),t('Terraingröße angepasst.')));
+ if(d.kind==='resize'&&d.moved&&g)safely(()=>commit(M.resizeTerrain(state,d.id,d.corner,g.point.x,g.point.y),t('Größe angepasst.')));
  if(d.kind==='object'&&d.moved&&g?.objects)safely(()=>commit(M.moveObjects(state,g.objects.map(o=>({id:o.id,x:o.x,y:o.y})))));
  if(d.kind==='selectbox'){
   const area=selectionBox(d.start,pointFromClient(e.clientX,e.clientY));
@@ -422,10 +428,11 @@ $('alliance-select').addEventListener('change',e=>safely(()=>activateAlliance(Nu
 $('season-select').addEventListener('change',e=>{const value=e.target.value;e.target.value=state.season;safely(()=>activateVariant(value,state.layout));});
 $('layout-select').addEventListener('change',e=>{const value=e.target.value;e.target.value=state.layout;safely(()=>activateVariant(state.season,value));});
 $('inspector').addEventListener('submit',e=>{
- if(!['position-form','terrain-size-form','bulk-move-form'].includes(e.target.id))return;e.preventDefault();const o=selected();if(!o)return;
+ if(!['position-form','terrain-size-form','object-size-form','bulk-move-form'].includes(e.target.id))return;e.preventDefault();const o=selected();if(!o)return;
  safely(()=>{
   if(e.target.id==='bulk-move-form')return moveSelection(Number($('selection-dx').value),Number($('selection-dy').value));
-  if(e.target.id==='terrain-size-form')return commit(M.updateObject(state,o.id,{w:Number($('terrain-width').value),h:Number($('terrain-height').value)}),t('Terraingröße angepasst.'));
+  if(e.target.id==='object-size-form')return commit(M.updateObject(state,o.id,{w:Number($('object-width').value),h:Number($('object-height').value),...(M.coreSize(o)?{coreW:Number($('core-width').value),coreH:Number($('core-height').value)}:{})}),t('Größe angepasst.'));
+  if(e.target.id==='terrain-size-form')return commit(M.updateObject(state,o.id,{w:Number($('terrain-width').value),h:Number($('terrain-height').value)}),t('Größe angepasst.'));
   const x=Number($('object-x').value),y=Number($('object-y').value);if(!Number.isFinite(x)||!Number.isFinite(y))throw new Error(t('Bitte gültige Koordinaten eingeben.'));
   commit(M.setObjectCorner(state,o.id,x,y));
  });
@@ -568,7 +575,7 @@ document.addEventListener('keydown',e=>{
  }
  if(directions[e.key]&&selected()){
   e.preventDefault();const o=selected(),step=e.shiftKey?5:1,[dx,dy]=directions[e.key],handle=e.target.closest('[data-resize]');
-  if(handle&&o.type==='terrain'&&!o.terrainGroup&&selectedObjectIds.size===1){const corner=handle.dataset.resize,r=M.rect(o),x=(corner.endsWith('e')?r.right:r.left)+dx*step,y=(corner.startsWith('n')?r.top:r.bottom)+dy*step;safely(()=>commit(M.resizeTerrain(state,o.id,corner,x,y)));svg.querySelector(`[data-resize="${corner}"]`)?.focus({preventScroll:true});}
+  if(handle&&M.resizable(o)&&selectedObjectIds.size===1){const corner=handle.dataset.resize,r=M.rect(o),x=(corner.endsWith('e')?r.right:r.left)+dx*step,y=(corner.startsWith('n')?r.top:r.bottom)+dy*step;safely(()=>commit(M.resizeTerrain(state,o.id,corner,x,y)));svg.querySelector(`[data-resize="${corner}"]`)?.focus({preventScroll:true});}
   else safely(()=>moveSelection(dx*step,dy*step));
  }
 });

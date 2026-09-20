@@ -66,3 +66,5 @@ button.danger-solid{background:#8c333b;border-color:#be555d;color:#fff0ef;flex-s
 .alliance-picker{display:flex;align-items:center;gap:8px;color:#e6eff6;font-size:.85rem}.alliance-picker select{min-width:125px;width:auto}#alliance-swatch{width:13px;height:13px;border-radius:3px;flex-shrink:0}.alliance-status{margin:0 14px 10px;color:#aec5d5;font-size:.78rem;line-height:1.5}.map-toolbar{flex-wrap:wrap}
 
 .archive-actions{display:flex;gap:5px;margin:8px 0}.archive-actions button{flex:1;padding:8px;font-size:.8rem}.archive-list{max-height:300px;overflow-y:auto;display:grid;gap:8px;margin:10px 0}.archive-card{padding:10px;border:1px solid #385065;border-radius:6px}.archive-card.active{border-color:#61ddcc;background:#153c3c}.archive-card strong{display:block;overflow-wrap:anywhere}.archive-card small{display:block;color:#adc2d4;margin:5px 0}.archive-card div{display:flex;gap:6px}.archive-card button{padding:5px 8px;font-size:.8rem}#archive-panel details{margin-top:12px}#archive-link{font-size:.75rem}#terrain-color{height:40px;width:100%}
+
+.object-missile.map-object-selected>rect:first-of-type{stroke:#ff8585!important;stroke-width:.24!important}

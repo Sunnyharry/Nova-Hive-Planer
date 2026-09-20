@@ -1,6 +1,6 @@
 # Nova Hive Planner
 
-Current application release: **1.1.10**. Increase the final number once per subsequent delivered update (1.1.11, 1.1.12, …); see `AGENTS.md`. The JSON schema version remains independent.
+Current application release: **1.1.11**. Increase the final number once per subsequent delivered update (1.1.12, 1.1.13, …); see `AGENTS.md`. The JSON schema version remains independent.
 
 A client-side Last War hive editor with English, German, French, Spanish, Portuguese, Vietnamese and Korean interfaces. Open `dist/index.html` in a modern browser, or serve the `dist` directory as static files. The editor has no package dependencies or application login. Named map storage and sharing use the separate online document service; local editing and JSON files remain available offline. The hosted Site has its own owner access policy.
 
@@ -20,7 +20,9 @@ The public service is https://nova-hive-viewer.georgiadis-c.chatgpt.site. The ex
 
 The terrain inspector offers a full hex color picker. Colors survive JSON save/open, every variant, named archive saves, and map exports. Changing a connected terrain shape's color updates all its parts. Existing uncolored terrain preserves its original style.
 
-**Stronghold** uses a 13×13 overall footprint with a centered, solid 5×5 core. **City** uses 15×15 with a centered, solid 7×7 core. Both have a brown buildable mud perimeter. Bases and other objects can occupy the perimeter; only the core participates in building collision checks. The overall footprint must still fit within the 1000×1000 world. Area filling, manual moves, multi-object moves, validation, save/open, exports and viewer use the same core collision rule. Coordinates denote the lower-left tile of the entire outer footprint. Landmarks are available in all seasons and belong to the active alliance. Moving a landmark does not automatically move bases sitting on its mud.
+**Stronghold** defaults to a 13×13 overall footprint with a solid 5×5 core. **City** defaults to 15×15 with a solid 7×7 core. Their outer mud and solid core each have independently editable width and height in the inspector (whole tiles, 1–1000; the core must fit inside the mud). Numeric resizing preserves the outer bottom-left tile. Corner handles resize the outer footprint from the opposite corner and cannot shrink it below the core dimensions. The core is aligned to whole map tiles as close to the middle as possible; with mixed even/odd dimensions, the extra tile lies on the top/right. Enlarging a core into another building is rejected without changing the plan. Both have a brown buildable mud perimeter. Bases and other objects can occupy the perimeter; only the core participates in building collision checks. The overall footprint must still fit within the 1000×1000 world. Area filling, manual moves, multi-object moves, validation, save/open, exports and viewer use the same core collision rule. Coordinates denote the lower-left tile of the entire outer footprint. Landmarks are available in all seasons and belong to the active alliance. Moving a landmark does not automatically move bases sitting on its mud.
+
+**Missile** is a red 35×35 overlay by default, with editable width/height and corner resize handles. It can overlap any object or another missile in either placement order and never blocks base-area filling. Select it by its red border or label, leaving underlying bases clickable. Only the world boundary limits its placement. Both new dimensions and missiles persist through save/open, archive, viewer and SVG/PNG export. Geometry schema 8 preserves support for schemas 1–7 and old default landmark sizes.
 
 ## Mega Hive: five alliances
 

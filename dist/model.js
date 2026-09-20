@@ -2,9 +2,9 @@
    Internal SVG geometry uses centers; even dimensions have half-tile centers. */
 (function(root){
 'use strict';
-const SCHEMA='nova-hive-planner',VERSION=7,WORLD_SIZE=1000;
+const SCHEMA='nova-hive-planner',VERSION=8,WORLD_SIZE=1000;
 const t=(key,params={})=>globalThis.HiveI18n?.t(key,params)??key.replace(/\{(\w+)\}/g,(_,k)=>String(params[k]??'{'+k+'}'));
-const DEFAULT_NAMES={center:'Allianzzentrum',marshall:'Marshall’s Guard',terrain:'Terrain',stronghold:'Stronghold',city:'Stadt'};
+const DEFAULT_NAMES={center:'Allianzzentrum',marshall:'Marshall’s Guard',terrain:'Terrain',stronghold:'Stronghold',city:'Stadt',missile:'Missile'};
 const PRIORITY_DEFAULTS=['Zuverlässiger Kern','Aktiv','Casual'];
 const priorityOf=player=>player?.priority??2;
 const priorityLabel=(state,level,alliance=activeAlliance(state))=>priorityLabelsFor(state,alliance)[level-1]||t(PRIORITY_DEFAULTS[level-1]);
@@ -38,9 +38,12 @@ function resetAllianceLayout(state){
 }
 function snap(value,size=3){const offset=size%2===0?.5:0;return Math.round(value-offset)+offset;}
 function rect(o){return {left:o.x-o.w/2,right:o.x+o.w/2,bottom:o.y-o.h/2,top:o.y+o.h/2};}
-const coreSize=o=>o.type==='stronghold'?5:o.type==='city'?7:null;
-const solidFootprint=o=>coreSize(o)?{...o,w:coreSize(o),h:coreSize(o)}:o;
-const blocks=(a,b)=>!(a.type==='terrain'&&b.type==='terrain')&&overlaps(solidFootprint(a),solidFootprint(b));
+const coreSize=o=>o.type==='stronghold'?(o.coreW??5):o.type==='city'?(o.coreW??7):null;
+const coreHeight=o=>coreSize(o)?(o.coreH??(o.type==='stronghold'?5:7)):null;
+const resizable=o=>!!o&&['terrain','stronghold','city','missile'].includes(o.type)&&!o.terrainGroup;
+const solidFootprint=o=>{if(!coreSize(o))return o;const w=coreSize(o),h=coreHeight(o);return {...o,w,h,x:o.x-o.w/2+Math.floor((o.w-w)/2)+w/2,y:o.y-o.h/2+Math.floor((o.h-h)/2)+h/2};};
+function assertDimensions(o){const limit=o.type==='terrain'?60:WORLD_SIZE;if(!Number.isInteger(o.w)||!Number.isInteger(o.h)||!finite(o.w,1,limit)||!finite(o.h,1,limit))throw new Error(t('Ungültige Größe oder Position eines Elements.'));if(['stronghold','city'].includes(o.type)&&(!Number.isInteger(coreSize(o))||!Number.isInteger(coreHeight(o))||!finite(coreSize(o),1,o.w)||!finite(coreHeight(o),1,o.h)))throw new Error(t('Der feste Kern muss innerhalb der Außenfläche liegen.'));}
+const blocks=(a,b)=>a.type!=='missile'&&b.type!=='missile'&&!(a.type==='terrain'&&b.type==='terrain')&&overlaps(solidFootprint(a),solidFootprint(b));
 function overlaps(a,b){const A=rect(a),B=rect(b);return A.left<B.right-1e-8&&A.right>B.left+1e-8&&A.bottom<B.top-1e-8&&A.top>B.bottom+1e-8;}
 function worldBounds(state){const left=state.origin.mapX-state.origin.x-.5,bottom=state.origin.mapY-state.origin.y-.5;return {left,right:left+WORLD_SIZE,bottom,top:bottom+WORLD_SIZE};}
 function referenceCoords(state){const half=isSeason4(state)?4:1,p=referencePoint(state);return {x:state.origin.x+p.x-state.origin.mapX-half,y:state.origin.y+p.y-state.origin.mapY-half};}
@@ -128,6 +131,7 @@ function collision(state,o,ignoreId=o.id){
  return state.objects.find(other=>!ignored.has(other.id)&&blocks(o,other))??null;
 }
 function assertPlacement(state,o,ignoreId=o.id){
+ assertDimensions(o);
  if(!isSeason4(state)&&(o.type==='center'||o.beacon))throw new Error(t('Allianzzentrum und Beacons sind nur in Season 4 verfügbar.'));
  assertWorldPlacement(state,o);
  const hit=collision(state,o,ignoreId);
@@ -161,6 +165,7 @@ function makeObjectLocal(state,type,x=0,y=0){
  if(type==='beacon'||type==='base')return {id:uid('base'),type:'base',x:snap(x),y:snap(y),w:3,h:3,slot:Math.max(0,...allianceObjects(state).filter(o=>o.type==='base').map(o=>o.slot))+1,playerId:null,beacon:type==='beacon'?nextBeacon(state):null,lightSize:25,electricians:40};
  if(type==='center')return {id:uid('center'),type,name:'Allianzzentrum',x:snap(x,9),y:snap(y,9),w:9,h:9};
  if(type==='marshall')return {id:uid('marshall'),type,name:'Marshall’s Guard',x:snap(x),y:snap(y),w:3,h:3};
+ if(type==='missile')return {id:uid(type),type,name:DEFAULT_NAMES[type],x:snap(x,35),y:snap(y,35),w:35,h:35};
  if(type==='stronghold'||type==='city'){const size=type==='stronghold'?13:15;return {id:uid(type),type,name:DEFAULT_NAMES[type],x:snap(x,size),y:snap(y,size),w:size,h:size};}
  if(type==='terrain')return {id:uid('terrain'),type,name:'Terrain',x:snap(x,4),y:snap(y,4),w:4,h:4,color:'#a8787d'};
  throw new Error(t('Unbekanntes Element.'));
@@ -227,7 +232,7 @@ function planBaseFill(state,area,gap=0){
  }
  const xs=axis(cx,x0,x1),ys=axis(cy,y0,y1).sort((a,b)=>(a-cy)**2-(b-cy)**2||b-a),positions=[],buckets=new Map();let skipped=0,limited=false;
  // Only nearby obstacles need inspection, even for large selected areas.
- for(const original of state.objects){const o=original.type==='base'?{...original,w:original.w+2*gap,h:original.h+2*gap}:solidFootprint(original),r=rect(o);for(let gx=Math.floor(r.left/16);gx<=Math.floor(r.right/16);gx++)for(let gy=Math.floor(r.bottom/16);gy<=Math.floor(r.top/16);gy++){const key=gx+','+gy;if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(original);}}
+ for(const original of state.objects){if(original.type==='missile')continue;const o=original.type==='base'?{...original,w:original.w+2*gap,h:original.h+2*gap}:solidFootprint(original),r=rect(o);for(let gx=Math.floor(r.left/16);gx<=Math.floor(r.right/16);gx++)for(let gy=Math.floor(r.bottom/16);gy<=Math.floor(r.top/16);gy++){const key=gx+','+gy;if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(original);}}
  // Apply the same narrow central seam when filling in multiple passes.
  const centralPair=(a,b,center)=>anchor?.type==='center'&&gap===2&&Math.abs(a-center)===2&&a+b===2*center&&a!==b;
  // Merge distance-sorted columns with a small heap instead of sorting up to
@@ -421,6 +426,10 @@ function updateObject(state,id,patch){
   if(patch.h!==undefined){if(!Number.isInteger(patch.h)||!finite(patch.h,1,60))throw new Error(t('Höhe: 1 bis 60 Felder.'));obj.h=patch.h;}
   obj.x=oldRect.left+obj.w/2;obj.y=oldRect.bottom+obj.h/2;
  }
+ if(coreSize(obj)||obj.type==='missile'){
+  const oldRect=rect(obj);for(const key of ['w','h',...(coreSize(obj)?['coreW','coreH']:[])])if(patch[key]!==undefined)obj[key]=patch[key];
+  assertDimensions(obj);obj.x=oldRect.left+obj.w/2;obj.y=oldRect.bottom+obj.h/2;
+ }
  if(patch.name!==undefined&&obj.type!=='base'){const name=normalizeName(patch.name).slice(0,80);obj.name=name||DEFAULT_NAMES[obj.type];if(name)obj.customName=true;else delete obj.customName;}
  if(obj.type==='base'){
   if(patch.beacon!==undefined){if(patch.beacon!==null&&!/^[A-Z]$/.test(patch.beacon))throw new Error(t('Beacon-Buchstabe: A bis Z.'));if(patch.beacon&&next.objects.some(q=>q.id!==id&&q.beacon===patch.beacon&&allianceOf(q)===allianceOf(obj)))throw new Error(t('Dieser Beacon-Buchstabe ist bereits vergeben.'));obj.beacon=patch.beacon;}
@@ -430,9 +439,9 @@ function updateObject(state,id,patch){
  assertPlacement(next,obj);return next;
 }
 function terrainResizeCandidate(o,corner,x,y){
- if(o?.type!=='terrain'||o.terrainGroup||!['nw','ne','sw','se'].includes(corner)||!Number.isFinite(x)||!Number.isFinite(y))throw new Error(t('Ungültige Terrain-Größe.'));
+ if(!resizable(o)||!['nw','ne','sw','se'].includes(corner)||!Number.isFinite(x)||!Number.isFinite(y))throw new Error(t('Ungültige Terrain-Größe.'));
  const r=rect(o),east=corner.endsWith('e'),north=corner.startsWith('n'),fixedX=east?r.left:r.right,fixedY=north?r.bottom:r.top;
- const w=Math.max(1,Math.min(60,Math.round((x-fixedX)*(east?1:-1)))),h=Math.max(1,Math.min(60,Math.round((y-fixedY)*(north?1:-1))));
+ const limit=o.type==='terrain'?60:WORLD_SIZE,w=Math.max(coreSize(o)??1,Math.min(limit,Math.round((x-fixedX)*(east?1:-1)))),h=Math.max(coreHeight(o)??1,Math.min(limit,Math.round((y-fixedY)*(north?1:-1))));
  return {...o,w,h,x:fixedX+(east?1:-1)*w/2,y:fixedY+(north?1:-1)*h/2};
 }
 function resizeTerrain(state,id,corner,x,y){const o=state.objects.find(o=>o.id===id),candidate=terrainResizeCandidate(o,corner,x,y);if(!owns(state,o))throw new Error(t('Wähle zuerst die passende Allianz.'));assertPlacement(state,candidate);const next=clone(state);Object.assign(next.objects.find(o=>o.id===id),candidate);return next;}
@@ -457,7 +466,7 @@ function bounds(state,includeLight=state.showLight){
  const rs=all.map(rect);return {left:Math.min(...rs.map(r=>r.left)),right:Math.max(...rs.map(r=>r.right)),bottom:Math.min(...rs.map(r=>r.bottom)),top:Math.max(...rs.map(r=>r.top))};
 }
 function validate(raw){
- if(!raw||raw.schema!==SCHEMA||![1,2,3,4,5,6,VERSION].includes(raw.version))throw new Error(t('Das ist keine unterstützte Hive-Plan-Datei.'));
+ if(!raw||raw.schema!==SCHEMA||![1,2,3,4,5,6,7,VERSION].includes(raw.version))throw new Error(t('Das ist keine unterstützte Hive-Plan-Datei.'));
  if(typeof raw.title!=='string'||raw.title.length>80)throw new Error(t('Ungültiger Planname.'));
  if(!raw.origin||!['x','y','mapX','mapY'].every(k=>Number.isSafeInteger(raw.origin[k])))throw new Error(t('Ungültiger Koordinatenursprung.'));
  if(!finite(raw.origin.x,0,999999)||!finite(raw.origin.y,0,999999)||!finite(raw.origin.mapX,-1000000000,1000000000)||!finite(raw.origin.mapY,-1000000000,1000000000))throw new Error(t('Ungültiger Koordinatenursprung.'));
@@ -485,11 +494,12 @@ function validate(raw){
  if(!isSeason4(state))state.showLight=false;
  const objIds=new Set(),centers=new Set(),marshalls=new Set(),terrainOwners=new Map();
  for(const o of raw.objects){
-  if(!o||!validAlliance(allianceOf(o))||!validId(o.id)||objIds.has(o.id)||!['base','center','marshall','terrain','stronghold','city'].includes(o.type)||!finite(o.x,-1000001000,1000001000)||!finite(o.y,-1000001000,1000001000))throw new Error(t('Ungültiges Kartenelement.'));
-  objIds.add(o.id);const fixed=o.type==='center'?9:o.type==='stronghold'?13:o.type==='city'?15:3,w=o.type==='terrain'?o.w:fixed,h=o.type==='terrain'?o.h:fixed;
+  if(!o||!validAlliance(allianceOf(o))||!validId(o.id)||objIds.has(o.id)||!['base','center','marshall','terrain','stronghold','city','missile'].includes(o.type)||!finite(o.x,-1000001000,1000001000)||!finite(o.y,-1000001000,1000001000))throw new Error(t('Ungültiges Kartenelement.'));
+  objIds.add(o.id);const fixed=o.type==='center'?9:o.type==='stronghold'?13:o.type==='city'?15:3,w=['terrain','stronghold','city','missile'].includes(o.type)?o.w:fixed,h=['terrain','stronghold','city','missile'].includes(o.type)?o.h:fixed;
   const terrainPosition=o.type==='terrain'&&(raw.version<5?(Number.isInteger(o.x*2)&&Number.isInteger(o.y*2)):(o.x===snap(o.x,w)&&o.y===snap(o.y,h)));
-  if(!Number.isInteger(w)||!Number.isInteger(h)||!finite(w,1,60)||!finite(h,1,60)||o.w!==w||o.h!==h||!(o.type==='terrain'?terrainPosition:(o.x===snap(o.x,w)&&o.y===snap(o.y,h))))throw new Error(t('Ungültige Größe oder Position eines Elements.'));
+  if(!Number.isInteger(w)||!Number.isInteger(h)||!finite(w,1,o.type==='terrain'?60:WORLD_SIZE)||!finite(h,1,o.type==='terrain'?60:WORLD_SIZE)||o.w!==w||o.h!==h||!(o.type==='terrain'?terrainPosition:(o.x===snap(o.x,w)&&o.y===snap(o.y,h))))throw new Error(t('Ungültige Größe oder Position eines Elements.'));
   const q={id:o.id,type:o.type,x:o.x,y:o.y,w,h,...(o.alliance===undefined?{}:{alliance:o.alliance})};
+  if(['stronghold','city'].includes(o.type)){if(o.coreW!==undefined)q.coreW=o.coreW;if(o.coreH!==undefined)q.coreH=o.coreH;}assertDimensions(q);
   if(raw.version<5&&o.type==='terrain'){q.x=Math.floor(o.x-(w-1)/2)+(w-1)/2;q.y=Math.floor(o.y-(h-1)/2)+(h-1)/2;}
   if(o.type==='base'){
    if(!Number.isInteger(o.slot)||!finite(o.slot,1,100000)||!Number.isInteger(o.lightSize)||!finite(o.lightSize,1,101)||!Number.isInteger(o.electricians)||!finite(o.electricians,0,100))throw new Error(t('Ungültige Basis-Einstellungen.'));
@@ -511,5 +521,5 @@ function validate(raw){
  for(const group of new Set(state.objects.filter(o=>o.terrainGroup).map(o=>o.terrainGroup)))if(!terrainsConnected(state.objects.filter(o=>o.terrainGroup===group)))throw new Error(t('Ungültige Terrain-Gruppe.'));
  return state;
 }
-root.HiveModel={coreSize,solidFootprint,blocks,ALLIANCE_COLORS,allianceOf,activeAlliance,owns,allianceObjects,alliancePlayers,allianceGroups,priorityLabelsFor,referencePoint,setAlliance,resetAllianceLayout,SCHEMA,VERSION,WORLD_SIZE,worldBounds,referenceCoords,assertWorldPlacement,setObjectCorner,PRIORITY_DEFAULTS,priorityOf,priorityLabel,setPlayerPriorities,setPriorityLabel,setPlayerGroups,groupPriority,SEASONS,emptyGroups,isSeason4,isDeveloping,anchorType,setSeason,groupForPlayer,setPlayerGroup,clearPlayers,areNeighbors,groupComponents,terrainResizeCandidate,resizeTerrain,terrainCornerCoords,terrainPositionFromCornerCoords,setTerrainCorner,connectTerrains,disconnectTerrains,terrainTouching,terrainsConnected,terrainParts,expandObjectIds,objectBounds,terrainUnionGeometry,planBaseFill,fillBases,moveObjects,removeObjects,COLORS,clone,uid,normalizeName,snap,rect,overlaps,coords,positionFromCoords,playerFor,objectForPlayer,objectLabel,makeLayout,collision,assertPlacement,moveObject,nextBeacon,makeObject,addObject,removeObject,parsePlayerFile,decodePlayerFile,importPlayers,addPlayers,autofillOptions,autofill,assign,unassign,unassignAll,removePlayer,setOrigin,updateObject,coverage,bounds,validate};
+root.HiveModel={coreSize,coreHeight,resizable,assertDimensions,solidFootprint,blocks,ALLIANCE_COLORS,allianceOf,activeAlliance,owns,allianceObjects,alliancePlayers,allianceGroups,priorityLabelsFor,referencePoint,setAlliance,resetAllianceLayout,SCHEMA,VERSION,WORLD_SIZE,worldBounds,referenceCoords,assertWorldPlacement,setObjectCorner,PRIORITY_DEFAULTS,priorityOf,priorityLabel,setPlayerPriorities,setPriorityLabel,setPlayerGroups,groupPriority,SEASONS,emptyGroups,isSeason4,isDeveloping,anchorType,setSeason,groupForPlayer,setPlayerGroup,clearPlayers,areNeighbors,groupComponents,terrainResizeCandidate,resizeTerrain,terrainCornerCoords,terrainPositionFromCornerCoords,setTerrainCorner,connectTerrains,disconnectTerrains,terrainTouching,terrainsConnected,terrainParts,expandObjectIds,objectBounds,terrainUnionGeometry,planBaseFill,fillBases,moveObjects,removeObjects,COLORS,clone,uid,normalizeName,snap,rect,overlaps,coords,positionFromCoords,playerFor,objectForPlayer,objectLabel,makeLayout,collision,assertPlacement,moveObject,nextBeacon,makeObject,addObject,removeObject,parsePlayerFile,decodePlayerFile,importPlayers,addPlayers,autofillOptions,autofill,assign,unassign,unassignAll,removePlayer,setOrigin,updateObject,coverage,bounds,validate};
 })(globalThis);

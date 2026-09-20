@@ -9,5 +9,5 @@ for(const [type,size,core] of [['stronghold',13,5],['city',15,7]]){
  assert.throws(()=>M.setObjectCorner(s,land.id,1000-size+1,500));
  const w=W.createWorkspace(s);assert.deepEqual(W.activePlan(W.readFile(W.saveFile(w))),s);
 }
-let s=M.makeLayout('empty');const a=M.makeObject(s,'terrain',0,0),b=M.makeObject(s,'terrain',4,0);s=M.addObject(M.addObject(s,a),b);s=M.connectTerrains(s,[a.id,b.id]);s=M.updateObject(s,a.id,{color:'#00AaFF'});assert.ok(s.objects.every(o=>o.color==='#00aaff'));assert.deepEqual(M.validate(s),s);assert.throws(()=>M.updateObject(s,a.id,{color:'url(evil)'}));const old=M.makeLayout('empty');old.version=6;assert.equal(M.validate(old).version,7);
+let s=M.makeLayout('empty');const a=M.makeObject(s,'terrain',0,0),b=M.makeObject(s,'terrain',4,0);s=M.addObject(M.addObject(s,a),b);s=M.connectTerrains(s,[a.id,b.id]);s=M.updateObject(s,a.id,{color:'#00AaFF'});assert.ok(s.objects.every(o=>o.color==='#00aaff'));assert.deepEqual(M.validate(s),s);assert.throws(()=>M.updateObject(s,a.id,{color:'url(evil)'}));const old=M.makeLayout('empty');old.version=6;assert.equal(M.validate(old).version,M.VERSION);
 console.log('Passed: landmark cores vs mud, move/import/fill/bounds, terrain colors, schema 6.');
