@@ -22,9 +22,9 @@ for(let id=1;id<=5;id++){
  const foreign=bases[id%5][0];assert.throws(()=>M.assign(state,players[id-1][0].id,foreign.id,true));
  assert.throws(()=>M.setPlayerGroups(state,[players[id%5][0].id],1));
  assert.throws(()=>M.moveObject(state,foreign.id,400,300));assert.throws(()=>M.removeObject(state,foreign.id));
- const other=state.objects.filter(o=>!M.owns(state,o)),coords=other.map(o=>M.coords(state,o)),ref=M.referenceCoords(state);
+ const other=state.objects.filter(o=>!M.owns(state,o)),coords=other.map(o=>M.cornerCoords(state,o)),ref=M.referenceCoords(state);
  const shifted=M.setOrigin(state,ref.x,ref.y+40);
- assert.deepEqual(other.map(o=>M.coords(shifted,shifted.objects.find(q=>q.id===o.id))),coords);
+ assert.deepEqual(other.map(o=>M.cornerCoords(shifted,shifted.objects.find(q=>q.id===o.id))),coords);
  assert.equal(M.coords(shifted,shifted.objects.find(o=>o.id===centers[id-1].id)).y,ref.y+40);
  assert.deepEqual(M.validate(shifted),shifted);
  const cleared=M.clearPlayers(state);assert.equal(M.alliancePlayers(cleared).length,0);assert.equal(cleared.players.length,8);assert.deepEqual(cleared.objects.filter(o=>!M.owns(state,o)),other);

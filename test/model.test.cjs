@@ -12,13 +12,13 @@ let r=M.addPlayers(s,'Sunnyharry\n미스터MM\nĐấu Trường\nSunnyharry');s=
 assert.equal(r.added,3);assert.equal(r.skipped,1);
 const a=s.objects.find(o=>o.beacon==='A'),b=s.objects.find(o=>o.beacon==='B'),p=s.players[0];
 s=M.assign(s,p.id,a.id);assert.equal(M.playerFor(s,s.objects.find(o=>o.id===a.id)).name,p.name);
-s=M.setOrigin(s,600,700);assert.deepEqual(M.coords(s,a),{x:591,y:715});
-const shifted=M.moveObject(s,a.id,a.x-1,a.y+1);assert.deepEqual(M.coords(shifted,shifted.objects.find(o=>o.id===a.id)),{x:590,y:716});
+s=M.setOrigin(s,600,700);assert.deepEqual(M.coords(s,a),{x:588,y:712});
+const shifted=M.moveObject(s,a.id,a.x-1,a.y+1);assert.deepEqual(M.coords(shifted,shifted.objects.find(o=>o.id===a.id)),{x:587,y:713});
 assert.throws(()=>M.moveObject(s,a.id,b.x,b.y),/überschneidet/);
 assert.throws(()=>M.assign(s,s.players[1].id,a.id),/vergeben/);
-let compact=M.makeLayout('compact',s);assert.equal(M.playerFor(compact,compact.objects.find(o=>o.id===a.id)).id,p.id);assert.equal(compact.objects.filter(o=>o.type==='base'&&M.coverage(compact,o).singleFull).length,100);assert.deepEqual(M.coords(compact,compact.objects.find(o=>o.id===a.id)),{x:594,y:712});
-let center=s.objects.find(o=>o.type==='center');let moved=M.moveObject(s,center.id,1,0);assert.deepEqual(M.coords(moved,moved.objects.find(o=>o.id===center.id)),{x:601,y:700});assert.deepEqual(M.coords(moved,a),{x:591,y:715});
-let noCenter=M.removeObject(moved,center.id);assert.deepEqual(M.coords(noCenter,a),{x:591,y:715});
+let compact=M.makeLayout('compact',s);assert.equal(M.playerFor(compact,compact.objects.find(o=>o.id===a.id)).id,p.id);assert.equal(compact.objects.filter(o=>o.type==='base'&&M.coverage(compact,o).singleFull).length,100);assert.deepEqual(M.coords(compact,compact.objects.find(o=>o.id===a.id)),{x:591,y:709});
+let center=s.objects.find(o=>o.type==='center');let moved=M.moveObject(s,center.id,1,0);assert.deepEqual(M.coords(moved,moved.objects.find(o=>o.id===center.id)),{x:601,y:700});assert.deepEqual(M.coords(moved,a),{x:588,y:712});
+let noCenter=M.removeObject(moved,center.id);assert.deepEqual(M.coords(noCenter,a),{x:588,y:712});
 let terrain=M.makeObject(s,'terrain',30,30);assert.equal(terrain.x,30.5);s=M.addObject(s,terrain);assert.throws(()=>M.addObject(s,M.makeObject(s,'base',30,30)),/überschneidet/);
 let round=M.validate(JSON.parse(JSON.stringify(s)));assert.deepEqual(round,s);
 let corrupt=M.clone(s);corrupt.objects.find(o=>o.id===b.id).playerId=p.id;assert.throws(()=>M.validate(corrupt),/doppelt/);

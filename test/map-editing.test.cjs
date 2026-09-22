@@ -38,7 +38,7 @@ let result=M.moveObjects(batch,[{id:ba.id,x:3,y:0},{id:bb.id,x:6,y:0}]);assert.d
 assert.throws(()=>M.moveObjects(batch,[{id:ba.id,x:27,y:0},{id:bb.id,x:30,y:0}]));assert.deepEqual(batch,snapshot);
 assert.throws(()=>M.moveObjects(batch,[{id:ba.id,x:.5,y:0}]));
 let anchored=M.makeLayout('empty'),center=M.makeObject(anchored,'center',0,0);anchored=M.addObject(anchored,center);let base=M.makeObject(anchored,'base',8,0);anchored=M.addObject(anchored,base);
-const withCenter=M.moveObjects(anchored,[{id:center.id,x:4,y:4},{id:base.id,x:12,y:4}]);assert.deepEqual(M.coords(withCenter,withCenter.objects[0]),{x:500,y:500});assert.deepEqual(M.coords(withCenter,withCenter.objects[1]),{x:511,y:503});roundTrip(withCenter);
+const withCenter=M.moveObjects(anchored,[{id:center.id,x:4,y:4},{id:base.id,x:12,y:4}]);assert.deepEqual(M.cornerCoords(withCenter,withCenter.objects[0]),{x:500,y:500});assert.deepEqual(M.cornerCoords(withCenter,withCenter.objects[1]),{x:511,y:503});roundTrip(withCenter);
 
 // All spacing options produce bounded, non-overlapping bases and preserve occupied objects.
 for(const gap of [0,1,2]){
