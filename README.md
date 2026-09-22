@@ -1,6 +1,6 @@
 # Nova Hive Planner
 
-Current application release: **1.1.17**. Increase the final number once per subsequent delivered update (1.1.18, 1.1.19, …); see `AGENTS.md`. The JSON schema version remains independent.
+Current application release: **1.1.18**. Increase the final number once per subsequent delivered update (1.1.19, 1.1.20, …); see `AGENTS.md`. The JSON schema version remains independent.
 
 A client-side Last War hive editor with English, German, French, Spanish, Portuguese, Vietnamese and Korean interfaces. Open `dist/index.html` in a modern browser, or serve the `dist` directory as static files. The editor has no package dependencies or application login. Named map storage and sharing use the separate online document service; local editing and JSON files remain available offline. The hosted Site has its own owner access policy.
 
@@ -146,3 +146,17 @@ The alliance alignment panel appears only when its reference object alone is sel
 ## Selection scope (1.1.17)
 
 The selection toolbar defaults to Current alliance. All alliances includes every object type in the selection rectangle and supports additive Ctrl/Cmd-click, rigid dragging, keyboard/delta moves, center positioning, removal and undo across alliances. Object ownership, colors and assignments remain intact. Switching back filters the selection to the active alliance. Connected terrain expands as one object; terrain belonging to different alliances cannot be merged. The selected-object count also reports the number of alliances for a mixed selection. Autofill and new objects continue to use the active alliance.
+
+## Editing and organization toolkit (1.1.18)
+
+- Lock/unlock any object or connected terrain. Locked objects remain collision obstacles, are excluded from box selection, and reject moves, resizing, removal and layout resets. They remain selectable individually or in the object list for unlocking. Player assignment and naming remain editable.
+- Copy/paste and duplicate selections with Ctrl/Cmd+C, V, D, or selection actions. A placement preview follows the pointer; click to place and Escape to cancel. Copies get new IDs, empty player assignments, new beacon letters and slots. Choose original alliances or the active alliance. Existing one-center/one-Marshall-per-alliance limits still apply.
+- Selection type filters, F/Zoom to selection, editor player/object search, grouped object tree, name editing, lock controls and Go to coordinates.
+- Alignment and row/column distribution preview with exact 0/1/2-tile exterior gaps. Changes apply atomically; collisions, locks and world boundaries reject the whole operation.
+- Swap player assignments between two bases of the same alliance. Dragging an already placed player onto another occupied base offers the same swap without moving either building.
+- Named object groups stored per object and reusable blueprints (up to 30) shared across the plan's variants. Blueprints are part of JSON/archive saves. Export/import the blueprint collection to reuse it in other maps. A blueprint strips player assignments and lock flags; private blueprint collections and editor group names are excluded from the published viewer payload.
+- Notes are one-tile anchor markers with editable names and center coordinates; they have no collisions. Toggle names, coordinates, notes, missile areas and individual alliances. Visibility does not change collision or light calculations. Viewer and SVG/PNG exports follow saved visibility; notes can additionally be omitted from exports.
+- Hive checks use a user-drawn rectangle or selection bounds. A summed-area scan detects every fully contained free 3×3 candidate, showing up to 200 result markers. Overlapping candidates are alternative landing positions, not simultaneous capacity. Terrain and solid landmark cores block; mud, notes and missile overlays do not. Light results distinguish full union coverage, partial intersection and no coverage, per alliance. Also lists vacant bases and unassigned players, with navigation to results. No assumptions about other in-game teleport restrictions are made.
+- Automatic last-session recovery in the same browser, including all 21 variants, names, assignments, groups, blueprints and view settings. It does not replace explicit named-map saves or JSON backups. Storage failures are reported, and last-session data is validated before restoration.
+
+All toolkit labels are localized in EN/DE/FR/ES/PT/VI/KO. Model schema 10 accepts older schemas through 9 without moving geometry. All existing tests and the new model/actual-handler tests pass; UI tests use DOM doubles, not a rendered browser.

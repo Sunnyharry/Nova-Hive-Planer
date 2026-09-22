@@ -2,9 +2,9 @@
    Even dimensions use X placeholders until the middle-tile reference is confirmed. */
 (function(root){
 'use strict';
-const SCHEMA='nova-hive-planner',VERSION=9,WORLD_SIZE=1000;
+const SCHEMA='nova-hive-planner',VERSION=10,WORLD_SIZE=1000;
 const t=(key,params={})=>globalThis.HiveI18n?.t(key,params)??key.replace(/\{(\w+)\}/g,(_,k)=>String(params[k]??'{'+k+'}'));
-const DEFAULT_NAMES={center:'Allianzzentrum',marshall:'Marshall’s Guard',terrain:'Terrain',stronghold:'Stronghold',city:'Stadt',missile:'Missile'};
+const DEFAULT_NAMES={center:'Allianzzentrum',marshall:'Marshall’s Guard',terrain:'Terrain',stronghold:'Stronghold',city:'Stadt',missile:'Missile',note:'Notiz'};
 const PRIORITY_DEFAULTS=['Zuverlässiger Kern','Aktiv','Casual'];
 const priorityOf=player=>player?.priority??2;
 const priorityLabel=(state,level,alliance=activeAlliance(state))=>priorityLabelsFor(state,alliance)[level-1]||t(PRIORITY_DEFAULTS[level-1]);
@@ -30,6 +30,7 @@ const priorityLabelsFor=(state,id=activeAlliance(state))=>id===1?state.priorityL
 const referencePoint=state=>state.objects.find(o=>owns(state,o)&&o.type===anchorType(state))??{x:state.origin.mapX,y:state.origin.mapY};
 function setAlliance(state,id){if(!Number.isInteger(id)||id<1||id>5)throw new Error(t('Allianz muss zwischen 1 und 5 liegen.'));return {...state,activeAlliance:id};}
 function resetAllianceLayout(state){
+ assertUnlocked(state,allianceObjects(state).map(o=>o.id));
  const id=activeAlliance(state),ref=referencePoint(state),origin={...state.origin,x:state.origin.x+ref.x-state.origin.mapX,y:state.origin.y+ref.y-state.origin.mapY,mapX:ref.x,mapY:ref.y};
  const template=makeLayout(state.layout,{...state,origin,objects:allianceObjects(state)});
  const next={...clone(state),objects:state.objects.filter(o=>!owns(state,o)).map(clone)};
@@ -43,7 +44,7 @@ const coreHeight=o=>coreSize(o)?(o.coreH??(o.type==='stronghold'?5:7)):null;
 const resizable=o=>!!o&&['terrain','stronghold','city','missile'].includes(o.type)&&!o.terrainGroup;
 const solidFootprint=o=>{if(!coreSize(o))return o;const w=coreSize(o),h=coreHeight(o);return {...o,w,h,x:o.x-o.w/2+Math.floor((o.w-w)/2)+w/2,y:o.y-o.h/2+Math.floor((o.h-h)/2)+h/2};};
 function assertDimensions(o){const limit=o.type==='terrain'?60:WORLD_SIZE;if(!Number.isInteger(o.w)||!Number.isInteger(o.h)||!finite(o.w,1,limit)||!finite(o.h,1,limit))throw new Error(t('Ungültige Größe oder Position eines Elements.'));if(['stronghold','city'].includes(o.type)&&(!Number.isInteger(coreSize(o))||!Number.isInteger(coreHeight(o))||!finite(coreSize(o),1,o.w)||!finite(coreHeight(o),1,o.h)))throw new Error(t('Der feste Kern muss innerhalb der Außenfläche liegen.'));}
-const blocks=(a,b)=>a.type!=='missile'&&b.type!=='missile'&&!(a.type==='terrain'&&b.type==='terrain')&&overlaps(solidFootprint(a),solidFootprint(b));
+const blocks=(a,b)=>!['missile','note'].includes(a.type)&&!['missile','note'].includes(b.type)&&!(a.type==='terrain'&&b.type==='terrain')&&overlaps(solidFootprint(a),solidFootprint(b));
 function overlaps(a,b){const A=rect(a),B=rect(b);return A.left<B.right-1e-8&&A.right>B.left+1e-8&&A.bottom<B.top-1e-8&&A.top>B.bottom+1e-8;}
 function worldBounds(state){const left=state.origin.mapX-state.origin.x-.5,bottom=state.origin.mapY-state.origin.y-.5;return {left,right:left+WORLD_SIZE,bottom,top:bottom+WORLD_SIZE};}
 function referenceCoords(state){const p=referencePoint(state);return {x:state.origin.x+p.x-state.origin.mapX,y:state.origin.y+p.y-state.origin.mapY};}
@@ -157,7 +158,9 @@ function assertPlacement(state,o,ignoreId=o.id){
  const hit=collision(state,o,ignoreId);
  if(hit)throw new Error(t('Die Fläche überschneidet sich mit {name}.',{name:objectLabel(state,hit)}));
 }
+function assertUnlocked(state,ids){const set=new Set(expandObjectIds(state,ids));const o=state.objects.find(o=>set.has(o.id)&&o.locked);if(o)throw new Error(t('Objekt gesperrt: {name}',{name:objectLabel(state,o)}));}
 function moveObject(state,id,x,y){
+ assertUnlocked(state,[id]);
  const old=state.objects.find(o=>o.id===id);if(!old)throw new Error(t('Element nicht gefunden.'));
  if(!owns(state,old))throw new Error(t('Wähle zuerst die passende Allianz.'));
  const candidate={...old,x:snap(x,old.w),y:snap(y,old.h)};
@@ -170,6 +173,7 @@ function moveObjects(state,entries,scope='active'){
  if(!Array.isArray(entries)||!entries.length||entries.length>800)throw new Error(t('Keine Elemente zum Verschieben ausgewählt.'));
  const ids=new Set(entries.map(e=>e?.id));if(ids.size!==entries.length||[...ids].some(id=>!state.objects.some(o=>o.id===id)))throw new Error(t('Ein ausgewähltes Element wurde nicht gefunden.'));
  if(scope!=='all'&&state.objects.some(o=>ids.has(o.id)&&!owns(state,o)))throw new Error(t('Wähle zuerst die passende Allianz.'));
+ assertUnlocked(state,[...ids]);
  const candidates=entries.map(e=>{const old=state.objects.find(o=>o.id===e.id);if(e.x!==snap(e.x,old.w)||e.y!==snap(e.y,old.h))throw new Error(t('Ungültige Objektposition.'));return {...old,x:e.x,y:e.y};});
  for(const candidate of candidates)if(candidate.terrainGroup){const old=state.objects.find(o=>o.id===candidate.id),dx=candidate.x-old.x,dy=candidate.y-old.y;for(const part of terrainParts(state,old)){const moved=candidates.find(o=>o.id===part.id);if(!moved||moved.x-part.x!==dx||moved.y-part.y!==dy)throw new Error(t('Verbundene Terrainflächen müssen gemeinsam verschoben werden.'));}}
  for(const candidate of candidates)assertPlacement(state,candidate,ids);
@@ -187,6 +191,7 @@ function makeObjectLocal(state,type,x=0,y=0){
  if(type==='marshall')return {id:uid('marshall'),type,name:'Marshall’s Guard',x:snap(x),y:snap(y),w:3,h:3};
  if(type==='missile')return {id:uid(type),type,name:DEFAULT_NAMES[type],x:snap(x,35),y:snap(y,35),w:35,h:35};
  if(type==='stronghold'||type==='city'){const size=type==='stronghold'?13:15;return {id:uid(type),type,name:DEFAULT_NAMES[type],x:snap(x,size),y:snap(y,size),w:size,h:size};}
+ if(type==='note')return {id:uid('note'),type,name:'Notiz',x:snap(x,1),y:snap(y,1),w:1,h:1};
  if(type==='terrain')return {id:uid('terrain'),type,name:'Terrain',x:snap(x,4),y:snap(y,4),w:4,h:4,color:'#a8787d'};
  throw new Error(t('Unbekanntes Element.'));
 }
@@ -199,7 +204,7 @@ function addObject(state,o){
  return next;
 }
 function removeObject(state,id){return removeObjects(state,[id]);}
-function removeObjects(state,ids,scope='active'){const set=new Set(expandObjectIds(state,ids));if(!set.size)return state;if(scope!=='all'&&state.objects.some(o=>set.has(o.id)&&!owns(state,o)))throw new Error(t('Wähle zuerst die passende Allianz.'));const next=clone(state);next.objects=next.objects.filter(o=>!set.has(o.id));return next;}
+function removeObjects(state,ids,scope='active'){assertUnlocked(state,ids);const set=new Set(expandObjectIds(state,ids));if(!set.size)return state;if(scope!=='all'&&state.objects.some(o=>set.has(o.id)&&!owns(state,o)))throw new Error(t('Wähle zuerst die passende Allianz.'));const next=clone(state);next.objects=next.objects.filter(o=>!set.has(o.id));return next;}
 function terrainTouching(a,b){const A=rect(a),B=rect(b);return A.left<=B.right+1e-7&&A.right>=B.left-1e-7&&A.bottom<=B.top+1e-7&&A.top>=B.bottom-1e-7;}
 function terrainsConnected(parts){
  if(!parts.length)return false;const seen=new Set([parts[0].id]),queue=[parts[0]];
@@ -207,6 +212,7 @@ function terrainsConnected(parts){
  return seen.size===parts.length;
 }
 function connectTerrains(state,ids){
+ assertUnlocked(state,ids);
  const set=new Set(expandObjectIds(state,ids)),parts=state.objects.filter(o=>set.has(o.id));
  if(parts.some(o=>!owns(state,o)))throw new Error(t('Wähle zuerst die passende Allianz.'));
  if(parts.length<2)throw new Error(t('Wähle mindestens zwei Terrainflächen aus.'));
@@ -215,7 +221,7 @@ function connectTerrains(state,ids){
  const groupId=parts.find(o=>o.terrainGroup)?.terrainGroup??uid('terrain_group'),next=clone(state);
  for(const o of next.objects)if(set.has(o.id)){o.terrainGroup=groupId;delete o.centerConfirmedX;delete o.centerConfirmedY;}return next;
 }
-function disconnectTerrains(state,ids){const set=new Set(expandObjectIds(state,ids));if(state.objects.some(o=>set.has(o.id)&&!owns(state,o)))throw new Error(t('Wähle zuerst die passende Allianz.'));const next=clone(state);for(const o of next.objects)if(set.has(o.id)){delete o.terrainGroup;delete o.centerConfirmedX;delete o.centerConfirmedY;}return next;}
+function disconnectTerrains(state,ids){assertUnlocked(state,ids);const set=new Set(expandObjectIds(state,ids));if(state.objects.some(o=>set.has(o.id)&&!owns(state,o)))throw new Error(t('Wähle zuerst die passende Allianz.'));const next=clone(state);for(const o of next.objects)if(set.has(o.id)){delete o.terrainGroup;delete o.centerConfirmedX;delete o.centerConfirmedY;}return next;}
 // Sweep rectangle edges to draw the union with holes and no internal borders.
 function terrainUnionGeometry(parts){
  const rectangles=parts.map(rect),xs=[...new Set(rectangles.flatMap(r=>[r.left,r.right]))].sort((a,b)=>a-b),slices=[],edges=[];
@@ -430,12 +436,14 @@ function unassignAll(state){
 function removePlayer(state,id){requirePlayerIds(state,[id]);const next=clone(state);next.players=next.players.filter(p=>p.id!==id);for(const g of next.groups??[])g.playerIds=g.playerIds.filter(p=>p!==id);for(const o of next.objects)if(o.playerId===id)o.playerId=null;return next;}
 // Align the selected alliance via the center of its reference object.
 function setOrigin(state,x,y){
+ if(x!==referenceCoords(state).x||y!==referenceCoords(state).y)assertUnlocked(state,allianceObjects(state).map(o=>o.id));
  requireCoordinates(x,y);
  if(activeAlliance(state)!==1||state.objects.some(o=>allianceOf(o)!==1)){const ref=referenceCoords(state),dx=x-ref.x,dy=y-ref.y,objects=allianceObjects(state);if(!objects.length)throw new Error(t('Platziere zuerst das Zentrum dieser Allianz.'));return moveObjects(state,objects.map(o=>({id:o.id,x:o.x+dx,y:o.y+dy})));}
  const next={...clone(state),origin:{...state.origin,x,y}};
  for(const o of next.objects)assertWorldPlacement(next,o);return next;
 }
 function updateObject(state,id,patch){
+ if(['w','h','coreW','coreH'].some(k=>patch[k]!==undefined))assertUnlocked(state,[id]);
  const next=clone(state),obj=next.objects.find(o=>o.id===id);if(!obj)throw new Error(t('Element nicht gefunden.'));if(!owns(state,obj))throw new Error(t('Wähle zuerst die passende Allianz.'));
  if(obj.type==='terrain'){
   if(patch.color!==undefined){if(typeof patch.color!=='string'||!/^#[0-9a-f]{6}$/i.test(patch.color))throw new Error(t('Ungültige Terrainfarbe.'));for(const part of terrainParts(next,obj))part.color=patch.color.toLowerCase();}
@@ -465,7 +473,7 @@ function terrainResizeCandidate(o,corner,x,y){
  const limit=o.type==='terrain'?60:WORLD_SIZE,w=Math.max(coreSize(o)??1,Math.min(limit,Math.round((x-fixedX)*(east?1:-1)))),h=Math.max(coreHeight(o)??1,Math.min(limit,Math.round((y-fixedY)*(north?1:-1))));
  const next={...o,w,h,x:fixedX+(east?1:-1)*w/2,y:fixedY+(north?1:-1)*h/2};if(w!==o.w||h!==o.h){delete next.centerConfirmedX;delete next.centerConfirmedY;}return next;
 }
-function resizeTerrain(state,id,corner,x,y){const o=state.objects.find(o=>o.id===id),candidate=terrainResizeCandidate(o,corner,x,y);if(!owns(state,o))throw new Error(t('Wähle zuerst die passende Allianz.'));assertPlacement(state,candidate);const next=clone(state);Object.assign(next.objects.find(o=>o.id===id),candidate);return next;}
+function resizeTerrain(state,id,corner,x,y){assertUnlocked(state,[id]);const o=state.objects.find(o=>o.id===id),candidate=terrainResizeCandidate(o,corner,x,y);if(!owns(state,o))throw new Error(t('Wähle zuerst die passende Allianz.'));assertPlacement(state,candidate);const next=clone(state);Object.assign(next.objects.find(o=>o.id===id),candidate);return next;}
 
 function coverage(state,o){
  const lights=state.objects.filter(q=>q.type==='base'&&q.beacon&&allianceOf(q)===allianceOf(o)).map(q=>({x:q.x,y:q.y,w:q.lightSize,h:q.lightSize}));
@@ -487,7 +495,7 @@ function bounds(state,includeLight=state.showLight){
  const rs=all.map(rect);return {left:Math.min(...rs.map(r=>r.left)),right:Math.max(...rs.map(r=>r.right)),bottom:Math.min(...rs.map(r=>r.bottom)),top:Math.max(...rs.map(r=>r.top))};
 }
 function validate(raw){
- if(!raw||raw.schema!==SCHEMA||![1,2,3,4,5,6,7,8,VERSION].includes(raw.version))throw new Error(t('Das ist keine unterstützte Hive-Plan-Datei.'));
+ if(!raw||raw.schema!==SCHEMA||![1,2,3,4,5,6,7,8,9,VERSION].includes(raw.version))throw new Error(t('Das ist keine unterstützte Hive-Plan-Datei.'));
  if(typeof raw.title!=='string'||raw.title.length>80)throw new Error(t('Ungültiger Planname.'));
  if(!raw.origin||!['x','y','mapX','mapY'].every(k=>Number.isSafeInteger(raw.origin[k])))throw new Error(t('Ungültiger Koordinatenursprung.'));
  if(!finite(raw.origin.x,0,999999)||!finite(raw.origin.y,0,999999)||!finite(raw.origin.mapX,-1000000000,1000000000)||!finite(raw.origin.mapY,-1000000000,1000000000))throw new Error(t('Ungültiger Koordinatenursprung.'));
@@ -500,6 +508,8 @@ function validate(raw){
  const validAlliance=id=>Number.isInteger(id)&&id>=1&&id<=5;
  if(raw.activeAlliance!==undefined){if(!validAlliance(raw.activeAlliance))throw new Error(t('Allianz muss zwischen 1 und 5 liegen.'));state.activeAlliance=raw.activeAlliance;}
  if(raw.alliancePriorityLabels!==undefined){if(!raw.alliancePriorityLabels||typeof raw.alliancePriorityLabels!=='object'||Array.isArray(raw.alliancePriorityLabels))throw new Error(t('Ungültige Prioritätsbezeichnungen.'));state.alliancePriorityLabels={};for(const [key,labels] of Object.entries(raw.alliancePriorityLabels)){if(!['2','3','4','5'].includes(key)||!Array.isArray(labels)||labels.length!==3||labels.some(v=>typeof v!=='string'||v.length>40))throw new Error(t('Ungültige Prioritätsbezeichnungen.'));state.alliancePriorityLabels[key]=labels.map(normalizeName);}}
+ if(raw.viewOptions!==undefined){const v=raw.viewOptions;if(!v||typeof v!=='object'||Array.isArray(v))throw new Error(t('Ungültiges Kartenelement.'));state.viewOptions={};for(const k of ['names','coordinates','notes','missiles','exportNotes'])if(v[k]!==undefined){if(typeof v[k]!=='boolean')throw new Error(t('Ungültiges Kartenelement.'));state.viewOptions[k]=v[k];}if(v.alliances!==undefined){if(!Array.isArray(v.alliances)||v.alliances.length>5||v.alliances.some(a=>!validAlliance(a)))throw new Error(t('Ungültiges Kartenelement.'));state.viewOptions.alliances=[...new Set(v.alliances)];}}
+ if(raw.blueprints!==undefined){if(!Array.isArray(raw.blueprints)||raw.blueprints.length>30)throw new Error(t('Ungültiger Baustein.'));const used=new Set();state.blueprints=raw.blueprints.map(b=>{if(!b||typeof b.id!=='string'||!/^[A-Za-z0-9_-]{1,100}$/.test(b.id)||used.has(b.id)||typeof b.name!=='string'||!b.name.trim()||b.name.length>80||!b.plan||!Array.isArray(b.plan.objects)||!b.plan.objects.length)throw new Error(t('Ungültiger Baustein.'));used.add(b.id);const plan=validate({...b.plan,blueprints:undefined});return {id:b.id,name:b.name,plan};});}
  const ids=new Set(),names=new Set(),assigned=new Set(),beacons=new Set(),playerAlliances=new Map();
  const validId=id=>typeof id==='string'&&id.length>0&&id.length<=100&&/^[A-Za-z0-9_-]+$/.test(id);
  for(const p of raw.players){if(!p||!validId(p.id)||ids.has(p.id)||typeof p.name!=='string'||!normalizeName(p.name)||p.name.length>80||names.has(allianceOf(p)+':'+nameKey(p.name))||!validAlliance(allianceOf(p)))throw new Error(t('Ungültige oder doppelte Spieler.'));ids.add(p.id);names.add(allianceOf(p)+':'+nameKey(p.name));playerAlliances.set(p.id,allianceOf(p));const priority=raw.version>=3?p.priority:2;if(!Number.isInteger(priority)||priority<1||priority>3)throw new Error(t('Priorität muss 1, 2 oder 3 sein.'));state.players.push({id:p.id,name:normalizeName(p.name),priority,...(p.alliance===undefined?{}:{alliance:p.alliance})});}
@@ -515,14 +525,15 @@ function validate(raw){
  if(!isSeason4(state))state.showLight=false;
  const objIds=new Set(),centers=new Set(),marshalls=new Set(),terrainOwners=new Map();
  for(const o of raw.objects){
-  if(!o||!validAlliance(allianceOf(o))||!validId(o.id)||objIds.has(o.id)||!['base','center','marshall','terrain','stronghold','city','missile'].includes(o.type)||!finite(o.x,-1000001000,1000001000)||!finite(o.y,-1000001000,1000001000))throw new Error(t('Ungültiges Kartenelement.'));
-  objIds.add(o.id);const fixed=o.type==='center'?9:o.type==='stronghold'?13:o.type==='city'?15:3,w=['terrain','stronghold','city','missile'].includes(o.type)?o.w:fixed,h=['terrain','stronghold','city','missile'].includes(o.type)?o.h:fixed;
+  if(!o||!validAlliance(allianceOf(o))||!validId(o.id)||objIds.has(o.id)||!['base','center','marshall','terrain','stronghold','city','missile','note'].includes(o.type)||!finite(o.x,-1000001000,1000001000)||!finite(o.y,-1000001000,1000001000))throw new Error(t('Ungültiges Kartenelement.'));
+  objIds.add(o.id);const fixed=o.type==='note'?1:o.type==='center'?9:o.type==='stronghold'?13:o.type==='city'?15:3,w=['terrain','stronghold','city','missile'].includes(o.type)?o.w:fixed,h=['terrain','stronghold','city','missile'].includes(o.type)?o.h:fixed;
   const terrainPosition=o.type==='terrain'&&(raw.version<5?(Number.isInteger(o.x*2)&&Number.isInteger(o.y*2)):(o.x===snap(o.x,w)&&o.y===snap(o.y,h)));
   if(!Number.isInteger(w)||!Number.isInteger(h)||!finite(w,1,o.type==='terrain'?60:WORLD_SIZE)||!finite(h,1,o.type==='terrain'?60:WORLD_SIZE)||o.w!==w||o.h!==h||!(o.type==='terrain'?terrainPosition:(o.x===snap(o.x,w)&&o.y===snap(o.y,h))))throw new Error(t('Ungültige Größe oder Position eines Elements.'));
   const q={id:o.id,type:o.type,x:o.x,y:o.y,w,h,...(o.alliance===undefined?{}:{alliance:o.alliance})};
   if(['stronghold','city'].includes(o.type)){if(o.coreW!==undefined)q.coreW=o.coreW;if(o.coreH!==undefined)q.coreH=o.coreH;}assertDimensions(q);
   if(raw.version<5&&o.type==='terrain'){q.x=Math.floor(o.x-(w-1)/2)+(w-1)/2;q.y=Math.floor(o.y-(h-1)/2)+(h-1)/2;}
-  for(const key of ['centerConfirmedX','centerConfirmedY'])if(o[key]!==undefined){if(typeof o[key]!=='boolean')throw new Error(t('Ungültige Größe oder Position eines Elements.'));q[key]=o[key];}
+  for(const key of ['centerConfirmedX','centerConfirmedY','locked'])if(o[key]!==undefined){if(typeof o[key]!=='boolean')throw new Error(t('Ungültige Größe oder Position eines Elements.'));q[key]=o[key];}
+  if(o.selectionGroup!==undefined){if(typeof o.selectionGroup!=='string'||!o.selectionGroup.trim()||o.selectionGroup.length>80)throw new Error(t('Ungültige Gruppenliste.'));q.selectionGroup=o.selectionGroup;}
   if(o.type==='base'){
    if(o.name!==undefined){if(typeof o.name!=='string'||o.name.length>80)throw new Error(t('Ungültiger Elementname.'));q.name=o.name;}if(o.customName!==undefined){if(typeof o.customName!=='boolean')throw new Error(t('Ungültiger Elementname.'));q.customName=o.customName;}
    if(!Number.isInteger(o.slot)||!finite(o.slot,1,100000)||!Number.isInteger(o.lightSize)||!finite(o.lightSize,1,101)||!Number.isInteger(o.electricians)||!finite(o.electricians,0,100))throw new Error(t('Ungültige Basis-Einstellungen.'));
@@ -544,5 +555,48 @@ function validate(raw){
  for(const group of new Set(state.objects.filter(o=>o.terrainGroup).map(o=>o.terrainGroup)))if(!terrainsConnected(state.objects.filter(o=>o.terrainGroup===group)))throw new Error(t('Ungültige Terrain-Gruppe.'));
  return state;
 }
-root.HiveModel={selectionCenter,setSelectionCenter,cornerCoords,displayCoords,centerLimits,setObjectCenter,coreSize,coreHeight,resizable,assertDimensions,solidFootprint,blocks,ALLIANCE_COLORS,allianceOf,activeAlliance,owns,allianceObjects,alliancePlayers,allianceGroups,priorityLabelsFor,referencePoint,setAlliance,resetAllianceLayout,SCHEMA,VERSION,WORLD_SIZE,worldBounds,referenceCoords,assertWorldPlacement,setObjectCorner,PRIORITY_DEFAULTS,priorityOf,priorityLabel,setPlayerPriorities,setPriorityLabel,setPlayerGroups,groupPriority,SEASONS,emptyGroups,isSeason4,isDeveloping,anchorType,setSeason,groupForPlayer,setPlayerGroup,clearPlayers,areNeighbors,groupComponents,terrainResizeCandidate,resizeTerrain,terrainCornerCoords,terrainPositionFromCornerCoords,setTerrainCorner,connectTerrains,disconnectTerrains,terrainTouching,terrainsConnected,terrainParts,expandObjectIds,objectBounds,terrainUnionGeometry,planBaseFill,fillBases,moveObjects,removeObjects,COLORS,clone,uid,normalizeName,snap,rect,overlaps,coords,positionFromCoords,playerFor,objectForPlayer,objectLabel,makeLayout,collision,assertPlacement,moveObject,nextBeacon,makeObject,addObject,removeObject,parsePlayerFile,decodePlayerFile,importPlayers,addPlayers,autofillOptions,autofill,assign,unassign,unassignAll,removePlayer,setOrigin,updateObject,coverage,bounds,validate};
+root.HiveModel={assertUnlocked,selectionCenter,setSelectionCenter,cornerCoords,displayCoords,centerLimits,setObjectCenter,coreSize,coreHeight,resizable,assertDimensions,solidFootprint,blocks,ALLIANCE_COLORS,allianceOf,activeAlliance,owns,allianceObjects,alliancePlayers,allianceGroups,priorityLabelsFor,referencePoint,setAlliance,resetAllianceLayout,SCHEMA,VERSION,WORLD_SIZE,worldBounds,referenceCoords,assertWorldPlacement,setObjectCorner,PRIORITY_DEFAULTS,priorityOf,priorityLabel,setPlayerPriorities,setPriorityLabel,setPlayerGroups,groupPriority,SEASONS,emptyGroups,isSeason4,isDeveloping,anchorType,setSeason,groupForPlayer,setPlayerGroup,clearPlayers,areNeighbors,groupComponents,terrainResizeCandidate,resizeTerrain,terrainCornerCoords,terrainPositionFromCornerCoords,setTerrainCorner,connectTerrains,disconnectTerrains,terrainTouching,terrainsConnected,terrainParts,expandObjectIds,objectBounds,terrainUnionGeometry,planBaseFill,fillBases,moveObjects,removeObjects,COLORS,clone,uid,normalizeName,snap,rect,overlaps,coords,positionFromCoords,playerFor,objectForPlayer,objectLabel,makeLayout,collision,assertPlacement,moveObject,nextBeacon,makeObject,addObject,removeObject,parsePlayerFile,decodePlayerFile,importPlayers,addPlayers,autofillOptions,autofill,assign,unassign,unassignAll,removePlayer,setOrigin,updateObject,coverage,bounds,validate};
+})(globalThis);
+
+/* Editing helpers shared by the editor and its tests. Geometry stays in HiveModel. */
+(function(root){
+'use strict';
+const M=root.HiveModel,t=(k,p)=>root.HiveI18n?.t(k,p)??k;
+const view=state=>({names:true,coordinates:true,notes:true,missiles:true,exportNotes:true,alliances:[1,2,3,4,5],...state.viewOptions});
+const visible=(state,o,exporting=false)=>{const v=view(state);return v.alliances.includes(M.allianceOf(o))&&(o.type!=='missile'||v.missiles)&&(o.type!=='note'||v.notes&&(!exporting||v.exportNotes));};
+function setLocked(state,ids,locked,scope='active'){const expanded=new Set(M.expandObjectIds(state,ids));if(scope!=='all'&&state.objects.some(o=>expanded.has(o.id)&&!M.owns(state,o)))throw Error(t('Wähle zuerst die passende Allianz.'));const next=M.clone(state);for(const o of next.objects)if(expanded.has(o.id))o.locked=!!locked;return next;}
+function setGroup(state,ids,name){const set=new Set(M.expandObjectIds(state,ids));const next=M.clone(state);name=M.normalizeName(name).slice(0,80);for(const o of next.objects)if(set.has(o.id)){if(name)o.selectionGroup=name;else delete o.selectionGroup;}return next;}
+function capture(state,ids){const set=new Set(M.expandObjectIds(state,ids)),plan=M.clone(state);plan.objects=plan.objects.filter(o=>set.has(o.id));if(!plan.objects.length)throw Error(t('Keine Elemente zum Verschieben ausgewählt.'));for(const o of plan.objects){delete o.locked;delete o.selectionGroup;if(o.type==='base')o.playerId=null;}plan.players=[];plan.groups=M.emptyGroups();delete plan.blueprints;delete plan.viewOptions;return M.validate(plan);}
+function prepareCopies(plan,targetAlliance=null){const groups=new Map();return plan.objects.map(raw=>{const o=M.clone(raw);o.id=M.uid(o.type);delete o.locked;delete o.selectionGroup;if(targetAlliance)o.alliance=targetAlliance;if(o.terrainGroup){if(!groups.has(o.terrainGroup))groups.set(o.terrainGroup,M.uid('terrain_group'));o.terrainGroup=groups.get(o.terrainGroup);}return o;});}
+function pasteAt(state,objects,x,y){
+ if(!objects.length)throw Error(t('Ungültiger Baustein.'));const b=M.objectBounds(objects),dx=Math.round(x-(b.left+b.right)/2),dy=Math.round(y-(b.bottom+b.top)/2);let next=M.clone(state);const active=M.activeAlliance(state),ids=[];
+ for(const raw of objects){let o={...M.clone(raw),x:raw.x+dx,y:raw.y+dy};next=M.setAlliance(next,M.allianceOf(o));if(o.type==='base'){o.slot=Math.max(0,...M.allianceObjects(next).filter(q=>q.type==='base').map(q=>q.slot))+1;o.playerId=null;if(o.beacon)o.beacon=M.nextBeacon(next);}next=M.addObject(next,o);ids.push(o.id);}
+ next=M.setAlliance(next,active);return {state:next,ids};
+}
+function duplicate(state,ids){const plan=capture(state,ids),objects=prepareCopies(plan),b=M.objectBounds(objects);return pasteAt(state,objects,(b.left+b.right)/2+(b.right-b.left)+1,(b.bottom+b.top)/2);}
+function arrange(state,ids,mode,gap=1){
+ if(!['alignX','alignY','row','column'].includes(mode)||![0,1,2].includes(gap))throw Error(t('Ungültiger Füllbereich oder Basisabstand.'));
+ const expanded=M.expandObjectIds(state,ids),seen=new Set(),units=[];
+ for(const o of state.objects.filter(o=>expanded.includes(o.id))){const key=o.terrainGroup||o.id;if(seen.has(key))continue;seen.add(key);const parts=M.terrainParts(state,o),b=M.objectBounds(parts);units.push({parts,b,x:(b.left+b.right)/2,y:(b.bottom+b.top)/2});}
+ if(units.length<2)throw Error(t('Mindestens zwei Objekte auswählen.'));
+ const horizontal=mode==='row',vertical=mode==='column';if(horizontal||vertical)units.sort((a,b)=>horizontal?a.b.left-b.b.left:a.b.bottom-b.b.bottom);
+ const first=units[0];let cursor=horizontal?first.b.left:first.b.bottom;const entries=[];
+ for(const u of units){let dx=0,dy=0;if(mode==='alignX'||vertical)dx=Math.floor(first.x)-Math.floor(u.x);if(mode==='alignY'||horizontal)dy=Math.floor(first.y)-Math.floor(u.y);if(horizontal){dx=cursor-u.b.left;cursor+=u.b.right-u.b.left+gap;}if(vertical){dy=cursor-u.b.bottom;cursor+=u.b.top-u.b.bottom+gap;}for(const o of u.parts)entries.push({id:o.id,x:o.x+dx,y:o.y+dy});}
+ return entries;
+}
+function swap(state,ids){const objects=state.objects.filter(o=>ids.includes(o.id));if(objects.length!==2||objects.some(o=>o.type!=='base')||M.allianceOf(objects[0])!==M.allianceOf(objects[1]))throw Error(t('Zwei Basen derselben Allianz auswählen.'));const next=M.clone(state),a=next.objects.find(o=>o.id===objects[0].id),b=next.objects.find(o=>o.id===objects[1].id);[a.playerId,b.playerId]=[b.playerId,a.playerId];return next;}
+function audit(state,area){
+ const result={landings:[],full:[],partial:[],outside:[],empty:[],unassigned:state.players.filter(p=>!M.objectForPlayer(state,p.id)),totalLandings:0};
+ for(const o of state.objects.filter(o=>o.type==='base')){if(!o.playerId)result.empty.push(o);if(M.isSeason4(state)){const c=M.coverage(state,o),r=M.rect(o),lights=state.objects.filter(l=>l.beacon&&M.allianceOf(l)===M.allianceOf(o));const intersects=lights.some(l=>M.overlaps(o,{...l,w:l.lightSize,h:l.lightSize}));result[c.unionFull?'full':intersects?'partial':'outside'].push(o);}}
+ if(!area)return result;
+ const world=M.worldBounds(state),left=Math.max(world.left,area.left),right=Math.min(world.right,area.right),bottom=Math.max(world.bottom,area.bottom),top=Math.min(world.top,area.top);
+ const x0=Math.ceil(left-world.left),x1=Math.floor(right-world.left)-3,y0=Math.ceil(bottom-world.bottom),y1=Math.floor(top-world.bottom)-3;
+ // Summed-area table: O(world tiles + candidate tiles), even for a whole-map scan.
+ const size=1001,occupied=new Uint8Array(1000000);
+ for(const raw of state.objects){if(['note','missile'].includes(raw.type))continue;const r=M.rect(M.solidFootprint(raw)),l=Math.max(0,Math.round(r.left-world.left)),rr=Math.min(1000,Math.round(r.right-world.left)),b=Math.max(0,Math.round(r.bottom-world.bottom)),tt=Math.min(1000,Math.round(r.top-world.bottom));for(let y=b;y<tt;y++)occupied.fill(1,y*1000+l,y*1000+rr);}
+ const sums=new Int32Array(size*size);for(let y=0;y<1000;y++){let line=0;for(let x=0;x<1000;x++){line+=occupied[y*1000+x];sums[(y+1)*size+x+1]=sums[y*size+x+1]+line;}}
+ for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const n=sums[(y+3)*size+x+3]-sums[y*size+x+3]-sums[(y+3)*size+x]+sums[y*size+x];if(!n){result.totalLandings++;if(result.landings.length<200)result.landings.push({x:world.left+x+1.5,y:world.bottom+y+1.5,w:3,h:3});}}
+ return result;
+}
+root.HiveQoL={view,visible,setLocked,setGroup,capture,prepareCopies,pasteAt,duplicate,arrange,swap,audit};
 })(globalThis);
