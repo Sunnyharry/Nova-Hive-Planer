@@ -1,10 +1,16 @@
 # Nova Hive Planner
 
-Current application release: **1.1.18**. Increase the final number once per subsequent delivered update (1.1.19, 1.1.20, …); see `AGENTS.md`. The JSON schema version remains independent.
+Current application release: **1.2.0**. Increase the final number once per subsequent delivered update (1.2.1, 1.2.2, …); see `AGENTS.md`. The JSON schema version remains independent.
 
 A client-side Last War hive editor with English, German, French, Spanish, Portuguese, Vietnamese and Korean interfaces. Open `dist/index.html` in a modern browser, or serve the `dist` directory as static files. The editor has no package dependencies or application login. Named map storage and sharing use the separate online document service; local editing and JSON files remain available offline. The hosted Site has its own owner access policy.
 
 The editor supports editable 100-seat templates with one-tile gaps or no gaps, TXT / semicolon CSV imports, individual and multiple-object movement, connected terrain shapes, rectangular base-area filling, priority-aware grouped autofill, multi-select organization, undo/redo, JSON save/load, and SVG, PNG and CSV exports. Player names and their calculated X/Y coordinates appear inside each base.
+
+## Stable editor workspace (1.2.0)
+
+The top header contains the editable plan title, save status, undo/redo, Plans (online archive and JSON save/open), Share & export, theme and language. Season, layout and active alliance occupy a separate context row. The left library has Players, Objects and Blueprints tabs, with searchable lists and the existing priority/friend-group organizer. Navigation, selection scope/type, object creation and Display controls stay beside the map. Hive checks use their own drawer below the map.
+
+The right sidebar is a fixed selection inspector with Position, Properties and Actions tabs. The name, selection metadata, lock controls and coordinate action stay in stable regions. Object and group positions refer to their centers. Size, colors and assignments appear under Properties; grouping, duplicate/copy/paste, arrangement and whole-alliance alignment are under Actions. Whole-alliance alignment is available only when its reference object is selected. Changing selection preserves the chosen tab; unrelated renders preserve coordinate drafts and inspector scroll. Sidebars scroll independently on desktop and stack on narrow screens. No plan schema or saved-map geometry changes.
 
 ## Viewer share address
 
@@ -12,7 +18,7 @@ New viewer links use `https://sunnyharry.github.io/Nova-Hive-Planer/viewer/?plan
 
 ## Named map archive and viewer
 
-The right panel **My maps** saves a named complete workspace online, including all 21 season/layout variants and their shared rosters. **Save map** updates the selected record; **Save as new** creates a separate map and viewer identity. Load and delete are available on each scrollable card. Loading confirms replacement of unsaved changes. Deleting a saved map preserves the currently open editor and revokes its public viewer. Explicit JSON Save/Open and exports still work as before.
+The top **Plans → My maps** menu saves a named complete workspace online, including all 21 season/layout variants and their shared rosters. **Save map** updates the selected record; **Save as new** creates a separate map and viewer identity. Load and delete are available on each scrollable card. Loading confirms replacement of unsaved changes. Deleting a saved map preserves the currently open editor and revokes its public viewer. Explicit JSON Save/Open and exports still work as before.
 
 Documents live in the separate Nova Hive Viewer service using R2. Only a random 256-bit private archive key is stored on this browser. Back up that key using **Back up archive access** to reopen the same archive from another browser, domain, or device, or after clearing browser data. Keep it private: it grants archive editing, while the viewer link grants read-only access to one published map. API writes use version checks and conditional R2 writes to reject stale saves rather than silently overwrite another session.
 
@@ -40,7 +46,7 @@ JSON saves preserve every alliance in all 21 variants, including the active alli
 
 ## Seasons and coordinates
 
-The season selector is at the top of the right panel. Off Season uses a central Marshall with bases around it and supports bases, Marshall and terrain only. Season 4 retains the Alliance Center, four beacon players and light ranges. Seasons 1, 2, 3, 5 and 6 provide basic layouts with a prominent localized **Under development** banner above the map; they do not implement seasonal special mechanics.
+The season selector is in the context row below the header. Off Season uses a central Marshall with bases around it and supports bases, Marshall and terrain only. Season 4 retains the Alliance Center, four beacon players and light ranges. Seasons 1, 2, 3, 5 and 6 provide basic layouts with a prominent localized **Under development** banner above the map; they do not implement seasonal special mechanics.
 
 The season and layout dropdowns switch directly between **21 independent variants**: seven seasons × spaced, compact and empty layouts. Switching preserves the previous variant and restores the destination's exact objects, terrain connections, coordinates, player assignments, light settings and title. An edited empty layout remains an edited empty layout. Variants that have not been edited retain their initial template; no switch recreates an existing map.
 
@@ -160,3 +166,5 @@ The selection toolbar defaults to Current alliance. All alliances includes every
 - Automatic last-session recovery in the same browser, including all 21 variants, names, assignments, groups, blueprints and view settings. It does not replace explicit named-map saves or JSON backups. Storage failures are reported, and last-session data is validated before restoration.
 
 All toolkit labels are localized in EN/DE/FR/ES/PT/VI/KO. Model schema 10 accepts older schemas through 9 without moving geometry. All existing tests and the new model/actual-handler tests pass; UI tests use DOM doubles, not a rendered browser.
+
+UI integration: `NOVA_DOM_MODULE=/absolute/path/to/linkedom node test/workspace-ui.test.cjs` runs the actual HTML structure with a QA-only DOM implementation. It covers menu relocation, delegated actions, persistent tabs and coordinate drafts, and all seven languages. The application itself remains dependency-free. Visual browser QA was unavailable for this release.
