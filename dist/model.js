@@ -60,9 +60,9 @@ function selectionCenter(state,ids){
  const b=objectBounds(objects),box={x:(b.left+b.right)/2,y:(b.bottom+b.top)/2,w:b.right-b.left,h:b.top-b.bottom};
  return {ids:expanded,coordinates:coords(state,box),limits:centerLimits(state,box)};
 }
-function setSelectionCenter(state,ids,x,y){
+function setSelectionCenter(state,ids,x,y,scope='active'){
  requireCoordinates(x,y);const info=selectionCenter(state,ids),dx=x-Math.floor(info.coordinates.x),dy=y-Math.floor(info.coordinates.y);
- return moveObjects(state,info.ids.map(id=>{const o=state.objects.find(p=>p.id===id);return {id,x:o.x+dx,y:o.y+dy};}));
+ return moveObjects(state,info.ids.map(id=>{const o=state.objects.find(p=>p.id===id);return {id,x:o.x+dx,y:o.y+dy};}),scope);
 }
 function setObjectCenter(state,id,x,y){
  requireCoordinates(x,y);const old=state.objects.find(o=>o.id===id);if(!old)throw new Error(t('Element nicht gefunden.'));
@@ -166,10 +166,10 @@ function moveObject(state,id,x,y){
  followReference(next,candidate);
  return next;
 }
-function moveObjects(state,entries){
+function moveObjects(state,entries,scope='active'){
  if(!Array.isArray(entries)||!entries.length||entries.length>800)throw new Error(t('Keine Elemente zum Verschieben ausgewählt.'));
  const ids=new Set(entries.map(e=>e?.id));if(ids.size!==entries.length||[...ids].some(id=>!state.objects.some(o=>o.id===id)))throw new Error(t('Ein ausgewähltes Element wurde nicht gefunden.'));
- if(state.objects.some(o=>ids.has(o.id)&&!owns(state,o)))throw new Error(t('Wähle zuerst die passende Allianz.'));
+ if(scope!=='all'&&state.objects.some(o=>ids.has(o.id)&&!owns(state,o)))throw new Error(t('Wähle zuerst die passende Allianz.'));
  const candidates=entries.map(e=>{const old=state.objects.find(o=>o.id===e.id);if(e.x!==snap(e.x,old.w)||e.y!==snap(e.y,old.h))throw new Error(t('Ungültige Objektposition.'));return {...old,x:e.x,y:e.y};});
  for(const candidate of candidates)if(candidate.terrainGroup){const old=state.objects.find(o=>o.id===candidate.id),dx=candidate.x-old.x,dy=candidate.y-old.y;for(const part of terrainParts(state,old)){const moved=candidates.find(o=>o.id===part.id);if(!moved||moved.x-part.x!==dx||moved.y-part.y!==dy)throw new Error(t('Verbundene Terrainflächen müssen gemeinsam verschoben werden.'));}}
  for(const candidate of candidates)assertPlacement(state,candidate,ids);
@@ -199,7 +199,7 @@ function addObject(state,o){
  return next;
 }
 function removeObject(state,id){return removeObjects(state,[id]);}
-function removeObjects(state,ids){const set=new Set(expandObjectIds(state,ids));if(!set.size)return state;if(state.objects.some(o=>set.has(o.id)&&!owns(state,o)))throw new Error(t('Wähle zuerst die passende Allianz.'));const next=clone(state);next.objects=next.objects.filter(o=>!set.has(o.id));return next;}
+function removeObjects(state,ids,scope='active'){const set=new Set(expandObjectIds(state,ids));if(!set.size)return state;if(scope!=='all'&&state.objects.some(o=>set.has(o.id)&&!owns(state,o)))throw new Error(t('Wähle zuerst die passende Allianz.'));const next=clone(state);next.objects=next.objects.filter(o=>!set.has(o.id));return next;}
 function terrainTouching(a,b){const A=rect(a),B=rect(b);return A.left<=B.right+1e-7&&A.right>=B.left-1e-7&&A.bottom<=B.top+1e-7&&A.top>=B.bottom-1e-7;}
 function terrainsConnected(parts){
  if(!parts.length)return false;const seen=new Set([parts[0].id]),queue=[parts[0]];

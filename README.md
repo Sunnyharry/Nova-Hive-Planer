@@ -1,6 +1,6 @@
 # Nova Hive Planner
 
-Current application release: **1.1.16**. Increase the final number once per subsequent delivered update (1.1.17, 1.1.18, …); see `AGENTS.md`. The JSON schema version remains independent.
+Current application release: **1.1.17**. Increase the final number once per subsequent delivered update (1.1.18, 1.1.19, …); see `AGENTS.md`. The JSON schema version remains independent.
 
 A client-side Last War hive editor with English, German, French, Spanish, Portuguese, Vietnamese and Korean interfaces. Open `dist/index.html` in a modern browser, or serve the `dist` directory as static files. The editor has no package dependencies or application login. Named map storage and sharing use the separate online document service; local editing and JSON files remain available offline. The hosted Site has its own owner access policy.
 
@@ -142,3 +142,7 @@ Every object has an editable label, including empty and occupied bases. A base l
 ## Selection center positioning (1.1.16)
 
 The alliance alignment panel appears only when its reference object alone is selected. Multi-object selections can be placed by the center of their combined bounding rectangle; relative positions stay fixed and collision/world-boundary checks are atomic. Connected terrain parts are included automatically. Even-sized selection bounds follow the same X-placeholder and left/lower middle-tile convention as individual objects. Object coordinate labels, roster, exports and viewer use the shared center display helper.
+
+## Selection scope (1.1.17)
+
+The selection toolbar defaults to Current alliance. All alliances includes every object type in the selection rectangle and supports additive Ctrl/Cmd-click, rigid dragging, keyboard/delta moves, center positioning, removal and undo across alliances. Object ownership, colors and assignments remain intact. Switching back filters the selection to the active alliance. Connected terrain expands as one object; terrain belonging to different alliances cannot be merged. The selected-object count also reports the number of alliances for a mixed selection. Autofill and new objects continue to use the active alliance.
