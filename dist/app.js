@@ -3,10 +3,11 @@
 const T=globalThis.HiveThemes??{svg:s=>s,init(){}},I=globalThis.HiveI18n,t=(key,params)=>I.t(key,params);
 const M=globalThis.HiveModel,W=globalThis.HiveWorkspace,$=id=>document.getElementById(id),svg=$('map'),stage=$('stage');
 // User-facing release: increment the final number for each later delivered update.
-const APP_VERSION='1.1.15';
+const APP_VERSION='1.1.16';
 const TOOL_SHORTCUTS={b:'base',m:'marshall',a:'center',t:'terrain',l:'beacon'};
 const shortcutFor=type=>Object.keys(TOOL_SHORTCUTS).find(key=>TOOL_SHORTCUTS[key]===type)?.toUpperCase();
 let workspace=W.createWorkspace(),state=W.activePlan(workspace),selectedId=null,pending=null,filter='all',dirty=false,undoStack=[],redoStack=[],drag=null,suppressClick=false,confirmAction=null,toastTimer=null;
+let selectionCenterEntry=null;
 let selectedObjectIds=new Set(),mapMode='pan',fillArea=null,fillPreview=null;
 let organizerOpen=false,organizationTab='priority',selectedPlayers=new Set(),lastAutofillResult=null;
 const allianceName=id=>t('Allianz {n}',{n:id});
@@ -198,13 +199,20 @@ function objectPositionForm(o){
  const q=M.displayCoords(state,o),limits=M.centerLimits(state,o);
  return `<form id="position-form" class="terrain-position-form"><h3>${h('Objektzentrum')}</h3><div class="inline-fields"><label>X<input id="object-x" type="number" step="1" min="${limits.minX}" max="${limits.maxX}" value="${q.x==='X'?'':q.x}" placeholder="X" required></label><label>Y<input id="object-y" type="number" step="1" min="${limits.minY}" max="${limits.maxY}" value="${q.y==='X'?'':q.y}" placeholder="X" required></label></div><button type="submit" class="full">${h('Position übernehmen')}</button><p class="field-help">${h('X/Y beziehen sich auf das Zentrum. Das gesamte Objekt bleibt innerhalb der Karte.')}</p>${q.x==='X'||q.y==='X'?`<p class="field-help">${h('Kein eindeutiges mittleres Feld: Bitte X/Y manuell eintragen. Bei gerader Größe verwenden wir das mittlere Feld links bzw. unten.')}</p>`:''}</form>`;
 }
+function selectionCenterKey(info){return JSON.stringify([info.ids.slice().sort(),info.coordinates]);}
+function selectionPositionForm(){
+ const info=M.selectionCenter(state,[...selectedObjectIds]),q=info.coordinates,limits=info.limits,confirmed=selectionCenterEntry?.key===selectionCenterKey(info);
+ const value=axis=>Number.isInteger(q[axis])?q[axis]:confirmed?selectionCenterEntry[axis]:'';
+ return `<form id="selection-position-form" class="terrain-position-form"><h3>${h('Mittelpunkt der Auswahl')}</h3><div class="inline-fields"><label>X<input id="selection-x" type="number" step="1" min="${limits.minX}" max="${limits.maxX}" value="${value('x')}" placeholder="X" required></label><label>Y<input id="selection-y" type="number" step="1" min="${limits.minY}" max="${limits.maxY}" value="${value('y')}" placeholder="X" required></label></div><button type="submit" class="full">${h('Auswahl positionieren')}</button><p class="field-help">${h('Der Mittelpunkt des äußeren Rahmens wird positioniert. Alle markierten Objekte behalten ihre Abstände zueinander.')}</p>${!Number.isInteger(q.x)||!Number.isInteger(q.y)?`<p class="field-help">${h('Kein eindeutiges mittleres Feld: Bitte X/Y manuell eintragen. Bei gerader Größe verwenden wir das mittlere Feld links bzw. unten.')}</p>`:''}</form>`;
+}
 function bulkMoveForm(){return `<form id="bulk-move-form"><div class="inline-fields"><label>${h('Verschiebung X')}<input id="selection-dx" type="number" step="1" value="0" required></label><label>${h('Verschiebung Y')}<input id="selection-dy" type="number" step="1" value="0" required></label></div><button type="submit" class="full">${h('Auswahl verschieben')}</button></form>`;}
 function renderInspector(){
  const objects=selectedObjects(),o=selected();$('selection-type').hidden=!o;
+ $('anchor-section').hidden=!(objects.length===1&&o?.type===M.anchorType(state));
  if(objects.length>1){
   const allTerrain=objects.every(q=>q.type==='terrain'),compound=allTerrain&&o?.terrainGroup&&objects.every(q=>q.terrainGroup===o.terrainGroup),bounds=M.objectBounds(objects);
   $('selection-type').textContent=compound?t('Verbundene Terrainfläche'):t('{n} Elemente',{n:objects.length});
-  $('inspector').innerHTML=`<div class="selection-form multi-inspector"><p class="field-help">${h('Ziehe ein markiertes Element, um die gesamte Auswahl zu verschieben.')}</p>${compound?`<label>${h('Bezeichnung')}<input id="terrain-group-name" value="${esc(M.objectLabel(state,o))}" maxlength="80"></label><p class="field-help">${h('{n} Teile · Außenmaß {w} × {h}',{n:objects.length,w:bounds.right-bounds.left,h:bounds.top-bounds.bottom})}</p>${terrainColorField(o)}${objectPositionForm(o)}<p class="field-help">${h('Bei verbundenem Terrain beziehen sich die Koordinaten auf das Zentrum des äußeren Rahmens.')}</p>`:bulkMoveForm()}${allTerrain?`${!compound?`<button id="connect-terrains" class="full">${h('Terrain verbinden')}</button>`:''}${objects.some(q=>q.terrainGroup)?`<button id="disconnect-terrains" class="full">${h('Terrain trennen')}</button>`:''}`:''}<button id="delete-selected" class="danger full">${h('Auswahl entfernen')}</button><button id="clear-map-selection" class="full">${h('Auswahl aufheben')}</button></div>`;return;
+  $('inspector').innerHTML=`<div class="selection-form multi-inspector"><p class="field-help">${h('Ziehe ein markiertes Element, um die gesamte Auswahl zu verschieben.')}</p>${compound?`<label>${h('Bezeichnung')}<input id="terrain-group-name" value="${esc(M.objectLabel(state,o))}" maxlength="80"></label><p class="field-help">${h('{n} Teile · Außenmaß {w} × {h}',{n:objects.length,w:bounds.right-bounds.left,h:bounds.top-bounds.bottom})}</p>${terrainColorField(o)}${objectPositionForm(o)}<p class="field-help">${h('Bei verbundenem Terrain beziehen sich die Koordinaten auf das Zentrum des äußeren Rahmens.')}</p>`:selectionPositionForm()+bulkMoveForm()}${allTerrain?`${!compound?`<button id="connect-terrains" class="full">${h('Terrain verbinden')}</button>`:''}${objects.some(q=>q.terrainGroup)?`<button id="disconnect-terrains" class="full">${h('Terrain trennen')}</button>`:''}`:''}<button id="delete-selected" class="danger full">${h('Auswahl entfernen')}</button><button id="clear-map-selection" class="full">${h('Auswahl aufheben')}</button></div>`;return;
  }
  if(!o){$('inspector').innerHTML=`<div class="selection-empty"><span aria-hidden="true">⌖</span><p>${h('Wähle eine Basis, den Marshall oder ein anderes Element auf der Karte.')}</p></div>`;return;}
  $('selection-type').textContent=allianceName(M.allianceOf(o))+' · '+typeName(o);
@@ -243,7 +251,7 @@ function renderControls(){
  $('season-help').textContent=t('Jede Season und jedes Layout behält seinen eigenen Kartenstand. Spieler, Gruppen und Prioritäten gelten für alle Varianten.');
  $('anchor-title').textContent=ref;$('anchor-size-key').textContent=t(s4?'Zentrum 9 × 9':'Marshall 3 × 3');
  $('autofill-direction').textContent=t('Autofill: Prioritäten und Gruppendurchschnitt, von innen nach außen.');
- $('mode-help-note').textContent=s4?t('Alle Koordinaten bezeichnen das linke untere Feld. Verschieben verändert nur die gewählten Objekte. L4 zeigt 25 × 25 Felder je Beacon.'):t('Alle Koordinaten bezeichnen das linke untere Feld. Der Marshall bleibt der Bezugspunkt für Autofill.');
+ $('mode-help-note').textContent=s4?t('Alle Koordinaten bezeichnen den Mittelpunkt des Objekts. Verschieben verändert nur die gewählten Objekte. L4 zeigt 25 × 25 Felder je Beacon.'):t('Alle Koordinaten bezeichnen den Mittelpunkt des Objekts. Der Marshall bleibt der Bezugspunkt für Autofill.');
  document.querySelectorAll('[data-s4-only]').forEach(el=>el.hidden=!s4);
  $('clear-players').disabled=!M.alliancePlayers(state).length;
  $('plan-title').value=state.title;$('anchor-x').value=M.referenceCoords(state).x;$('anchor-y').value=M.referenceCoords(state).y;$('anchor-x').min=$('anchor-y').min=M.isSeason4(state)?4:1;$('anchor-x').max=$('anchor-y').max=M.isSeason4(state)?995:998;$('show-light').checked=state.showLight;$('layout-select').value=state.layout;
@@ -430,8 +438,15 @@ $('alliance-select').addEventListener('change',e=>safely(()=>activateAlliance(Nu
 $('season-select').addEventListener('change',e=>{const value=e.target.value;e.target.value=state.season;safely(()=>activateVariant(value,state.layout));});
 $('layout-select').addEventListener('change',e=>{const value=e.target.value;e.target.value=state.layout;safely(()=>activateVariant(state.season,value));});
 $('inspector').addEventListener('submit',e=>{
- if(!['position-form','terrain-size-form','object-size-form','bulk-move-form'].includes(e.target.id))return;e.preventDefault();const o=selected();if(!o)return;
+ if(!['position-form','terrain-size-form','object-size-form','bulk-move-form','selection-position-form'].includes(e.target.id))return;e.preventDefault();const o=selected();if(!o)return;
  safely(()=>{
+  if(e.target.id==='selection-position-form'){
+   const x=Number($('selection-x').value),y=Number($('selection-y').value);
+   if(!$('selection-x').value.trim()||!$('selection-y').value.trim())throw new Error(t('Bitte gültige Koordinaten eingeben.'));
+   const next=M.setSelectionCenter(state,[...selectedObjectIds],x,y);
+   selectionCenterEntry={key:selectionCenterKey(M.selectionCenter(next,[...selectedObjectIds])),x,y};
+   commit(next,t('Koordinaten aktualisiert.'));renderInspector();return;
+  }
   if(e.target.id==='bulk-move-form')return moveSelection(Number($('selection-dx').value),Number($('selection-dy').value));
   if(e.target.id==='object-size-form')return commit(M.updateObject(state,o.id,{w:Number($('object-width').value),h:Number($('object-height').value),...(M.coreSize(o)?{coreW:Number($('core-width').value),coreH:Number($('core-height').value)}:{})}),t('Größe angepasst.'));
   if(e.target.id==='terrain-size-form')return commit(M.updateObject(state,o.id,{w:Number($('terrain-width').value),h:Number($('terrain-height').value)}),t('Größe angepasst.'));
@@ -466,7 +481,7 @@ $('inspector').addEventListener('click',e=>safely(()=>{
  if(e.target.id==='clear-map-selection'){setMapSelection([]);render();return;}
  if(e.target.id==='unassign-player'&&selected())return commit(M.unassign(state,selectedId),t('Der Spieler ist wieder ohne Platz.'));
 }));
-$('anchor-form').addEventListener('submit',e=>{e.preventDefault();safely(()=>commit(M.setOrigin(state,Number($('anchor-x').value),Number($('anchor-y').value)),t('Koordinaten aktualisiert.')));});
+$('anchor-form').addEventListener('submit',e=>{e.preventDefault();if(selectedObjects().length!==1||selected()?.type!==M.anchorType(state))return;safely(()=>commit(M.setOrigin(state,Number($('anchor-x').value),Number($('anchor-y').value)),t('Koordinaten aktualisiert.')));});
 $('plan-title').addEventListener('change',e=>{const name=e.target.value.trim()||t('Mein Hive');commit({...M.clone(state),title:name});});
 $('show-light').addEventListener('change',e=>commit({...M.clone(state),showLight:e.target.checked}));
 $('player-search').addEventListener('input',renderRoster);
@@ -601,7 +616,7 @@ if(context?.registerTool){
  const register=tool=>{try{void Promise.resolve(context.registerTool(tool,{signal:life.signal})).catch(()=>{});}catch{}};
  register({name:'read_hive_plan',title:'Hive-Plan lesen',description:'Returns the current players, placements and calculated coordinates.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true,untrustedContentHint:true},execute(){return {title:state.title,season:state.season,layout:state.layout,variantCount:workspace.variants.length,groups:state.groups,priorityLabels:state.priorityLabels,alliancePriorityLabels:state.alliancePriorityLabels??{},origin:state.origin,activeAlliance:M.activeAlliance(state),players:state.players,objects:state.objects.map(o=>({...o,name:M.objectLabel(state,o),coordinates:M.displayCoords(state,o),coordinateReference:'object-center'}))};}});
  register({name:'add_hive_players',title:'Spieler hinzufügen',description:'Adds names to the player list. Existing names are preserved and duplicates skipped.',inputSchema:{type:'object',properties:{names:{type:'array',items:{type:'string',minLength:1,maxLength:80},minItems:1,maxItems:300}},required:['names'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:true},execute(input){if(!input||!Array.isArray(input.names)||!input.names.length||input.names.length>300||input.names.some(n=>typeof n!=='string'||!n.trim()||n.includes('\n')||n.length>80))throw new Error(t('Ungültige oder doppelte Spieler.'));const r=M.addPlayers(state,input.names.join('\n'));commit(r.state);return {added:r.added,skipped:r.skipped,total:M.alliancePlayers(state).length};}});
- register({name:'set_hive_center_coordinates',title:'Zentrumskoordinaten setzen',description:'Aligns only the active alliance using the bottom-left tile of its reference (Alliance Center or Marshall). Every object must remain within the 1000 by 1000 world.',inputSchema:{type:'object',properties:{x:{type:'integer',minimum:0,maximum:999},y:{type:'integer',minimum:0,maximum:999}},required:['x','y'],additionalProperties:false},annotations:{readOnlyHint:false},execute(input){if(!input)throw new Error(t('Bitte gültige Koordinaten eingeben.'));commit(M.setOrigin(state,input.x,input.y));return {origin:state.origin};}});
+ register({name:'set_hive_center_coordinates',title:'Zentrumskoordinaten setzen',description:'Aligns only the active alliance using the center of its reference (Alliance Center or Marshall). Every object must remain within the 1000 by 1000 world.',inputSchema:{type:'object',properties:{x:{type:'integer',minimum:0,maximum:999},y:{type:'integer',minimum:0,maximum:999}},required:['x','y'],additionalProperties:false},annotations:{readOnlyHint:false},execute(input){if(!input)throw new Error(t('Bitte gültige Koordinaten eingeben.'));commit(M.setOrigin(state,input.x,input.y));return {origin:state.origin};}});
  register({name:'assign_hive_players',title:'Spieler auf freie Plätze setzen',description:'Assigns existing players to existing empty bases in one batch. Fails atomically if any assignment is invalid.',inputSchema:{type:'object',properties:{assignments:{type:'array',items:{type:'object',properties:{playerId:{type:'string'},baseId:{type:'string'}},required:['playerId','baseId'],additionalProperties:false},minItems:1,maxItems:300}},required:['assignments'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:true},execute(input){if(!input||!Array.isArray(input.assignments)||!input.assignments.length||input.assignments.length>300)throw new Error(t('Eine Spielerzuweisung ist ungültig oder doppelt.'));let next=state;const ids=new Set();for(const a of input.assignments){if(!a||ids.has(a.playerId))throw new Error(t('Eine Spielerzuweisung ist ungültig oder doppelt.'));ids.add(a.playerId);next=M.assign(next,a.playerId,a.baseId);}commit(next);return {assigned:input.assignments.length};}});
 }
 })();

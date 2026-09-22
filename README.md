@@ -1,6 +1,6 @@
 # Nova Hive Planner
 
-Current application release: **1.1.15**. Increase the final number once per subsequent delivered update (1.1.16, 1.1.17, …); see `AGENTS.md`. The JSON schema version remains independent.
+Current application release: **1.1.16**. Increase the final number once per subsequent delivered update (1.1.17, 1.1.18, …); see `AGENTS.md`. The JSON schema version remains independent.
 
 A client-side Last War hive editor with English, German, French, Spanish, Portuguese, Vietnamese and Korean interfaces. Open `dist/index.html` in a modern browser, or serve the `dist` directory as static files. The editor has no package dependencies or application login. Named map storage and sharing use the separate online document service; local editing and JSON files remain available offline. The hosted Site has its own owner access policy.
 
@@ -138,3 +138,7 @@ All coordinate labels, rosters, previews, object inspectors, CSV and image expor
 Odd footprints have an exact middle tile. Even dimensions show X for the ambiguous axis until the user enters a whole-number value; that manual reference uses the left/lower middle tile and persists with the object. Dragging keeps that reference consistent. Resizing or changing terrain connections clears confirmation for a newly ambiguous center. Objects still occupy full integer map tiles within 0–999; no half-coordinate is shown to players. `coords` returns mathematical centers internally, `displayCoords` resolves this presentation convention, and explicitly named corner helpers remain for migration-era geometry tests.
 
 Every object has an editable label, including empty and occupied bases. A base label is independent from its assigned player; both appear on the map when different, and viewer player search also matches the base label. Clearing the custom base label restores the assigned player or automatic seat label. Schema 9 persists base labels and manual-center confirmations, accepting older schemas without relocating objects.
+
+## Selection center positioning (1.1.16)
+
+The alliance alignment panel appears only when its reference object alone is selected. Multi-object selections can be placed by the center of their combined bounding rectangle; relative positions stay fixed and collision/world-boundary checks are atomic. Connected terrain parts are included automatically. Even-sized selection bounds follow the same X-placeholder and left/lower middle-tile convention as individual objects. Object coordinate labels, roster, exports and viewer use the shared center display helper.

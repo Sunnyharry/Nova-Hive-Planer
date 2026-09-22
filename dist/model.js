@@ -1,5 +1,5 @@
-/* Pure map model. Public coordinates identify the bottom-left tile (0–999).
-   Internal SVG geometry uses centers; even dimensions have half-tile centers. */
+/* Public coordinates identify object centers (0–999).
+   Even dimensions use X placeholders until the middle-tile reference is confirmed. */
 (function(root){
 'use strict';
 const SCHEMA='nova-hive-planner',VERSION=9,WORLD_SIZE=1000;
@@ -54,6 +54,16 @@ function cornerCoords(state,o){
 function coords(state,o){const r=o.terrainGroup?objectBounds(terrainParts(state,o)):rect(o);return {x:state.origin.x+(r.left+r.right)/2-state.origin.mapX,y:state.origin.y+(r.bottom+r.top)/2-state.origin.mapY};}
 function displayCoords(state,o){const q=coords(state,o);return {x:Number.isInteger(q.x)?q.x:o.centerConfirmedX?Math.floor(q.x):'X',y:Number.isInteger(q.y)?q.y:o.centerConfirmedY?Math.floor(q.y):'X'};}
 function centerLimits(state,o){const r=o.terrainGroup?objectBounds(terrainParts(state,o)):rect(o),w=r.right-r.left,h=r.top-r.bottom;return {minX:Math.floor((w-1)/2),maxX:WORLD_SIZE-1-Math.ceil((w-1)/2),minY:Math.floor((h-1)/2),maxY:WORLD_SIZE-1-Math.ceil((h-1)/2)};}
+function selectionCenter(state,ids){
+ const expanded=expandObjectIds(state,ids),objects=state.objects.filter(o=>expanded.includes(o.id));
+ if(!objects.length)throw new Error(t('Keine Elemente zum Verschieben ausgewählt.'));
+ const b=objectBounds(objects),box={x:(b.left+b.right)/2,y:(b.bottom+b.top)/2,w:b.right-b.left,h:b.top-b.bottom};
+ return {ids:expanded,coordinates:coords(state,box),limits:centerLimits(state,box)};
+}
+function setSelectionCenter(state,ids,x,y){
+ requireCoordinates(x,y);const info=selectionCenter(state,ids),dx=x-Math.floor(info.coordinates.x),dy=y-Math.floor(info.coordinates.y);
+ return moveObjects(state,info.ids.map(id=>{const o=state.objects.find(p=>p.id===id);return {id,x:o.x+dx,y:o.y+dy};}));
+}
 function setObjectCenter(state,id,x,y){
  requireCoordinates(x,y);const old=state.objects.find(o=>o.id===id);if(!old)throw new Error(t('Element nicht gefunden.'));
  const q=coords(state,old),dx=x-Math.floor(q.x),dy=y-Math.floor(q.y),ids=expandObjectIds(state,[id]);
@@ -534,5 +544,5 @@ function validate(raw){
  for(const group of new Set(state.objects.filter(o=>o.terrainGroup).map(o=>o.terrainGroup)))if(!terrainsConnected(state.objects.filter(o=>o.terrainGroup===group)))throw new Error(t('Ungültige Terrain-Gruppe.'));
  return state;
 }
-root.HiveModel={cornerCoords,displayCoords,centerLimits,setObjectCenter,coreSize,coreHeight,resizable,assertDimensions,solidFootprint,blocks,ALLIANCE_COLORS,allianceOf,activeAlliance,owns,allianceObjects,alliancePlayers,allianceGroups,priorityLabelsFor,referencePoint,setAlliance,resetAllianceLayout,SCHEMA,VERSION,WORLD_SIZE,worldBounds,referenceCoords,assertWorldPlacement,setObjectCorner,PRIORITY_DEFAULTS,priorityOf,priorityLabel,setPlayerPriorities,setPriorityLabel,setPlayerGroups,groupPriority,SEASONS,emptyGroups,isSeason4,isDeveloping,anchorType,setSeason,groupForPlayer,setPlayerGroup,clearPlayers,areNeighbors,groupComponents,terrainResizeCandidate,resizeTerrain,terrainCornerCoords,terrainPositionFromCornerCoords,setTerrainCorner,connectTerrains,disconnectTerrains,terrainTouching,terrainsConnected,terrainParts,expandObjectIds,objectBounds,terrainUnionGeometry,planBaseFill,fillBases,moveObjects,removeObjects,COLORS,clone,uid,normalizeName,snap,rect,overlaps,coords,positionFromCoords,playerFor,objectForPlayer,objectLabel,makeLayout,collision,assertPlacement,moveObject,nextBeacon,makeObject,addObject,removeObject,parsePlayerFile,decodePlayerFile,importPlayers,addPlayers,autofillOptions,autofill,assign,unassign,unassignAll,removePlayer,setOrigin,updateObject,coverage,bounds,validate};
+root.HiveModel={selectionCenter,setSelectionCenter,cornerCoords,displayCoords,centerLimits,setObjectCenter,coreSize,coreHeight,resizable,assertDimensions,solidFootprint,blocks,ALLIANCE_COLORS,allianceOf,activeAlliance,owns,allianceObjects,alliancePlayers,allianceGroups,priorityLabelsFor,referencePoint,setAlliance,resetAllianceLayout,SCHEMA,VERSION,WORLD_SIZE,worldBounds,referenceCoords,assertWorldPlacement,setObjectCorner,PRIORITY_DEFAULTS,priorityOf,priorityLabel,setPlayerPriorities,setPriorityLabel,setPlayerGroups,groupPriority,SEASONS,emptyGroups,isSeason4,isDeveloping,anchorType,setSeason,groupForPlayer,setPlayerGroup,clearPlayers,areNeighbors,groupComponents,terrainResizeCandidate,resizeTerrain,terrainCornerCoords,terrainPositionFromCornerCoords,setTerrainCorner,connectTerrains,disconnectTerrains,terrainTouching,terrainsConnected,terrainParts,expandObjectIds,objectBounds,terrainUnionGeometry,planBaseFill,fillBases,moveObjects,removeObjects,COLORS,clone,uid,normalizeName,snap,rect,overlaps,coords,positionFromCoords,playerFor,objectForPlayer,objectLabel,makeLayout,collision,assertPlacement,moveObject,nextBeacon,makeObject,addObject,removeObject,parsePlayerFile,decodePlayerFile,importPlayers,addPlayers,autofillOptions,autofill,assign,unassign,unassignAll,removePlayer,setOrigin,updateObject,coverage,bounds,validate};
 })(globalThis);
