@@ -14,8 +14,8 @@ class Element{
 const get=id=>{if(!elements.has(id))elements.set(id,new Element(id));return elements.get(id);};
 const document={getElementById:get,createElement:tag=>new Element(tag),querySelectorAll:()=>[],addEventListener(){},body:new Element(),documentElement:{lang:'de'}};
 const context=vm.createContext({console,document,window:{addEventListener(){}},Blob,URL:{createObjectURL(blob){const id='blob:'+ ++blobId;blobs.set(id,blob);return id;},revokeObjectURL(){}},setTimeout(){return 1;},clearTimeout(){},requestAnimationFrame(fn){fn();},ResizeObserver:class{observe(){}},TextDecoder});
-for(const name of ['i18n','model','workspace'])vm.runInContext(fs.readFileSync('dist/'+name+'.js','utf8'),context);
-let app=fs.readFileSync('dist/app.js','utf8');
+for(const name of ['i18n','world-map','model','workspace'])vm.runInContext(fs.readFileSync('dist/'+name+'.js','utf8'),context);
+let app=fs.readFileSync('dist/app.js','utf8').replace('initWorldControls();','');
 const start="I.apply(document);$('language-select').value=I.language;render();requestAnimationFrame(fitMap);";assert.ok(app.includes(start));
 app=app.replace(start,"render=()=>renderControls();fitMap=()=>{};renderMap=()=>{};globalThis.testApp={get state(){return state;},get workspace(){return workspace;},commit,restoreHistory,renderInspector,scene,setMapSelection,select:o=>{selectedId=o.id;selectedObjectIds=new Set([o.id]);}};"+start);
 vm.runInContext(app,context);

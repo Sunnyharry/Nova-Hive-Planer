@@ -4,7 +4,7 @@
 const M=root.HiveModel,SCHEMA='nova-hive-workspace',VERSION=1,LAYOUTS=['spaced','compact','empty'],MAX_FILE_BYTES=20_000_000;
 const t=(key,params={})=>root.HiveI18n?.t(key,params)??key.replace(/\{(\w+)\}/g,(_,k)=>String(params[k]??'{'+k+'}'));
 const key=(season,layout)=>season+':'+layout;
-const variantFromPlan=plan=>M.clone({season:plan.season,layout:plan.layout,title:plan.title,origin:plan.origin,showLight:plan.showLight,objects:plan.objects,...(plan.viewOptions===undefined?{}:{viewOptions:plan.viewOptions}),...(plan.activeAlliance===undefined?{}:{activeAlliance:plan.activeAlliance})});
+const variantFromPlan=plan=>M.clone({season:plan.season,layout:plan.layout,title:plan.title,origin:plan.origin,showLight:plan.showLight,objects:plan.objects,...(plan.worldMap?{worldMap:plan.worldMap}:{}),...(plan.mapStyle?{mapStyle:plan.mapStyle}:{}),...(plan.mapOptions?{mapOptions:plan.mapOptions}:{}),...(plan.viewOptions===undefined?{}:{viewOptions:plan.viewOptions}),...(plan.activeAlliance===undefined?{}:{activeAlliance:plan.activeAlliance})});
 const sharedFromPlan=plan=>M.clone({players:plan.players,groups:plan.groups,priorityLabels:plan.priorityLabels,...(plan.blueprints===undefined?{}:{blueprints:plan.blueprints}),...(plan.alliancePriorityLabels===undefined?{}:{alliancePriorityLabels:plan.alliancePriorityLabels})});
 function activePlan(workspace){
  const variant=workspace.variants.find(v=>v.season===workspace.active.season&&v.layout===workspace.active.layout);

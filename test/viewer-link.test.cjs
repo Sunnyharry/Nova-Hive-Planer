@@ -4,7 +4,7 @@ const archive=fs.readFileSync('dist/archive.js','utf8'),share=archive.match(/fun
 const elements=new Map();class El{constructor(){this.value='';this.listeners={};this.dataset={};this.classList={add(){},remove(){}};}addEventListener(k,f){(this.listeners[k]??=[]).push(f);}setAttribute(k,v){this[k]=v;}getBoundingClientRect(){return {left:0,top:0,width:1000,height:700};}setPointerCapture(){}focus(){}closest(){return null;}querySelector(){return new El();}replaceChildren(){}append(){}}
 const get=id=>{if(!elements.has(id))elements.set(id,new El());return elements.get(id);};const calls=[];let saved;
 const context=vm.createContext({console,document:{getElementById:get,querySelectorAll:()=>[],createElement:()=>new El(),documentElement:{}},ResizeObserver:class{observe(){}},fetch:async(url,opts)=>{calls.push({url,opts});return {ok:true,json:async()=>({name:'Shared map',updatedAt:'2026-09-20T00:00:00Z',plan:saved})};},URLSearchParams,AbortSignal,location:{search:'?plan=example-id'}});
-for(const file of ['dist/i18n.js','dist/model.js'])vm.runInContext(fs.readFileSync(file,'utf8'),context);
+for(const file of ['dist/i18n.js','dist/world-map.js','dist/model.js'])vm.runInContext(fs.readFileSync(file,'utf8'),context);
 const M=context.HiveModel;saved=M.makeLayout('empty');saved=M.addObject(saved,M.makeObject(saved,'missile'));
 for(const [i,type] of ['base','beacon','center','marshall','terrain','stronghold','city'].entries()){let o=M.makeObject(saved,type,50+i*40,80);if(type==='terrain')o={...o,x:50+i*40,y:80,w:5,h:7};saved=M.addObject(saved,o);}
 vm.runInContext(fs.readFileSync('viewer/viewer.js','utf8'),context);

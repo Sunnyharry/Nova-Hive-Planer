@@ -203,3 +203,5 @@ body[data-editor-shell]{height:100dvh;display:flex;flex-direction:column;overflo
 #left-players .roster-management .hive-reset .field-help{display:block}
 #left-players>.autofill-controls{flex-shrink:0;gap:2px}
 #left-players>.roster-management{flex-shrink:0}
+
+.world-status{margin:0;padding:5px 12px;background:var(--panel,#172638);font-size:12px}#world-dialog{max-width:580px}#world-import-error{color:#ed6570}#world-display{border:0;padding:8px 0}#world-display legend{font-weight:650}

@@ -4,12 +4,13 @@ const T=globalThis.HiveThemes??{svg:s=>s,init(){}},I=globalThis.HiveI18n,t=(key,
 const Q=globalThis.HiveQoL;
 const M=globalThis.HiveModel,W=globalThis.HiveWorkspace,$=id=>document.getElementById(id),svg=$('map'),stage=$('stage');
 // User-facing release: increment the final number for each later delivered update.
-const APP_VERSION='1.2.0';
+const APP_VERSION='1.2.1';
 const editorUI={ready:false,left:'players',inspector:'position',inspectorKey:null,selectionKey:null};
 const TOOL_SHORTCUTS={b:'base',m:'marshall',a:'center',t:'terrain',l:'beacon'};
 const shortcutFor=type=>Object.keys(TOOL_SHORTCUTS).find(key=>TOOL_SHORTCUTS[key]===type)?.toUpperCase();
 let workspace=W.createWorkspace(),state=W.activePlan(workspace),selectedId=null,pending=null,filter='all',dirty=false,undoStack=[],redoStack=[],drag=null,suppressClick=false,confirmAction=null,toastTimer=null;
 let selectionCenterEntry=null;
+let worldSelection=null,worldEditing=false,worldPending=null;
 let nameAction=null,qolInitialized=false;
 let selectionScope='active',selectionFilter='all',clipboardPlan=null,pasteObjects=null,arrangement=null,checkArea=null,checkResult=null,highlightObject=null,recoveryTimer=null,recoveryInitialized=false;
 let selectedObjectIds=new Set(),mapMode='pan',fillArea=null,fillPreview=null;
@@ -28,10 +29,10 @@ const typeName=o=>t({base:o?.beacon?'Beacon':'Basis',center:'Zentrum',marshall:'
 const selected=()=>state.objects.find(o=>o.id===selectedId)??null;
 const selectedObjects=()=>state.objects.filter(o=>selectedObjectIds.has(o.id));
 function selectionMatches(o){return Q.visible(state,o)&&(selectionFilter==='all'||selectionFilter==='bases'&&o.type==='base'||selectionFilter==='terrain'&&o.type==='terrain'||selectionFilter==='buildings'&&['center','marshall','stronghold','city'].includes(o.type)||selectionFilter==='notes'&&o.type==='note');}
-function setMapSelection(ids,primary=null){selectedObjectIds=new Set(M.expandObjectIds(state,ids).filter(id=>state.objects.some(o=>o.id===id&&(selectionScope==='all'||M.owns(state,o)))));selectedId=selectedObjectIds.has(primary)?primary:selectedObjectIds.values().next().value??null;}
+function setMapSelection(ids,primary=null){if(ids.length){worldSelection=null;editorUI.inspectorKey=null;}selectedObjectIds=new Set(M.expandObjectIds(state,ids).filter(id=>state.objects.some(o=>o.id===id&&(selectionScope==='all'||M.owns(state,o)))));selectedId=selectedObjectIds.has(primary)?primary:selectedObjectIds.values().next().value??null;}
 function selectionSummary(){const objects=selectedObjects(),alliances=new Set(objects.map(M.allianceOf)).size;return !objects.length?'':alliances>1?t('{n} Objekte aus {alliances} Allianzen ausgewählt',{n:objects.length,alliances}):t('{n} Elemente',{n:objects.length});}
 function activateSelectionAlliance(){const objects=selectedObjects(),ids=new Set(objects.map(M.allianceOf));if(ids.size===1&&!M.owns(state,objects[0]))commit(M.setAlliance(state,M.allianceOf(objects[0])));}
-function resetMapTools(clearSelection=false){pasteObjects=null;arrangement=null;pending=null;ghost=null;drag=null;fillArea=null;fillPreview=null;mapMode='pan';if(clearSelection){selectedObjectIds.clear();selectedId=null;}}
+function resetMapTools(clearSelection=false){worldSelection=null;editorUI.inspectorKey=null;pasteObjects=null;arrangement=null;pending=null;ghost=null;drag=null;fillArea=null;fillPreview=null;mapMode='pan';if(clearSelection){selectedObjectIds.clear();selectedId=null;}}
 function refreshFillPreview(){try{fillPreview=fillArea?M.planBaseFill(state,fillArea,Number($('fill-gap').value)):null;}catch(error){fillArea=null;fillPreview=null;throw error;}}
 
 function toast(message,error=false){clearTimeout(toastTimer);$('toast').textContent=message;$('toast').classList.toggle('error',error);$('toast').hidden=false;toastTimer=setTimeout(()=>$('toast').hidden=true,error?6500:4200);}
@@ -141,7 +142,7 @@ function compoundTerrainSvg(parts,exporting=false){
  return `<g data-theme-preserve="true" data-object="${esc(primary.id)}" class="object-terrain terrain-compound" role="button" aria-label="${esc(name)}, ${h('Objektzentrum')}, X ${num(x)}, Y ${num(y)}"><title>${esc(name)} · ${h('Verbundene Terrainfläche')} · X ${num(x)} / Y ${num(y)}</title><path d="${fill}" fill="${primary.color??'url(#terrain-hatch)'}"/><path d="${outline}" fill="none" stroke="${stroke}" stroke-width="${active?.16:.09}" pointer-events="none"/><g transform="translate(${label.x} ${-label.y})" pointer-events="none">${nameSvg(name,label.w-.25,Math.max(.3,label.h-1.1),-.2,terrainInk(primary),.6)}<text y="${label.h/2-.25}" text-anchor="middle" fill="${terrainInk(primary)}" font-size=".35">X ${num(x)} / Y ${num(y)}</text></g></g>`;
 }
 function scene(exporting=false){
- let s='';
+ let s=globalThis.HiveWorldMap.render(state,exporting?null:viewBox(),camera.scale,!exporting,worldSelection);
  const displayObjects=state.objects.filter(o=>Q.visible(state,o,exporting)).map(o=>!exporting&&ghost?.objects?.find(g=>g.id===o.id)||(!exporting&&drag?.kind==='resize'&&ghost?.o?.id===o.id?ghost.o:o));
  for(const o of displayObjects)if(M.coreSize(o))s+=`<rect data-theme-preserve="true" data-object="${esc(o.id)}" x="${o.x-o.w/2}" y="${-o.y-o.h/2}" width="${o.w}" height="${o.h}" fill="#765638" fill-opacity=".5" stroke="#ad865f" stroke-width=".06"/>`;
  if(M.isSeason4(state)&&state.showLight)for(const o of displayObjects)if(o.type==='base'&&o.beacon)s+=`<rect x="${o.x-o.lightSize/2}" y="${-o.y-o.lightSize/2}" width="${o.lightSize}" height="${o.lightSize}" fill="${color(o)}" fill-opacity=".045" stroke="${color(o)}" stroke-opacity=".8" stroke-width=".09" pointer-events="none"/>`;
@@ -158,11 +159,12 @@ function scene(exporting=false){
   if(fillArea&&mapMode==='fill'&&drag?.kind!=='selectbox')s+=fillAreaHandles(fillArea);
  }
  if(M.resizable(terrainSelection)&&!terrainSelection.locked&&!pending&&mapMode!=='fill')s+=terrainHandles(terrainSelection);
+ for(const o of displayObjects){const flag=globalThis.HiveWorldMap.status(state,o);if(flag.blocked||o.type==='base'&&flag.mud)s+=`<rect data-theme-preserve="true" x="${o.x-o.w/2}" y="${-o.y-o.h/2}" width="${o.w}" height="${o.h}" fill="none" stroke="${flag.blocked?'#ff5c68':'#ffcb63'}" stroke-width=".16" stroke-dasharray=".25 .12" pointer-events="none"><title>${h(flag.blocked?'Konflikt mit der importierten Karte':'Schlamm: PvP jederzeit möglich')}</title></rect>`;}
  return s+qolOverlay(exporting);
 }
 function renderMap(){
  updateView();const b=M.worldBounds(state),grid=camera.scale>=5?'big-grid':camera.scale>=1.5?'medium-grid':'world-grid',labelSize=13/camera.scale,pad=8/camera.scale;
- svg.innerHTML=T.svg(definitions()+`<rect x="${b.left}" y="${-b.top}" width="1000" height="1000" fill="#0b1726" pointer-events="none"/><rect x="${b.left}" y="${-b.top}" width="1000" height="1000" fill="url(#${grid})" stroke="#5a819d" stroke-width="1.5" vector-effect="non-scaling-stroke" pointer-events="none"/><g clip-path="url(#world-clip)">${scene()}</g><g fill="#b9d0df" font-size="${labelSize}" pointer-events="none"><text x="${b.left+pad}" y="${-b.bottom-pad}">X 0 · Y 0</text><text x="${b.right-pad}" y="${-b.top+pad+labelSize}" text-anchor="end">X 999 · Y 999</text></g>`);
+ svg.innerHTML=T.svg(definitions()+`<rect x="${b.left}" y="${-b.top}" width="1000" height="1000" fill="#0b1726" pointer-events="none"/><rect x="${b.left}" y="${-b.top}" width="1000" height="1000" fill="${globalThis.HiveWorldMap.options(state).grid?`url(#${grid})`:"none"}" stroke="#5a819d" stroke-width="1.5" vector-effect="non-scaling-stroke" pointer-events="none"/><g clip-path="url(#world-clip)">${scene()}</g><g fill="#b9d0df" font-size="${labelSize}" pointer-events="none"><text x="${b.left+pad}" y="${-b.bottom-pad}">X 0 · Y 0</text><text x="${b.right-pad}" y="${-b.top+pad+labelSize}" text-anchor="end">X 999 · Y 999</text></g>`);
  svg.classList.toggle('adding',!!pending||mapMode==='fill'||mapMode==='select');svg.classList.toggle('moving',!!drag&&drag.kind!=='roster');
 }
 function priorityText(level){return `P${level} · ${M.priorityLabel(state,level)}`;}
@@ -299,7 +301,7 @@ function renderAutofill(){
  $('autofill').disabled=!players.length||!seats.length;
  $('autofill-summary').textContent=!M.alliancePlayers(state).length?t('Füge zuerst Spieler hinzu.'):!players.length?t('Alle Spieler haben bereits einen Platz.'):t('{players} ohne Platz · {seats} freie Plätze.',{players:players.length,seats:seats.length})+(reserved?' '+t('{n} Beacon-Plätze bleiben frei.',{n:reserved}):'');
 }
-function render(){renderControls();renderRoster();renderOrganizer();renderInspector();renderMap();renderQoL();}
+function render(){renderWorldControls();renderControls();renderRoster();renderOrganizer();renderInspector();renderMap();renderQoL();}
 function clearPending(){resetMapTools();render();}
 function selectObject(id,focus=false,add=false){
  const o=state.objects.find(q=>q.id===id);if(!o)return;if(!M.owns(state,o)&&!(selectionScope==='all'&&add))activateAlliance(M.allianceOf(o));
@@ -369,6 +371,8 @@ svg.addEventListener('pointerdown',e=>{
  const id=e.target.closest('[data-object]')?.dataset.object,handle=e.target.closest('[data-resize]'),fillHandle=e.target.closest('[data-fill-resize]');
  if(pasteObjects){safely(()=>placeCopies(lastPoint));return;}
  if(pending){safely(()=>placePending(lastPoint));return;}
+ const mapArea=e.target.closest('[data-map-area]');if(mapArea&&mapMode==='pan'&&!e.shiftKey){selectWorldArea(mapArea.dataset.mapArea);return;}
+ if(worldSelection){worldSelection=null;editorUI.inspectorKey=null;}
  if(id&&!['fill','check'].includes(mapMode)&&!e.shiftKey){const object=state.objects.find(o=>o.id===id);if(object&&!M.owns(state,object)&&!(selectionScope==='all'&&(e.ctrlKey||e.metaKey||selectedObjectIds.has(id))))activateAlliance(M.allianceOf(object));}
  const box=['fill','check'].includes(mapMode)||e.shiftKey||(!id&&(mapMode==='select'||e.ctrlKey||e.metaKey));
  if(fillHandle&&fillArea&&mapMode==='fill'){drag={kind:'fill-resize',original:{...fillArea},corner:fillHandle.dataset.fillResize,point:lastPoint,clientX:e.clientX,clientY:e.clientY,moved:false};renderFillControls();}
@@ -568,13 +572,13 @@ function csvExport(){
 }
 function exportTextSize(text,width,size){metrics.font='100px system-ui, sans-serif';return Math.min(size,width/Math.max(.01,metrics.measureText(text).width/100));}
 function exportSvg(){
- const b=M.bounds({...state,objects:state.objects.filter(o=>Q.visible(state,o,true))}),w=Math.max(b.right-b.left+8,36),h=Math.max(b.top-b.bottom+15,36),left=(b.left+b.right-w)/2,top=-b.top-9,scale=Math.min(80,5800/Math.max(w,h));
+ const b=state.worldMap&&!state.objects.length?M.worldBounds(state):M.bounds({...state,objects:state.objects.filter(o=>Q.visible(state,o,true))}),w=Math.max(b.right-b.left+8,36),h=Math.max(b.top-b.bottom+15,36),left=(b.left+b.right-w)/2,top=-b.top-9,scale=Math.min(80,5800/Math.max(w,h));
  const bases=state.objects.filter(o=>o.type==='base'),assigned=bases.filter(o=>o.playerId).length;
  const summary=t('{assigned} / {total} Plätze vergeben · {name} X {x} / Y {y}',{assigned,total:bases.length,name:referenceName(),...M.referenceCoords(state)});
  const legend=t(M.isSeason4(state)?'Basis 3 × 3 · Zentrum 9 × 9 · Koordinaten: Objektzentrum · Welt 1000 × 1000':'Basis 3 × 3 · Marshall 3 × 3 · Koordinaten: Objektzentrum · Welt 1000 × 1000');
  const footnote=(M.isSeason4(state)?t(state.showLight?'Lichtflächen gemäß eingestellter Breite. L4-Standard: 25 × 25 Kartenfelder.':'Lichtflächen ausgeblendet.')+' · ':'')+t('Erstellt {date}',{date:new Date().toLocaleDateString(I.language)});
  const allianceLegend=[1,2,3,4,5].map((id,i)=>`<text x="${left+2+i*(w-4)/5}" y="${top+h-3.7}" fill="${M.ALLIANCE_COLORS[id-1]}" font-size="${exportTextSize(allianceName(id),(w-4)/5-.3,.42)}">${esc(allianceName(id))}</text>`).join('');
- const source=`<svg xmlns="http://www.w3.org/2000/svg" width="${Math.ceil(w*scale)}" height="${Math.ceil(h*scale)}" viewBox="${left} ${top} ${w} ${h}"><style>text{font-family:system-ui,-apple-system,Segoe UI,sans-serif}</style>${definitions()}<rect x="${left}" y="${top}" width="${w}" height="${h}" fill="#0b1726"/><text x="${left+2}" y="${top+2.6}" fill="#61ddcc" font-size="${exportTextSize('NOVA HIVE PLANNER · '+seasonName()+(M.isDeveloping(state)?' · '+t('Noch in Bearbeitung'):''),w-4,.65)}" font-weight="650">NOVA HIVE PLANNER · ${esc(seasonName())}${M.isDeveloping(state)?' · '+t('Noch in Bearbeitung'):''}</text><text x="${left+2}" y="${top+4.8}" fill="#eef7ff" font-size="${Math.min(1.4,(w-4)/(Math.max(1,state.title.length)*.65))}" font-weight="750">${esc(state.title)}</text><text x="${left+2}" y="${top+6.4}" fill="#9db9cc" font-size="${exportTextSize(summary,w-4,.55)}">${esc(summary)}</text><rect x="${left+1}" y="${top+8}" width="${w-2}" height="${h-12}" fill="url(#big-grid)"/><g clip-path="url(#world-clip)">${scene(true)}</g>${allianceLegend}<text x="${left+2}" y="${top+h-2.6}" font-size="${exportTextSize(legend,w-4,.52)}" fill="#b5ccda">${esc(legend)}</text><text x="${left+2}" y="${top+h-1.3}" font-size="${exportTextSize(footnote,w-4,.44)}" fill="#7896ac">${esc(footnote)}</text></svg>`;
+ const source=`<svg xmlns="http://www.w3.org/2000/svg" width="${Math.ceil(w*scale)}" height="${Math.ceil(h*scale)}" viewBox="${left} ${top} ${w} ${h}"><style>text{font-family:system-ui,-apple-system,Segoe UI,sans-serif}</style>${definitions()}<rect x="${left}" y="${top}" width="${w}" height="${h}" fill="#0b1726"/><text x="${left+2}" y="${top+2.6}" fill="#61ddcc" font-size="${exportTextSize('NOVA HIVE PLANNER · '+seasonName()+(M.isDeveloping(state)?' · '+t('Noch in Bearbeitung'):''),w-4,.65)}" font-weight="650">NOVA HIVE PLANNER · ${esc(seasonName())}${M.isDeveloping(state)?' · '+t('Noch in Bearbeitung'):''}</text><text x="${left+2}" y="${top+4.8}" fill="#eef7ff" font-size="${Math.min(1.4,(w-4)/(Math.max(1,state.title.length)*.65))}" font-weight="750">${esc(state.title)}</text><text x="${left+2}" y="${top+6.4}" fill="#9db9cc" font-size="${exportTextSize(summary,w-4,.55)}">${esc(summary)}</text><rect x="${left+1}" y="${top+8}" width="${w-2}" height="${h-12}" fill="url(#big-grid)"/><defs><clipPath id="export-map-clip"><rect x="${left+1}" y="${top+8}" width="${w-2}" height="${h-12}"/></clipPath></defs><g clip-path="url(#export-map-clip)"><g clip-path="url(#world-clip)">${scene(true)}</g></g>${allianceLegend}<text x="${left+2}" y="${top+h-2.6}" font-size="${exportTextSize(legend,w-4,.52)}" fill="#b5ccda">${esc(legend)}</text><text x="${left+2}" y="${top+h-1.3}" font-size="${exportTextSize(footnote,w-4,.44)}" fill="#7896ac">${esc(footnote)}</text></svg>`;
  return {source:T.svg(source),width:Math.ceil(w*scale),height:Math.ceil(h*scale)};
 }
 async function exportFile(format){
@@ -629,7 +633,7 @@ $('language-select').addEventListener('change',e=>{const previousLabel=selected(
 document.addEventListener('invalid',e=>{const el=e.target;if(!el.setCustomValidity)return;el.setCustomValidity('');el.setCustomValidity(t(el.validity.valueMissing?'Bitte dieses Feld ausfüllen.':'Bitte einen gültigen Wert eingeben.'));},true);
 document.addEventListener('input',e=>e.target.setCustomValidity?.(''));
 globalThis.HiveArchiveBridge={getWorkspace:()=>W.saveFile(workspace),isDirty:()=>dirty,markSaved:()=>{dirty=false;renderControls();},load:raw=>{const next=W.readFile(raw);resetMapTools(true);commitWorkspace(next);dirty=false;render();fitMap();},confirm:action=>{if(dirty)confirm(t('Gespeicherte Karte laden?'),t('Nicht gespeicherte Änderungen werden ersetzt.'),action);else action();},requestConfirm:confirm,toast};
-T.init('theme-select',renderMap);initQoL();
+T.init('theme-select',renderMap);initQoL();initWorldControls();
 I.apply(document);$('language-select').value=I.language;render();requestAnimationFrame(fitMap);
 // Optional structured tools use exactly the same state and actions as the visible planner.
 const context=document.modelContext;
@@ -722,10 +726,10 @@ function initQoL(){
 // Stable editor chrome is UI state only; it never changes the workspace or undo history.
 function shellEnabled(){return document.body.hasAttribute?.('data-editor-shell')===true;}
 function shellTab(kind,value,focus=false){
- editorUI[kind]=value;const attr=kind==='left'?'leftTab':'inspectorTab';
+ editorUI[kind]=value;if(kind==='inspector'&&worldSelection)renderWorldInspector();const attr=kind==='left'?'leftTab':'inspectorTab';
  document.querySelectorAll(`[data-${kind==='left'?'left-tab':'inspector-tab'}]`).forEach(b=>{const active=b.dataset[attr]===value;b.setAttribute('aria-selected',String(active));b.tabIndex=active?0:-1;if(active&&focus)b.focus();});
  if(kind==='left'){for(const key of ['players','objects','blueprints'])$('left-'+key).hidden=key!==value;if(value!=='players'&&organizerOpen){organizerOpen=false;renderOrganizer();renderSelection();}}
- else{document.querySelectorAll('[data-inspector-pane]').forEach(p=>p.hidden=p.dataset.inspectorPane!==value);$('inspector-actions-dock').hidden=value!=='actions';$('anchor-section').hidden=value!=='actions'||selectedObjects().length!==1||selected()?.type!==M.anchorType(state);$('inspector-apply').disabled=value!=='position'||!selectedObjects().length||selectedObjects().some(o=>o.locked);$('inspector-apply').hidden=false;$('inspector-footer-hint').textContent=value==='properties'?t('Änderungen werden direkt übernommen.'):value==='actions'?t('Aktionen gelten für die aktuelle Auswahl.'):t('Koordinaten bezeichnen den Mittelpunkt.');}
+ else{document.querySelectorAll('[data-inspector-pane]').forEach(p=>p.hidden=p.dataset.inspectorPane!==value);$('inspector-actions-dock').hidden=!!worldSelection||value!=='actions';$('anchor-section').hidden=value!=='actions'||selectedObjects().length!==1||selected()?.type!==M.anchorType(state);$('inspector-apply').disabled=value!=='position'||!selectedObjects().length||selectedObjects().some(o=>o.locked);$('inspector-apply').hidden=false;$('inspector-footer-hint').textContent=value==='properties'?t('Änderungen werden direkt übernommen.'):value==='actions'?t('Aktionen gelten für die aktuelle Auswahl.'):t('Koordinaten bezeichnen den Mittelpunkt.');}
 }
 function initEditorShell(){
  if(!shellEnabled()||editorUI.ready)return;editorUI.ready=true;
@@ -757,6 +761,7 @@ function mountQoL(){
  shellTab('left',editorUI.left);shellTab('inspector',editorUI.inspector);
 }
 function renderInspector(){
+ if(renderWorldInspector())return;
  if(!shellEnabled()){renderInspectorContent();return;}
  const key=JSON.stringify({objects:selectedObjects(),players:state.players,origin:state.origin,season:state.season,lang:I.language,groups:state.groups,scope:selectionScope,confirmed:selectionCenterEntry,all:state.objects});
  const scroll=$('inspector-scroll')?.scrollTop??0;
@@ -783,6 +788,47 @@ function renderShellState(){
  $('inspector-preview-footer').hidden=editorUI.inspector!=='actions';$('arrange-cancel').disabled=!arrangement;
  $('check-selection').disabled=!selectedObjects().length;
  for(const fold of editorUI.folds??[])document.querySelectorAll('#object-tree details').forEach(e=>{if(e.dataset.fold===fold)e.open=true;});editorUI.folds=null;
+}
+
+// Imported world layer controls. The immutable source layer cannot be dragged accidentally.
+function initWorldControls(){
+ const label=(key,body)=>`<label><span data-i18n="${key}">${h(key)}</span>${body}</label>`;
+ $('layout-select').closest('label').insertAdjacentHTML('afterend',label('Darstellung','<select id="map-style"><option value="plan" data-i18n="Planansicht">Planansicht</option><option value="game" data-i18n="Spieloptik">Spieloptik</option></select>'));
+ const button='<button data-import-world data-i18n="Kartendaten importieren">Kartendaten importieren</button>';
+ $('display-menu').insertAdjacentHTML('beforebegin',button);
+ $('open-plan').insertAdjacentHTML('afterend',button);
+ $('display-content').insertAdjacentHTML('beforeend','<fieldset id="world-display"><legend data-i18n="Kartenebene">Kartenebene</legend>'+[['terrain','Terrain'],['buildings','Feste Gebäude'],['mud','Schlamm'],['labels','Kartenbeschriftungen'],['grid','Raster']].map(([key,name])=>`<label class="check-label"><input type="checkbox" data-world-option="${key}"><span data-i18n="${name}">${h(name)}</span></label>`).join('')+'<label class="check-label"><input id="world-edit" type="checkbox"><span data-i18n="Kartenebene bearbeiten">Kartenebene bearbeiten</span></label><button id="world-remove" data-i18n="Kartenebene entfernen">Kartenebene entfernen</button></fieldset>');
+ $('autofill-beacons').closest('label').insertAdjacentHTML('afterend','<label class="check-label"><input type="checkbox" id="avoid-mud"><span data-i18n="Schlamm bei Autofill und Flächenfüllung vermeiden">Schlamm bei Autofill und Flächenfüllung vermeiden</span></label>');
+ $('stage').insertAdjacentHTML('beforebegin','<p id="world-status" class="field-help world-status" role="status" hidden></p>');
+ document.body.insertAdjacentHTML('beforeend','<input type="file" id="world-file" accept=".json,application/json" hidden><dialog id="world-dialog"><form id="world-form"><h2 data-i18n="Kartendaten importieren">Kartendaten importieren</h2><p id="world-preview"></p><p data-i18n="Ausgewählte Ebenen werden ersetzt. Bestehende Basen bleiben erhalten.">Ausgewählte Ebenen werden ersetzt. Bestehende Basen bleiben erhalten.</p>'+[['terrain','Terrain'],['buildings','Feste Gebäude'],['mud','Schlamm']].map(([key,name])=>`<label class="check-label"><input type="checkbox" id="import-${key}" checked><span data-i18n="${name}">${h(name)}</span></label>`).join('')+'<p id="world-import-error" role="alert"></p><div class="dialog-footer"><button type="button" id="world-cancel" data-i18n="Abbrechen">Abbrechen</button><button type="submit" class="primary" data-i18n="Übernehmen">Übernehmen</button></div></form></dialog>');
+ document.querySelectorAll('[data-import-world]').forEach(b=>b.addEventListener('click',()=>$('world-file').click()));
+ $('map-style').addEventListener('change',e=>commit({...state,mapStyle:e.target.value}));
+ for(const el of document.querySelectorAll('[data-world-option]'))el.addEventListener('change',()=>commit({...state,mapOptions:{...state.mapOptions,[el.dataset.worldOption]:el.checked}}));
+ $('avoid-mud').addEventListener('change',e=>commit({...state,mapOptions:{...state.mapOptions,avoidMud:e.target.checked}}));
+ $('world-edit').addEventListener('change',e=>{worldEditing=e.target.checked;renderWorldInspector();});
+ $('world-remove').addEventListener('click',()=>confirm(t('Kartenebene entfernen'),t('Bestehende Basen bleiben erhalten.'),()=>{const next={...state};delete next.worldMap;worldSelection=null;commit(next);}));
+ $('world-cancel').addEventListener('click',()=>$('world-dialog').close());
+ $('world-file').addEventListener('change',async e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;try{if(file.size>8_000_000)throw Error(t('Kartendatei ist zu groß (maximal 8 MB).'));worldPending=globalThis.HiveWorldMap.parse(JSON.parse(await file.text()));if(state.season!==worldPending.season)throw Error(t('Kartendaten passen nicht zur ausgewählten Season.'));$('world-preview').textContent=`S04 · 1000 × 1000 · ${worldPending.areas.filter(a=>globalThis.HiveWorldMap.terrain.has(a.type)).length} ${t('Terrain')} · ${worldPending.areas.filter(a=>!globalThis.HiveWorldMap.terrain.has(a.type)).length} ${t('Feste Gebäude')} · ${worldPending.mud.length} ${t('Schlamm')}`;$('world-import-error').textContent='';for(const k of ['terrain','buildings','mud'])$('import-'+k).checked=true;$('world-dialog').showModal();}catch(error){worldPending=null;toast(error.message,true);}});
+ $('world-form').addEventListener('submit',e=>{e.preventDefault();try{const chosen=Object.fromEntries(['terrain','buildings','mud'].map(k=>[k,$('import-'+k).checked]));if(!Object.values(chosen).some(Boolean))throw Error(t('Mindestens eine Ebene auswählen.'));const next=globalThis.HiveWorldMap.apply(state,worldPending,chosen);worldSelection=null;commit(next,t('Kartendaten importiert.'));$('world-dialog').close();worldPending=null;}catch(error){$('world-import-error').textContent=error.message;}});
+ svg.addEventListener('keydown',e=>{const el=e.target.closest('[data-map-area]');if(el&&['Enter',' '].includes(e.key)){e.preventDefault();e.stopImmediatePropagation();selectWorldArea(el.dataset.mapArea);}},true);
+ I.apply(document);
+}
+function selectWorldArea(id){editorUI.inspectorKey=null;worldSelection=id;setMapSelection([]);renderInspector();renderMap();}
+function renderWorldControls(){
+ if(!$('map-style'))return;
+ $('map-style').value=state.mapStyle??'plan';const opt=globalThis.HiveWorldMap.options(state);
+ document.querySelectorAll('[data-world-option]').forEach(el=>el.checked=opt[el.dataset.worldOption]);$('avoid-mud').checked=!!opt.avoidMud;$('world-edit').checked=worldEditing;$('world-remove').disabled=!state.worldMap;
+ const flags=state.objects.map(o=>({o,...globalThis.HiveWorldMap.status(state,o)})),blocked=flags.filter(f=>f.blocked).length,mud=flags.filter(f=>f.o.type==='base'&&f.mud).length;
+ $('world-status').hidden=!state.worldMap;$('world-status').textContent=`S04 · ${t('Konflikte')}: ${blocked} · ${t('Basen im Schlamm')}: ${mud} · ${t('Schlamm: PvP jederzeit möglich')}`;
+ if(worldSelection&&![...(state.worldMap?.areas??[]),...(state.worldMap?.mud??[])].some(a=>a.id===worldSelection))worldSelection=null;
+}
+function renderWorldInspector(){
+ const a=[...(state.worldMap?.areas??[]),...(state.worldMap?.mud??[]).map(a=>({...a,type:'mud'}))].find(a=>a.id===worldSelection);if(!a)return false;
+ const b=a.bounds,key=editorUI.inspector,name=t(globalThis.HiveWorldMap.names[a.type]);
+ $('inspector-name').textContent=name;$('inspector-name').disabled=true;$('selection-type').hidden=false;$('selection-type').textContent=t('Kartenebene');$('anchor-section').hidden=true;
+ $('inspector').innerHTML=`<div class="selection-form"><p>${esc(name)} · ${h('Kartenebene')}</p>${key==='position'?`<p>X ${(b.minX+b.maxX)/2} / Y ${(b.minY+b.maxY)/2}</p><p>X ${b.minX}–${b.maxX} · Y ${b.minY}–${b.maxY}</p>`:key==='properties'?`<p>${h(a.type==='mud'?'Schlamm: PvP jederzeit möglich':'Nicht bebaubar')} · ${a.runs?a.runs.reduce((n,r)=>n+r[2]-r[1]+1,0):(b.maxX-b.minX+1)*(b.maxY-b.minY+1)} ${h('Felder')}</p>${a.level?`<p>${h('Stufe')} ${a.level}</p>`:''}`:`<p>${h('Kartenebene bearbeiten')}</p><button id="world-area-remove" ${worldEditing?'':'disabled'}>${h('Auswahl entfernen')}</button>`}</div>`;
+ $('world-area-remove')?.addEventListener('click',()=>{const next={...state,worldMap:{...state.worldMap,areas:state.worldMap.areas.filter(q=>q.id!==a.id),mud:state.worldMap.mud.filter(q=>q.id!==a.id)}};worldSelection=null;editorUI.inspectorKey=null;commit(next);});
+ $('inspector-apply').disabled=true;if($('inspector-actions-dock'))$('inspector-actions-dock').hidden=true;return true;
 }
 
 })();

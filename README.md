@@ -1,10 +1,14 @@
 # Nova Hive Planner
 
-Current application release: **1.2.0**. Increase the final number once per subsequent delivered update (1.2.1, 1.2.2, …); see `AGENTS.md`. The JSON schema version remains independent.
+Current application release: **1.2.1**. Increase the final number once per subsequent delivered update (1.2.1, 1.2.2, …); see `AGENTS.md`. The JSON schema version remains independent.
 
 A client-side Last War hive editor with English, German, French, Spanish, Portuguese, Vietnamese and Korean interfaces. Open `dist/index.html` in a modern browser, or serve the `dist` directory as static files. The editor has no package dependencies or application login. Named map storage and sharing use the separate online document service; local editing and JSON files remain available offline. The hosted Site has its own owner access policy.
 
 The editor supports editable 100-seat templates with one-tile gaps or no gaps, TXT / semicolon CSV imports, individual and multiple-object movement, connected terrain shapes, rectangular base-area filling, priority-aware grouped autofill, multi-select organization, undo/redo, JSON save/load, and SVG, PNG and CSV exports. Player names and their calculated X/Y coordinates appear inside each base.
+
+## Static map import and game textures (1.2.1)
+
+Season 4 map exports can be imported as a separate locked layer with exact terrain cells, fixed buildings and buildable PvP mud. The Appearance selector switches between the existing plan view and embedded game textures. Import, collision checks, autofill, area filling, free-space scans, undo/redo, all-variant saves, online sharing and image exports use the same geometry. See [MAP-IMPORT.md](MAP-IMPORT.md) for usage, validation and extraction limits. Run `node build-standalone.mjs` after changing sources.
 
 ## Stable editor workspace (1.2.0)
 

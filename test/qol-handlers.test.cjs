@@ -20,8 +20,8 @@ const modes=['pan','select','fill'].map(mode=>{const e=new Element();e.dataset.m
 document=new Element('document');Object.assign(document,{getElementById:get,createElement:tag=>new Element(tag),querySelectorAll:selector=>selector==='[data-map-mode]'?modes:[],body:new Element(),documentElement:{lang:'de'},activeElement:new Element()});
 get('fill-gap').value='1';
 const storage=new Map();const context=vm.createContext({localStorage:{getItem:k=>storage.get(k)??null,setItem:(k,v)=>storage.set(k,v)},console,document,window:{addEventListener(){}},Blob,URL:{},setTimeout(){return 1;},clearTimeout(){},requestAnimationFrame(fn){fn();},ResizeObserver:class{observe(){}},TextDecoder,DOMPoint:class{constructor(x,y){this.x=x;this.y=y;}matrixTransform(){return {x:this.x/10,y:this.y/10};}}});
-for(const name of ['i18n','model','workspace'])vm.runInContext(fs.readFileSync('dist/'+name+'.js','utf8'),context);
-let app=fs.readFileSync('dist/app.js','utf8');
+for(const name of ['i18n','world-map','model','workspace'])vm.runInContext(fs.readFileSync('dist/'+name+'.js','utf8'),context);
+let app=fs.readFileSync('dist/app.js','utf8').replace('initWorldControls();','');
 const start="I.apply(document);$('language-select').value=I.language;render();requestAnimationFrame(fitMap);";assert.ok(app.includes(start));
 app=app.replace(start,"render=()=>{renderControls();renderMap();renderInspector();renderQoL();};fitMap=()=>{};globalThis.testApp={get state(){return state;},get area(){return fillArea;},get preview(){return fillPreview;},commit,restoreHistory,selectObject,exportSvg,csvExport,get selected(){return [...selectedObjectIds];},get scope(){return selectionScope;},armObject,saveRecovery,restoreRecovery,renderQoL};"+start);
 vm.runInContext(app,context);
