@@ -1,6 +1,10 @@
 # Nova Hive Planner
 
-Current application release: **1.2.2**. Increase the final number once per subsequent delivered update (1.2.1, 1.2.2, …); see `AGENTS.md`. The JSON schema version remains independent.
+Current application release: **1.2.3**. Increase the final number once per subsequent delivered update (1.2.1, 1.2.2, …); see `AGENTS.md`. The JSON schema version remains independent.
+
+## Plan-view object labels (1.2.3)
+
+Imported terrain and fixed buildings now have centered labels in plan view: object type, bounding width × height, center coordinates, and city/capital level. Terrain labels are no longer excluded, and zooming out does not remove plan-view labels. The existing map-label switch still applies. Game-view presentation, manual object labels, exact collision geometry, and persistent rendering layers are preserved. The shared renderer supplies the same labels to the editor, viewer and image exports.
 
 A client-side Last War hive editor with English, German, French, Spanish, Portuguese, Vietnamese and Korean interfaces. Open `dist/index.html` in a modern browser, or serve the `dist` directory as static files. The editor has no package dependencies or application login. Named map storage and sharing use the separate online document service; local editing and JSON files remain available offline. The hosted Site has its own owner access policy.
 

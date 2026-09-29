@@ -4,7 +4,7 @@ const T=globalThis.HiveThemes??{svg:s=>s,init(){}},I=globalThis.HiveI18n,t=(key,
 const Q=globalThis.HiveQoL;
 const M=globalThis.HiveModel,W=globalThis.HiveWorkspace,$=id=>document.getElementById(id),svg=$('map'),stage=$('stage');
 // User-facing release: increment the final number for each later delivered update.
-const APP_VERSION='1.2.2';
+const APP_VERSION='1.2.3';
 const editorUI={ready:false,left:'players',inspector:'position',inspectorKey:null,selectionKey:null};
 const TOOL_SHORTCUTS={b:'base',m:'marshall',a:'center',t:'terrain',l:'beacon'};
 const shortcutFor=type=>Object.keys(TOOL_SHORTCUTS).find(key=>TOOL_SHORTCUTS[key]===type)?.toUpperCase();
@@ -192,7 +192,7 @@ function renderMap(){
  if(state.mapStyle==='game'&&!assetReady){mapDOM.textures.innerHTML=Object.entries(globalThis.HiveMapAssets??{}).map(([key,uri])=>`<symbol id="asset-${key.replace(/[^a-zA-Z0-9]/g,'-')}" viewBox="0 0 1 1" preserveAspectRatio="xMidYMid meet"><image href="${uri}" width="1" height="1" preserveAspectRatio="xMidYMid meet"/></symbol>`).join('');assetReady=true;}
  const sk=staticSignature(state)+theme+I.language+worldSelection;
  if(sk!==staticKey){staticKey=sk;mapDOM.static.innerHTML=themedSvg(globalThis.HiveWorldMap.render(state,null,12,true,worldSelection,true));}
- mapDOM.static.classList.toggle('hide-map-labels',camera.scale<4);
+ mapDOM.static.classList.toggle('hide-map-labels',state.mapStyle==='game'&&camera.scale<4);
  mapDOM.grid.style.display=globalThis.HiveWorldMap.options(state).grid&&camera.scale>=5?'':'none';
  const ok=theme+I.language+[...selectedObjectIds].join(',');
  if(objectState!==state||objectKey!==ok){objectState=state;objectKey=ok;mapDOM.objects.innerHTML=themedSvg(scene(false,'objects'));}

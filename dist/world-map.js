@@ -38,6 +38,12 @@ const colors={mountain:'#727765',lake:'#3d9ab8',stone_statue:'#ada295',sushi_res
 function outline(area){const cells=new Set();for(const [y,l,r] of area.runs)for(let x=l;x<=r;x++)cells.add(y*1000+x);let path='';for(const [y,l,r] of area.runs)for(let x=l;x<=r;x++){const px=x-.5,py=-y-.5;if(y===999||!cells.has((y+1)*1000+x))path+=`M${px} ${py}h1`;if(y===0||!cells.has((y-1)*1000+x))path+=`M${px} ${py+1}h1`;if(x===0||!cells.has(y*1000+x-1))path+=`M${px} ${py}v1`;if(x===999||!cells.has(y*1000+x+1))path+=`M${px+1} ${py}v1`;}return path;}
 const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function sprite(a){if(a.type==='stronghold')return 'zyf_S4_city2.png';if(a.type==='trading_post')return 'zyf_S4_city3.png';if(['city','capital'].includes(a.type))return `zyf_S4_city${2*(a.type==='capital'?7:a.level)+3}.png`;return {special_structure_tree:'zyf_S4_wujisuofang_5.png',special_structure_mountain:'zyf_S4_wujisuofang_2.png',cannon:'zyf_S4_wujisuofang_6.png'}[a.type];}
+function planLabel(a){
+ const b=a.bounds,cx=(b.minX+b.maxX)/2,cy=(b.minY+b.maxY)/2,w=b.maxX-b.minX+1,h=b.maxY-b.minY+1;
+ const name=tr(names[a.type])+(['city','capital'].includes(a.type)?' · '+tr('Stufe')+' '+a.level:''),coords=`X ${cx} / Y ${cy}`,dimensions=`${w} × ${h}`;
+ const size=Math.min(1.5,Math.max(.65,Math.min(w,h)/8),(w-.25)/Math.max([...name].length*.56,coords.length*.4,dimensions.length*.4),h/4);
+ return `<g class="world-map-label" data-map-label="${a.id}" transform="translate(${cx} ${-cy})" pointer-events="none" text-anchor="middle" dominant-baseline="middle" fill="white" stroke="#182620" stroke-width="${size*.16}" stroke-linejoin="round" paint-order="stroke"><text y="${-size*1.15}" font-size="${size}" font-weight="600">${esc(name)}</text><text y="0" font-size="${size*.72}">${dimensions}</text><text y="${size*1.05}" font-size="${size*.72}">${coords}</text></g>`;
+}
 function render(state,view=null,scale=12,interactive=false,selected=null,externalAssets=false){
  const M=root.HiveModel,opt=options(state),game=state.mapStyle==='game',assets=root.HiveMapAssets??{},world=M.worldBounds(state),dx=world.left+.5,dy=world.bottom+.5,data=state.worldMap;
  const visible=b=>!view||(b.maxX+dx+3>=view.x&&b.minX+dx-3<=view.x+view.w&&-b.minY-dy+3>=view.y&&-b.maxY-dy-3<=view.y+view.h);
@@ -50,7 +56,7 @@ function render(state,view=null,scale=12,interactive=false,selected=null,externa
  if(data)for(const a of data.areas){if(!opt[terrain.has(a.type)?'terrain':'buildings']||!visible(a.bounds))continue;const b=a.bounds,cx=(b.minX+b.maxX)/2,cy=(b.minY+b.maxY)/2,w=b.maxX-b.minX+1,h=b.maxY-b.minY+1,path=a.runs.map(([y,l,r])=>`M${l-.5} ${-y-.5}h${r-l+1}v1h-${r-l+1}z`).join('');
  s+=`<g ${interactive?`data-map-area="${a.id}" pointer-events="auto" tabindex="0" role="button" aria-label="${esc(tr(names[a.type]))} X ${cx} Y ${cy}"`:''}><title>${esc(tr(names[a.type]))} · X ${cx} / Y ${cy} · ${w} × ${h}</title><path d="${path}" fill="${colors[a.type]??'#8996ad'}" fill-opacity="${game&&!terrain.has(a.type)?'.4':'.9'}"/>`;
  if(game&&!terrain.has(a.type))s+=image(sprite(a),`x="${cx-w*.7}" y="${-cy-h*.9}" width="${w*1.4}" height="${h*1.4}" pointer-events="none"`);
- if(opt.labels&&scale>=4&&!terrain.has(a.type))s+=`<text x="${cx}" y="${-cy+h/2+.9}" text-anchor="middle" font-size=".65" fill="white" stroke="#182620" stroke-width=".16" paint-order="stroke">${esc(tr(names[a.type]))}${['city','capital'].includes(a.type)?' '+a.level:''}</text>`;
+ if(opt.labels){if(!game)s+=planLabel(a);else if(scale>=4&&!terrain.has(a.type))s+=`<text x="${cx}" y="${-cy+h/2+.9}" text-anchor="middle" font-size=".65" fill="white" stroke="#182620" stroke-width=".16" paint-order="stroke">${esc(tr(names[a.type]))}${['city','capital'].includes(a.type)?' '+a.level:''}</text>`;}
  if(selected===a.id)s+=`<path d="${outline(a)}" fill="none" stroke="#ffe075" stroke-width="2" vector-effect="non-scaling-stroke"/>`;s+='</g>';
  }
  s+='</g>';
