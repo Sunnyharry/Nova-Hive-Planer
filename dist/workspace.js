@@ -5,11 +5,11 @@ const M=root.HiveModel,SCHEMA='nova-hive-workspace',VERSION=1,LAYOUTS=['spaced',
 const t=(key,params={})=>root.HiveI18n?.t(key,params)??key.replace(/\{(\w+)\}/g,(_,k)=>String(params[k]??'{'+k+'}'));
 const key=(season,layout)=>season+':'+layout;
 const variantFromPlan=plan=>M.clone({season:plan.season,layout:plan.layout,title:plan.title,origin:plan.origin,showLight:plan.showLight,objects:plan.objects,...(plan.worldMap?{worldMap:plan.worldMap}:{}),...(plan.mapStyle?{mapStyle:plan.mapStyle}:{}),...(plan.mapOptions?{mapOptions:plan.mapOptions}:{}),...(plan.viewOptions===undefined?{}:{viewOptions:plan.viewOptions}),...(plan.activeAlliance===undefined?{}:{activeAlliance:plan.activeAlliance})});
-const sharedFromPlan=plan=>M.clone({players:plan.players,groups:plan.groups,priorityLabels:plan.priorityLabels,...(plan.blueprints===undefined?{}:{blueprints:plan.blueprints}),...(plan.alliancePriorityLabels===undefined?{}:{alliancePriorityLabels:plan.alliancePriorityLabels})});
+const sharedFromPlan=plan=>M.clone({players:plan.players,groups:plan.groups,priorityLabels:plan.priorityLabels,allianceProfiles:M.alliances(plan),...(plan.blueprints===undefined?{}:{blueprints:plan.blueprints}),...(plan.alliancePriorityLabels===undefined?{}:{alliancePriorityLabels:plan.alliancePriorityLabels})});
 function activePlan(workspace){
  const variant=workspace.variants.find(v=>v.season===workspace.active.season&&v.layout===workspace.active.layout);
  if(!variant)throw new Error(t('Die aktive Variante fehlt in der Plan-Datei.'));
- return M.clone({schema:M.SCHEMA,version:M.VERSION,...variant,players:workspace.players,groups:workspace.groups,priorityLabels:workspace.priorityLabels,...(workspace.blueprints===undefined?{}:{blueprints:workspace.blueprints}),...(workspace.alliancePriorityLabels===undefined?{}:{alliancePriorityLabels:workspace.alliancePriorityLabels})});
+ return M.clone({schema:M.SCHEMA,version:M.VERSION,...variant,players:workspace.players,groups:workspace.groups,priorityLabels:workspace.priorityLabels,allianceProfiles:workspace.allianceProfiles,...(workspace.blueprints===undefined?{}:{blueprints:workspace.blueprints}),...(workspace.alliancePriorityLabels===undefined?{}:{alliancePriorityLabels:workspace.alliancePriorityLabels})});
 }
 function createWorkspace(plan=M.makeLayout()){
  const valid=M.validate(plan),variants=[];
@@ -40,20 +40,26 @@ function validateWorkspace(raw){
  if(!raw||raw.schema!==SCHEMA||raw.version!==VERSION||!Number.isInteger(raw.planVersion)||raw.planVersion<5||raw.planVersion>M.VERSION)throw new Error(t('Das ist keine unterstützte Varianten-Datei.'));
  if(!raw.active||!M.SEASONS.includes(raw.active.season)||!LAYOUTS.includes(raw.active.layout))throw new Error(t('Die aktive Variante fehlt in der Plan-Datei.'));
  if(!Array.isArray(raw.variants)||raw.variants.length!==M.SEASONS.length*LAYOUTS.length)throw new Error(t('Die Plan-Datei muss alle 21 Season- und Layout-Varianten enthalten.'));
- const seen=new Set(),variants=[];let shared=null;
+ const profiles=M.validateAlliances(M.alliances(raw)),seen=new Set(),variants=[];let shared=null;
  for(const v of raw.variants){
   if(!v||!M.SEASONS.includes(v.season)||!LAYOUTS.includes(v.layout)||seen.has(key(v.season,v.layout)))throw new Error(t('Eine Variante fehlt oder ist doppelt vorhanden.'));
   seen.add(key(v.season,v.layout));
-  const valid=M.validate({...v,schema:M.SCHEMA,version:raw.planVersion,players:raw.players,groups:raw.groups,priorityLabels:raw.priorityLabels,...(raw.blueprints===undefined?{}:{blueprints:raw.blueprints}),...(raw.alliancePriorityLabels===undefined?{}:{alliancePriorityLabels:raw.alliancePriorityLabels})});
+  const valid=M.validate({...v,schema:M.SCHEMA,version:raw.planVersion,players:raw.players,groups:raw.groups,priorityLabels:raw.priorityLabels,allianceProfiles:profiles,...(raw.blueprints===undefined?{}:{blueprints:raw.blueprints}),...(raw.alliancePriorityLabels===undefined?{}:{alliancePriorityLabels:raw.alliancePriorityLabels})});
   if(!shared)shared=sharedFromPlan(valid);variants.push(variantFromPlan(valid));
  }
  if(!seen.has(key(raw.active.season,raw.active.layout)))throw new Error(t('Die aktive Variante fehlt in der Plan-Datei.'));
  return {schema:SCHEMA,version:VERSION,planVersion:M.VERSION,active:{season:raw.active.season,layout:raw.active.layout},...shared,variants};
+}
+function removeAlliance(workspace,id){
+ const profiles=M.alliances(workspace);if(profiles.length<2)throw Error(t('Die letzte Allianz bleibt erhalten.'));
+ const used=v=>(v.objects??[]).some(o=>M.allianceOf(o)===id)||(v.players??[]).some(o=>M.allianceOf(o)===id)||(v.groups??[]).some(g=>M.allianceOf(g)===id&&g.playerIds.length)||(v.blueprints??[]).some(b=>used(b.plan));
+ if(used(workspace)||workspace.variants.some(used))throw Error(t('Diese Allianz enthält noch Objekte oder Spieler in einer Variante oder einem Baustein.'));
+ const next=M.clone(workspace);next.allianceProfiles=profiles.filter(a=>a.id!==id);next.groups=next.groups.filter(g=>M.allianceOf(g)!==id);delete next.alliancePriorityLabels?.[id];for(const v of next.variants){if((v.activeAlliance??1)===id)v.activeAlliance=next.allianceProfiles[0].id;if(v.viewOptions?.alliances)v.viewOptions.alliances=v.viewOptions.alliances.filter(a=>a!==id);}return next;
 }
 function readFile(raw){
  if(raw?.schema===M.SCHEMA)return createWorkspace(M.validate(raw));
  return validateWorkspace(raw);
 }
 function saveFile(workspace){return {...validateWorkspace(workspace),savedAt:new Date().toISOString()};}
-root.HiveWorkspace={SCHEMA,VERSION,LAYOUTS,MAX_FILE_BYTES,createWorkspace,activePlan,updateWorkspace,switchVariant,validateWorkspace,readFile,saveFile};
+root.HiveWorkspace={removeAlliance,SCHEMA,VERSION,LAYOUTS,MAX_FILE_BYTES,createWorkspace,activePlan,updateWorkspace,switchVariant,validateWorkspace,readFile,saveFile};
 })(globalThis);

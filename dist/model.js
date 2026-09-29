@@ -2,7 +2,7 @@
    Even dimensions use X placeholders until the middle-tile reference is confirmed. */
 (function(root){
 'use strict';
-const SCHEMA='nova-hive-planner',VERSION=11,WORLD_SIZE=1000;
+const SCHEMA='nova-hive-planner',VERSION=12,WORLD_SIZE=1000;
 const t=(key,params={})=>globalThis.HiveI18n?.t(key,params)??key.replace(/\{(\w+)\}/g,(_,k)=>String(params[k]??'{'+k+'}'));
 const DEFAULT_NAMES={center:'Allianzzentrum',marshall:'Marshall’s Guard',terrain:'Terrain',stronghold:'Stronghold',city:'Stadt',missile:'Missile',note:'Notiz'};
 const PRIORITY_DEFAULTS=['Zuverlässiger Kern','Aktiv','Casual'];
@@ -20,6 +20,16 @@ const normalizeName=name=>String(name).trim().normalize('NFC');
 const nameKey=name=>normalizeName(name).toLocaleLowerCase();
 const finite=(n,min,max)=>Number.isFinite(n)&&n>=min&&n<=max;
 const ALLIANCE_COLORS=['#5b829f','#f2c75c','#6fd18b','#c196ed','#ee9276'];
+function usedAlliances(value){
+ const ids=new Set();
+ function scan(v){if(!v)return;for(const o of [...(v.objects??[]),...(v.players??[])])ids.add(o.alliance??1);for(const g of v.groups??[])if(g.playerIds?.length)ids.add(g.alliance??1);if(v.activeAlliance)ids.add(v.activeAlliance);for(const b of v.blueprints??[])scan(b.plan);for(const variant of v.variants??[])scan(variant);}
+ scan(value);if(!ids.size)ids.add(1);return [...ids].sort((a,b)=>a-b);
+}
+function alliances(state){const listed=state.allianceProfiles??[];return [...listed,...usedAlliances(state).filter(id=>!listed.some(a=>a.id===id)).map(id=>({id,name:'',color:ALLIANCE_COLORS[(id-1)%ALLIANCE_COLORS.length]}))];}
+const allianceName=(state,id)=>(state.allianceProfiles??alliances(state)).find(a=>a.id===id)?.name||t('Allianz {n}',{n:id});
+const allianceColor=(state,id)=>(state.allianceProfiles??alliances(state)).find(a=>a.id===id)?.color??ALLIANCE_COLORS[(id-1)%ALLIANCE_COLORS.length];
+function validateAlliances(raw){if(!Array.isArray(raw)||!raw.length||raw.length>50)throw Error(t('Ungültige Allianzen.'));const ids=new Set();return raw.map(a=>{if(!a||!Number.isInteger(a.id)||a.id<1||a.id>500||ids.has(a.id)||typeof a.name!=='string'||a.name.length>40||!/^#[0-9a-f]{6}$/i.test(a.color))throw Error(t('Ungültige Allianzen.'));ids.add(a.id);return {id:a.id,name:normalizeName(a.name),color:a.color.toLowerCase()};});}
+function editAlliance(state,id,name,color){if(!Number.isInteger(id)||id<1||id>500)throw Error(t('Ungültige Allianzen.'));const list=alliances(state),next={id,name:normalizeName(name),color};if(!next.name)throw Error(t('Bitte einen Allianznamen eingeben.'));return {...state,allianceProfiles:validateAlliances(list.some(a=>a.id===id)?list.map(a=>a.id===id?next:a):[...list,next]),activeAlliance:id};}
 const allianceOf=value=>value?.alliance===undefined?1:value.alliance;
 const activeAlliance=state=>state.activeAlliance??1;
 const owns=(state,value)=>allianceOf(value)===activeAlliance(state);
@@ -28,7 +38,7 @@ const alliancePlayers=state=>state.players.filter(p=>owns(state,p));
 const allianceGroups=state=>(state.groups??[]).filter(g=>owns(state,g));
 const priorityLabelsFor=(state,id=activeAlliance(state))=>id===1?state.priorityLabels??['','','']:state.alliancePriorityLabels?.[id]??['','',''];
 const referencePoint=state=>state.objects.find(o=>owns(state,o)&&o.type===anchorType(state))??{x:state.origin.mapX,y:state.origin.mapY};
-function setAlliance(state,id){if(!Number.isInteger(id)||id<1||id>5)throw new Error(t('Allianz muss zwischen 1 und 5 liegen.'));return {...state,activeAlliance:id};}
+function setAlliance(state,id){if(!Number.isInteger(id)||id<1||id>500)throw new Error(t('Ungültige Allianzen.'));const list=alliances(state);return {...state,activeAlliance:id,allianceProfiles:list.some(a=>a.id===id)?list:[...list,{id,name:'',color:ALLIANCE_COLORS[(id-1)%5]}]};}
 function resetAllianceLayout(state){
  assertUnlocked(state,allianceObjects(state).map(o=>o.id));
  const id=activeAlliance(state),ref=referencePoint(state),origin={...state.origin,x:state.origin.x+ref.x-state.origin.mapX,y:state.origin.y+ref.y-state.origin.mapY,mapX:ref.x,mapY:ref.y};
@@ -112,7 +122,7 @@ function objectLabel(state,o){
 function makeLayout(kind='spaced',existing=null){
  const season=existing?.season??'4';
  if(!SEASONS.includes(season))throw new Error(t('Ungültige Season.'));
- const state={schema:SCHEMA,version:VERSION,season,groups:clone(existing?.groups??emptyGroups()),priorityLabels:clone(existing?.priorityLabels??['','','']),title:existing?.title??'NOVA FAMILY',origin:clone(existing?.origin??{x:500,y:500,mapX:0,mapY:0}),showLight:season==='4'?(existing?.showLight??true):false,layout:kind,players:clone(existing?.players??[]).map(p=>({...p,priority:priorityOf(p)})),objects:[]};
+ const state={schema:SCHEMA,version:VERSION,season,allianceProfiles:clone(existing?.allianceProfiles??[{id:1,name:'',color:ALLIANCE_COLORS[0]}]),groups:clone(existing?.groups??emptyGroups()),priorityLabels:clone(existing?.priorityLabels??['','','']),title:existing?.title??'NOVA FAMILY',origin:clone(existing?.origin??{x:500,y:500,mapX:0,mapY:0}),showLight:season==='4'?(existing?.showLight??true):false,layout:kind,players:clone(existing?.players??[]).map(p=>({...p,priority:priorityOf(p)})),objects:[]};
  const ox=state.origin.mapX,oy=state.origin.mapY;
  if(kind==='empty')return state;
  if(!['spaced','compact'].includes(kind))throw new Error(t('Unbekannte Vorlage.'));
@@ -237,44 +247,52 @@ function terrainUnionGeometry(parts){
  }
  return {slices,edges};
 }
+// Geometry is independent of visibility, textures and the active alliance.
+const geometryCache=new WeakMap();
+function prefix(mask){const sums=new Int32Array(1001*1001);for(let y=0;y<1000;y++){let row=0;for(let x=0;x<1000;x++){row+=mask[y*1000+x];sums[(y+1)*1001+x+1]=sums[y*1001+x+1]+row;}}return sums;}
+function tileCount(sums,x,y,w,h){const l=Math.max(0,x),b=Math.max(0,y),r=Math.min(1000,x+w),t=Math.min(1000,y+h);if(r<=l||t<=b)return 0;return sums[t*1001+r]-sums[b*1001+r]-sums[t*1001+l]+sums[b*1001+l];}
+function geometry(state){
+ if(geometryCache.has(state))return geometryCache.get(state);
+ const world=worldBounds(state),imported=root.HiveWorldMap?.index(state.worldMap),hard=imported?.blocked.slice()??new Uint8Array(1000000),mud=imported?.mud.slice()??new Uint8Array(1000000),near=new Uint8Array(1000000);
+ function paint(mask,o,pad=0){const r=rect(o),l=Math.max(0,Math.round(r.left-world.left)-pad),rr=Math.min(1000,Math.round(r.right-world.left)+pad),b=Math.max(0,Math.round(r.bottom-world.bottom)-pad),tt=Math.min(1000,Math.round(r.top-world.bottom)+pad);for(let y=b;y<tt;y++)mask.fill(1,y*1000+l,y*1000+rr);}
+ for(const o of state.objects){if(['note','missile'].includes(o.type))continue;paint(hard,solidFootprint(o));if(coreSize(o))paint(mud,o);if(['base','center','marshall'].includes(o.type))paint(near,o,6);}
+ const result={world,hard,mud,near,hardSums:prefix(hard),mudSums:prefix(mud)};geometryCache.set(state,result);return result;
+}
+function mudContact(state,o){
+ const g=geometry(state),r=rect(o),x=Math.round(r.left-g.world.left),y=Math.round(r.bottom-g.world.bottom);let count=0,sides=15;
+ for(let yy=0;yy<o.h;yy++)for(let xx=0;xx<o.w;xx++)if(g.mud[(y+yy)*1000+x+xx]){count++;sides&=(xx===0?1:0)|(xx===o.w-1?2:0)|(yy===0?4:0)|(yy===o.h-1?8:0);}
+ return {count,edge:count>0&&sides!==0,fullEdge:count===3&&sides!==0};
+}
+function baseSeatEligible(state,o){
+ if(root.HiveWorldMap?.status(state,o).blocked)return false;
+ const contact=mudContact(state,o);return !contact.count||!!state.mapOptions?.mudEdge&&contact.edge;
+}
 function planBaseFill(state,area,gap=0){
  if(!area||![area.left,area.right,area.bottom,area.top].every(Number.isFinite)||!Number.isInteger(gap)||gap<0||gap>2)throw new Error(t('Ungültiger Füllbereich oder Basisabstand.'));
- const world=worldBounds(state),left=Math.max(world.left,Math.min(area.left,area.right)),right=Math.min(world.right,Math.max(area.left,area.right)),bottom=Math.max(world.bottom,Math.min(area.bottom,area.top)),top=Math.min(world.top,Math.max(area.bottom,area.top)),pitch=3+gap;
- const x0=Math.ceil(left+1.5-1e-8),y0=Math.ceil(bottom+1.5-1e-8),x1=Math.floor(right-1.5+1e-8),y1=Math.floor(top-1.5+1e-8),capacity=Math.max(0,800-state.objects.length);
- if(x0>x1||y0>y1)return {positions:[],skipped:0,limited:false,gap};
- const anchor=state.objects.find(o=>owns(state,o)&&o.type===anchorType(state)),cx=anchor?.x??state.origin.mapX,cy=anchor?.y??state.origin.mapY;
- // Never widen an interval beyond the chosen pitch: a 6-tile interval
- // leaves a hostile 3x3 landing space. For gap 2, use two inner axes at
- // -2/+2 (one empty tile), then +/-7, +/-12, ... (two empty tiles).
- // This also keeps all four faces of the 9x9 center one tile from bases.
- // Axis positions never depend on the selection rectangle's starting corner.
- function axis(center,lo,hi){
-  const values=[];
-  if(anchor?.type==='center'){
-   const inner=gap===0?[-3,0,3]:[-2,2];
-   for(const offset of inner)if(center+offset>=lo&&center+offset<=hi)values.push(center+offset);
-   for(const sign of [-1,1])for(let offset=gap===2?7:6;offset<=Math.max(Math.abs(lo-center),Math.abs(hi-center));offset+=pitch){const value=center+sign*offset;if(value>=lo&&value<=hi)values.push(value);}
-  }else for(let k=Math.ceil((lo-center)/pitch);k<=Math.floor((hi-center)/pitch);k++)values.push(center+k*pitch);
-  return values.sort((a,b)=>(a-center)**2-(b-center)**2||a-b);
+ const g=geometry(state),world=g.world,left=Math.max(world.left,Math.min(area.left,area.right)),right=Math.min(world.right,Math.max(area.left,area.right)),bottom=Math.max(world.bottom,Math.min(area.bottom,area.top)),top=Math.min(world.top,Math.max(area.bottom,area.top)),pitch=3+gap;
+ const x0=Math.ceil(left-world.left),y0=Math.ceil(bottom-world.bottom),x1=Math.floor(right-world.left)-3,y1=Math.floor(top-world.bottom)-3,capacity=Math.max(0,800-state.objects.length),positions=[];
+ if(x0>x1||y0>y1)return {positions,skipped:0,limited:false,gap};
+ const ref=referencePoint(state),cx=Math.round(ref.x-world.left-1.5),cy=Math.round(ref.y-world.bottom-1.5),candidates=[],edgeEnabled=!!state.mapOptions?.mudEdge;
+ let skipped=0,limited=false;
+ const clear=(s,x,y,d)=>!tileCount(s,x-d,y-d,3+d*2,3+d*2);
+ // Include exact obstacle-boundary positions, not only one preselected lattice.
+ for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){
+  const grid=(x-cx)%pitch===0&&(y-cy)%pitch===0;
+  if(!clear(g.hardSums,x,y,gap)){if(grid)skipped++;continue;}
+  const mud=tileCount(g.mudSums,x,y,3,3);let edge=false,full=false;
+  if(mud){if(!edgeEnabled){if(grid)skipped++;continue;}const q=mudContact(state,{x:world.left+x+1.5,y:world.bottom+y+1.5,w:3,h:3});if(!q.edge){if(grid)skipped++;continue;}edge=true;full=q.fullEdge;}
+  else if(!clear(g.mudSums,x,y,gap)){if(grid)skipped++;continue;}
+  const boundary=!clear(g.hardSums,x,y,gap+1)||!edge&&!clear(g.mudSums,x,y,gap+1);
+  if(grid||boundary||edge)candidates.push({x,y,rank:full?0:edge?1:boundary?2:3,d:(x-cx)**2+(y-cy)**2});
  }
- const xs=axis(cx,x0,x1),ys=axis(cy,y0,y1).sort((a,b)=>(a-cy)**2-(b-cy)**2||b-a),positions=[],buckets=new Map();let skipped=0,limited=false;
- // Only nearby obstacles need inspection, even for large selected areas.
- for(const original of state.objects){if(original.type==='missile')continue;const o=original.type==='base'?{...original,w:original.w+2*gap,h:original.h+2*gap}:solidFootprint(original),r=rect(o);for(let gx=Math.floor(r.left/16);gx<=Math.floor(r.right/16);gx++)for(let gy=Math.floor(r.bottom/16);gy<=Math.floor(r.top/16);gy++){const key=gx+','+gy;if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(original);}}
- // Apply the same narrow central seam when filling in multiple passes.
- const centralPair=(a,b,center)=>anchor?.type==='center'&&gap===2&&Math.abs(a-center)===2&&a+b===2*center&&a!==b;
- // Merge distance-sorted columns with a small heap instead of sorting up to
- // 110,000 world-wide candidates on every live resize. Stop at the plan limit.
- const heap=[],compare=(a,b)=>a.distance-b.distance||b.y-a.y||a.x-b.x;
- function push(x,i){const y=ys[i],item={x,y,i,distance:(x-cx)**2+(y-cy)**2};let n=heap.length;heap.push(item);while(n){const p=(n-1)>>1;if(compare(heap[p],item)<=0)break;heap[n]=heap[p];n=p;}heap[n]=item;}
- function pop(){const first=heap[0],last=heap.pop();if(heap.length){let n=0;while(n*2+1<heap.length){let c=n*2+1;if(c+1<heap.length&&compare(heap[c+1],heap[c])<0)c++;if(compare(last,heap[c])<=0)break;heap[n]=heap[c];n=c;}heap[n]=last;}return first;}
- if(ys.length)for(const x of xs)push(x,0);
- while(heap.length){
-  const {x,y,i}=pop();if(i+1<ys.length)push(x,i+1);
-  const candidate={x,y,w:3,h:3},nearby=new Set();for(let gx=Math.floor((x-1.5)/16);gx<=Math.floor((x+1.5)/16);gx++)for(let gy=Math.floor((y-1.5)/16);gy<=Math.floor((y+1.5)/16);gy++)for(const o of buckets.get(gx+','+gy)??[])nearby.add(o);
-  if([...nearby].some(o=>overlaps(candidate,o.type==='base'?{...o,w:o.w+2*(centralPair(x,o.x,cx)?1:gap),h:o.h+2*(centralPair(y,o.y,cy)?1:gap)}:solidFootprint(o)))){skipped++;continue;}
-  if(root.HiveWorldMap&&!root.HiveWorldMap.eligible(state,{...candidate,type:'base'})){skipped++;continue;}
-  if(positions.length>=capacity){limited=true;break;}
-  positions.push({x:x||0,y:y||0});
+ candidates.sort((a,b)=>a.rank-b.rank||a.d-b.d||b.y-a.y||a.x-b.x);
+ const buckets=new Map();
+ for(const c of candidates){
+  const bx=Math.floor(c.x/8),by=Math.floor(c.y/8);let blocked=false;
+  for(let yy=by-1;yy<=by+1&&!blocked;yy++)for(let xx=bx-1;xx<=bx+1&&!blocked;xx++)for(const p of buckets.get(xx+','+yy)??[])if(Math.abs(p.x-c.x)<pitch&&Math.abs(p.y-c.y)<pitch){blocked=true;break;}
+  if(blocked){skipped++;continue;}if(positions.length===capacity){limited=true;break;}
+  const key=bx+','+by;if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(c);
+  positions.push({x:world.left+c.x+1.5,y:world.bottom+c.y+1.5});
  }
  return {positions,skipped,limited,gap};
 }
@@ -323,10 +341,10 @@ function importPlayers(state,text,format){return addPlayerNames(state,parsePlaye
 function autofillOptions(state,includeBeacons=false){
  const occupied=new Set(state.objects.filter(o=>o.playerId).map(o=>o.playerId));
  const players=alliancePlayers(state).filter(p=>!occupied.has(p.id));
- const empty=allianceObjects(state).filter(o=>o.type==='base'&&!o.playerId&&(!root.HiveWorldMap||root.HiveWorldMap.eligible(state,o)));
+ const empty=allianceObjects(state).filter(o=>o.type==='base'&&!o.playerId&&baseSeatEligible(state,o));
  const distance=o=>(o.x-referencePoint(state).x)**2+(o.y-referencePoint(state).y)**2;
  const seats=empty.filter(o=>includeBeacons||!o.beacon).sort((a,b)=>distance(a)-distance(b)||a.slot-b.slot||a.id.localeCompare(b.id));
- return {players,seats,reserved:includeBeacons?0:empty.filter(o=>o.beacon).length};
+ return {players,seats,reserved:includeBeacons?0:empty.filter(o=>o.beacon).length,unsuitable:allianceObjects(state).filter(o=>o.type==='base'&&!o.playerId&&(includeBeacons||!o.beacon)&&!baseSeatEligible(state,o)).length};
 }
 function groupForPlayer(state,id){return (state.groups??[]).find(g=>g.playerIds.includes(id))??null;}
 function requirePlayerIds(state,playerIds){
@@ -497,27 +515,28 @@ function bounds(state,includeLight=state.showLight){
  const rs=all.map(rect);return {left:Math.min(...rs.map(r=>r.left)),right:Math.max(...rs.map(r=>r.right)),bottom:Math.min(...rs.map(r=>r.bottom)),top:Math.max(...rs.map(r=>r.top))};
 }
 function validate(raw){
- if(!raw||raw.schema!==SCHEMA||![1,2,3,4,5,6,7,8,9,10,VERSION].includes(raw.version))throw new Error(t('Das ist keine unterstützte Hive-Plan-Datei.'));
+ if(!raw||raw.schema!==SCHEMA||![1,2,3,4,5,6,7,8,9,10,11,VERSION].includes(raw.version))throw new Error(t('Das ist keine unterstützte Hive-Plan-Datei.'));
  if(typeof raw.title!=='string'||raw.title.length>80)throw new Error(t('Ungültiger Planname.'));
  if(!raw.origin||!['x','y','mapX','mapY'].every(k=>Number.isSafeInteger(raw.origin[k])))throw new Error(t('Ungültiger Koordinatenursprung.'));
  if(!finite(raw.origin.x,0,999999)||!finite(raw.origin.y,0,999999)||!finite(raw.origin.mapX,-1000000000,1000000000)||!finite(raw.origin.mapY,-1000000000,1000000000))throw new Error(t('Ungültiger Koordinatenursprung.'));
  if(raw.origin.x>999||raw.origin.y>999)throw new Error(t(raw.version<5?'Der ältere Plan liegt außerhalb der neuen Karte (X/Y 0–999) und wurde nicht geladen.':'Ungültiger Koordinatenursprung.'));
- if(!Array.isArray(raw.players)||raw.players.length>1500||!Array.isArray(raw.objects)||raw.objects.length>800)throw new Error(t('Die Datei enthält zu viele oder ungültige Elemente.'));
+ if(!Array.isArray(raw.players)||raw.players.length>15000||!Array.isArray(raw.objects)||raw.objects.length>800)throw new Error(t('Die Datei enthält zu viele oder ungültige Elemente.'));
  const season=raw.version===1?'4':raw.season;
  if(!SEASONS.includes(season))throw new Error(t('Ungültige Season.'));
  const state={schema:SCHEMA,version:VERSION,season,groups:[],priorityLabels:['','',''],title:raw.title,origin:{x:raw.origin.x,y:raw.origin.y,mapX:raw.origin.mapX,mapY:raw.origin.mapY},showLight:raw.showLight!==false,layout:['spaced','compact','empty'].includes(raw.layout)?raw.layout:'empty',players:[],objects:[]};
  if(raw.version>=3){if(!Array.isArray(raw.priorityLabels)||raw.priorityLabels.length!==3||raw.priorityLabels.some(v=>typeof v!=='string'||v.length>40))throw new Error(t('Ungültige Prioritätsbezeichnungen.'));state.priorityLabels=raw.priorityLabels.map(normalizeName);}
- const validAlliance=id=>Number.isInteger(id)&&id>=1&&id<=5;
- if(raw.activeAlliance!==undefined){if(!validAlliance(raw.activeAlliance))throw new Error(t('Allianz muss zwischen 1 und 5 liegen.'));state.activeAlliance=raw.activeAlliance;}
- if(raw.alliancePriorityLabels!==undefined){if(!raw.alliancePriorityLabels||typeof raw.alliancePriorityLabels!=='object'||Array.isArray(raw.alliancePriorityLabels))throw new Error(t('Ungültige Prioritätsbezeichnungen.'));state.alliancePriorityLabels={};for(const [key,labels] of Object.entries(raw.alliancePriorityLabels)){if(!['2','3','4','5'].includes(key)||!Array.isArray(labels)||labels.length!==3||labels.some(v=>typeof v!=='string'||v.length>40))throw new Error(t('Ungültige Prioritätsbezeichnungen.'));state.alliancePriorityLabels[key]=labels.map(normalizeName);}}
- if(raw.viewOptions!==undefined){const v=raw.viewOptions;if(!v||typeof v!=='object'||Array.isArray(v))throw new Error(t('Ungültiges Kartenelement.'));state.viewOptions={};for(const k of ['names','coordinates','notes','missiles','exportNotes'])if(v[k]!==undefined){if(typeof v[k]!=='boolean')throw new Error(t('Ungültiges Kartenelement.'));state.viewOptions[k]=v[k];}if(v.alliances!==undefined){if(!Array.isArray(v.alliances)||v.alliances.length>5||v.alliances.some(a=>!validAlliance(a)))throw new Error(t('Ungültiges Kartenelement.'));state.viewOptions.alliances=[...new Set(v.alliances)];}}
+ if(raw.allianceProfiles!==undefined)state.allianceProfiles=validateAlliances(raw.allianceProfiles);
+ const validAlliance=id=>Number.isInteger(id)&&id>=1&&id<=50;
+ if(raw.activeAlliance!==undefined){if(!validAlliance(raw.activeAlliance)||raw.allianceProfiles&&!raw.allianceProfiles.some(a=>a.id===raw.activeAlliance))throw new Error(t('Allianz muss zwischen 1 und 5 liegen.'));state.activeAlliance=raw.activeAlliance;}
+ if(raw.alliancePriorityLabels!==undefined){if(!raw.alliancePriorityLabels||typeof raw.alliancePriorityLabels!=='object'||Array.isArray(raw.alliancePriorityLabels))throw new Error(t('Ungültige Prioritätsbezeichnungen.'));state.alliancePriorityLabels={};for(const [key,labels] of Object.entries(raw.alliancePriorityLabels)){if((!validAlliance(Number(key))||Number(key)===1||String(Number(key))!==key)||!Array.isArray(labels)||labels.length!==3||labels.some(v=>typeof v!=='string'||v.length>40))throw new Error(t('Ungültige Prioritätsbezeichnungen.'));state.alliancePriorityLabels[key]=labels.map(normalizeName);}}
+ if(raw.viewOptions!==undefined){const v=raw.viewOptions;if(!v||typeof v!=='object'||Array.isArray(v))throw new Error(t('Ungültiges Kartenelement.'));state.viewOptions={};for(const k of ['names','coordinates','notes','missiles','exportNotes'])if(v[k]!==undefined){if(typeof v[k]!=='boolean')throw new Error(t('Ungültiges Kartenelement.'));state.viewOptions[k]=v[k];}if(v.alliances!==undefined){if(!Array.isArray(v.alliances)||v.alliances.length>50||v.alliances.some(a=>!validAlliance(a)))throw new Error(t('Ungültiges Kartenelement.'));state.viewOptions.alliances=[...new Set(v.alliances)];}}
  if(raw.blueprints!==undefined){if(!Array.isArray(raw.blueprints)||raw.blueprints.length>30)throw new Error(t('Ungültiger Baustein.'));const used=new Set();state.blueprints=raw.blueprints.map(b=>{if(!b||typeof b.id!=='string'||!/^[A-Za-z0-9_-]{1,100}$/.test(b.id)||used.has(b.id)||typeof b.name!=='string'||!b.name.trim()||b.name.length>80||!b.plan||!Array.isArray(b.plan.objects)||!b.plan.objects.length)throw new Error(t('Ungültiger Baustein.'));used.add(b.id);const plan=validate({...b.plan,blueprints:undefined});return {id:b.id,name:b.name,plan};});}
  const ids=new Set(),names=new Set(),assigned=new Set(),beacons=new Set(),playerAlliances=new Map();
  const validId=id=>typeof id==='string'&&id.length>0&&id.length<=100&&/^[A-Za-z0-9_-]+$/.test(id);
  for(const p of raw.players){if(!p||!validId(p.id)||ids.has(p.id)||typeof p.name!=='string'||!normalizeName(p.name)||p.name.length>80||names.has(allianceOf(p)+':'+nameKey(p.name))||!validAlliance(allianceOf(p)))throw new Error(t('Ungültige oder doppelte Spieler.'));ids.add(p.id);names.add(allianceOf(p)+':'+nameKey(p.name));playerAlliances.set(p.id,allianceOf(p));const priority=raw.version>=3?p.priority:2;if(!Number.isInteger(priority)||priority<1||priority>3)throw new Error(t('Priorität muss 1, 2 oder 3 sein.'));state.players.push({id:p.id,name:normalizeName(p.name),priority,...(p.alliance===undefined?{}:{alliance:p.alliance})});}
- for(let id=1;id<=5;id++)if(state.players.filter(p=>allianceOf(p)===id).length>300)throw new Error(t('Die Liste kann höchstens 300 Spieler enthalten.'));
+ for(let id=1;id<=50;id++)if(state.players.filter(p=>allianceOf(p)===id).length>300)throw new Error(t('Die Liste kann höchstens 300 Spieler enthalten.'));
  const groups=raw.version===1?emptyGroups():raw.groups,groupIds=new Set(),groupedPlayers=new Set();
- if(!Array.isArray(groups)||groups.length>50)throw new Error(t('Ungültige Gruppenliste.'));
+ if(!Array.isArray(groups)||groups.length>500)throw new Error(t('Ungültige Gruppenliste.'));
  for(const g of groups){
   if(!g||!Number.isInteger(g.id)||g.id<1||g.id>10||groupIds.has(allianceOf(g)+':'+g.id)||!validAlliance(allianceOf(g))||!Array.isArray(g.playerIds)||g.playerIds.length>300)throw new Error(t('Ungültige Gruppenliste.'));
   groupIds.add(allianceOf(g)+':'+g.id);const playerIds=[];
@@ -558,16 +577,16 @@ function validate(raw){
  if(raw.worldMap!==undefined){if(!root.HiveWorldMap)throw new Error(t('Kartendaten-Modul fehlt.'));state.worldMap=root.HiveWorldMap.validate(raw.worldMap);if(state.worldMap.season!==state.season)throw new Error(t('Kartendaten passen nicht zur ausgewählten Season.'));}
  if(raw.mapStyle!==undefined){if(!['plan','game'].includes(raw.mapStyle))throw new Error(t('Ungültige Kartendaten.'));state.mapStyle=raw.mapStyle;}
  if(raw.mapOptions!==undefined)state.mapOptions=root.HiveWorldMap.validateOptions(raw.mapOptions);
- return state;
+ state.allianceProfiles=validateAlliances(alliances(state));return state;
 }
-root.HiveModel={assertUnlocked,selectionCenter,setSelectionCenter,cornerCoords,displayCoords,centerLimits,setObjectCenter,coreSize,coreHeight,resizable,assertDimensions,solidFootprint,blocks,ALLIANCE_COLORS,allianceOf,activeAlliance,owns,allianceObjects,alliancePlayers,allianceGroups,priorityLabelsFor,referencePoint,setAlliance,resetAllianceLayout,SCHEMA,VERSION,WORLD_SIZE,worldBounds,referenceCoords,assertWorldPlacement,setObjectCorner,PRIORITY_DEFAULTS,priorityOf,priorityLabel,setPlayerPriorities,setPriorityLabel,setPlayerGroups,groupPriority,SEASONS,emptyGroups,isSeason4,isDeveloping,anchorType,setSeason,groupForPlayer,setPlayerGroup,clearPlayers,areNeighbors,groupComponents,terrainResizeCandidate,resizeTerrain,terrainCornerCoords,terrainPositionFromCornerCoords,setTerrainCorner,connectTerrains,disconnectTerrains,terrainTouching,terrainsConnected,terrainParts,expandObjectIds,objectBounds,terrainUnionGeometry,planBaseFill,fillBases,moveObjects,removeObjects,COLORS,clone,uid,normalizeName,snap,rect,overlaps,coords,positionFromCoords,playerFor,objectForPlayer,objectLabel,makeLayout,collision,assertPlacement,moveObject,nextBeacon,makeObject,addObject,removeObject,parsePlayerFile,decodePlayerFile,importPlayers,addPlayers,autofillOptions,autofill,assign,unassign,unassignAll,removePlayer,setOrigin,updateObject,coverage,bounds,validate};
+root.HiveModel={alliances,usedAlliances,allianceName,allianceColor,validateAlliances,editAlliance,geometry,prefix,tileCount,mudContact,baseSeatEligible,assertUnlocked,selectionCenter,setSelectionCenter,cornerCoords,displayCoords,centerLimits,setObjectCenter,coreSize,coreHeight,resizable,assertDimensions,solidFootprint,blocks,ALLIANCE_COLORS,allianceOf,activeAlliance,owns,allianceObjects,alliancePlayers,allianceGroups,priorityLabelsFor,referencePoint,setAlliance,resetAllianceLayout,SCHEMA,VERSION,WORLD_SIZE,worldBounds,referenceCoords,assertWorldPlacement,setObjectCorner,PRIORITY_DEFAULTS,priorityOf,priorityLabel,setPlayerPriorities,setPriorityLabel,setPlayerGroups,groupPriority,SEASONS,emptyGroups,isSeason4,isDeveloping,anchorType,setSeason,groupForPlayer,setPlayerGroup,clearPlayers,areNeighbors,groupComponents,terrainResizeCandidate,resizeTerrain,terrainCornerCoords,terrainPositionFromCornerCoords,setTerrainCorner,connectTerrains,disconnectTerrains,terrainTouching,terrainsConnected,terrainParts,expandObjectIds,objectBounds,terrainUnionGeometry,planBaseFill,fillBases,moveObjects,removeObjects,COLORS,clone,uid,normalizeName,snap,rect,overlaps,coords,positionFromCoords,playerFor,objectForPlayer,objectLabel,makeLayout,collision,assertPlacement,moveObject,nextBeacon,makeObject,addObject,removeObject,parsePlayerFile,decodePlayerFile,importPlayers,addPlayers,autofillOptions,autofill,assign,unassign,unassignAll,removePlayer,setOrigin,updateObject,coverage,bounds,validate};
 })(globalThis);
 
 /* Editing helpers shared by the editor and its tests. Geometry stays in HiveModel. */
 (function(root){
 'use strict';
 const M=root.HiveModel,t=(k,p)=>root.HiveI18n?.t(k,p)??k;
-const view=state=>({names:true,coordinates:true,notes:true,missiles:true,exportNotes:true,alliances:[1,2,3,4,5],...state.viewOptions});
+const view=state=>({names:true,coordinates:true,notes:true,missiles:true,exportNotes:true,alliances:(state.allianceProfiles??M.alliances(state)).map(a=>a.id),...state.viewOptions});
 const visible=(state,o,exporting=false)=>{const v=view(state);return v.alliances.includes(M.allianceOf(o))&&(o.type!=='missile'||v.missiles)&&(o.type!=='note'||v.notes&&(!exporting||v.exportNotes));};
 function setLocked(state,ids,locked,scope='active'){const expanded=new Set(M.expandObjectIds(state,ids));if(scope!=='all'&&state.objects.some(o=>expanded.has(o.id)&&!M.owns(state,o)))throw Error(t('Wähle zuerst die passende Allianz.'));const next=M.clone(state);for(const o of next.objects)if(expanded.has(o.id))o.locked=!!locked;return next;}
 function setGroup(state,ids,name){const set=new Set(M.expandObjectIds(state,ids));const next=M.clone(state);name=M.normalizeName(name).slice(0,80);for(const o of next.objects)if(set.has(o.id)){if(name)o.selectionGroup=name;else delete o.selectionGroup;}return next;}
@@ -596,11 +615,17 @@ function audit(state,area){
  if(!area)return result;
  const world=M.worldBounds(state),left=Math.max(world.left,area.left),right=Math.min(world.right,area.right),bottom=Math.max(world.bottom,area.bottom),top=Math.min(world.top,area.top);
  const x0=Math.ceil(left-world.left),x1=Math.floor(right-world.left)-3,y0=Math.ceil(bottom-world.bottom),y1=Math.floor(top-world.bottom)-3;
- // Summed-area table: O(world tiles + candidate tiles), even for a whole-map scan.
- const size=1001,occupied=root.HiveWorldMap?.index(state.worldMap)?.blocked.slice()??new Uint8Array(1000000);
- for(const raw of state.objects){if(['note','missile'].includes(raw.type))continue;const r=M.rect(M.solidFootprint(raw)),l=Math.max(0,Math.round(r.left-world.left)),rr=Math.min(1000,Math.round(r.right-world.left)),b=Math.max(0,Math.round(r.bottom-world.bottom)),tt=Math.min(1000,Math.round(r.top-world.bottom));for(let y=b;y<tt;y++)occupied.fill(1,y*1000+l,y*1000+rr);}
- const sums=new Int32Array(size*size);for(let y=0;y<1000;y++){let line=0;for(let x=0;x<1000;x++){line+=occupied[y*1000+x];sums[(y+1)*size+x+1]=sums[y*size+x+1]+line;}}
- for(let y=y0;y<=y1;y++)for(let x=x0;x<=x1;x++){const n=sums[(y+3)*size+x+3]-sums[y*size+x+3]-sums[(y+3)*size+x]+sums[y*size+x];if(!n){result.totalLandings++;if(result.landings.length<200)result.landings.push({x:world.left+x+1.5,y:world.bottom+y+1.5,w:3,h:3});}}
+ const g=M.geometry(state),mask=new Uint8Array(1000000);result.landingMask=mask;result.world=world;result.nearCount=0;result.farCount=0;result.rows=[];
+ // Retain every legal anchor in a compact mask; aggregate display never truncates the scan.
+ const near=[],far=[];
+ for(let y=y0;y<=y1;y++){let run=null;for(let x=x0;x<=x1;x++){
+  const legal=!M.tileCount(g.hardSums,x,y,3,3),kind=legal?(g.near[(y+1)*1000+x+1]?2:1):0;
+  if(kind){mask[y*1000+x]=kind;result.totalLandings++;result[kind===2?'nearCount':'farCount']++;const list=kind===2?near:far;if(list.length<200)list.push({x:world.left+x+1.5,y:world.bottom+y+1.5,w:3,h:3});}
+  if(run&&run.kind!==kind){result.rows.push(run);run=null;}if(kind){if(!run)run={y,left:x,right:x,kind};else run.right=x;}
+ }if(run)result.rows.push(run);}
+ // A short navigation list, prioritizing the formation. The renderer uses the full mask/rows.
+ result.landings=[...near,...far].slice(0,200);
+
  return result;
 }
 root.HiveQoL={view,visible,setLocked,setGroup,capture,prepareCopies,pasteAt,duplicate,arrange,swap,audit};

@@ -4,18 +4,19 @@ const T=globalThis.HiveThemes??{svg:s=>s,init(){}},I=globalThis.HiveI18n,t=(key,
 const Q=globalThis.HiveQoL;
 const M=globalThis.HiveModel,W=globalThis.HiveWorkspace,$=id=>document.getElementById(id),svg=$('map'),stage=$('stage');
 // User-facing release: increment the final number for each later delivered update.
-const APP_VERSION='1.2.1';
+const APP_VERSION='1.2.2';
 const editorUI={ready:false,left:'players',inspector:'position',inspectorKey:null,selectionKey:null};
 const TOOL_SHORTCUTS={b:'base',m:'marshall',a:'center',t:'terrain',l:'beacon'};
 const shortcutFor=type=>Object.keys(TOOL_SHORTCUTS).find(key=>TOOL_SHORTCUTS[key]===type)?.toUpperCase();
 let workspace=W.createWorkspace(),state=W.activePlan(workspace),selectedId=null,pending=null,filter='all',dirty=false,undoStack=[],redoStack=[],drag=null,suppressClick=false,confirmAction=null,toastTimer=null;
-let selectionCenterEntry=null;
+let selectionCenterEntry=null,savedRecord=null,savedFingerprint=null,recoveryMessage='',recoveryReady=false;
+const D=globalThis.HiveRecovery;
 let worldSelection=null,worldEditing=false,worldPending=null;
-let nameAction=null,qolInitialized=false;
+let nameAction=null,qolInitialized=false,landingPage=0;
 let selectionScope='active',selectionFilter='all',clipboardPlan=null,pasteObjects=null,arrangement=null,checkArea=null,checkResult=null,highlightObject=null,recoveryTimer=null,recoveryInitialized=false;
 let selectedObjectIds=new Set(),mapMode='pan',fillArea=null,fillPreview=null;
 let organizerOpen=false,organizationTab='priority',selectedPlayers=new Set(),lastAutofillResult=null;
-const allianceName=id=>t('Allianz {n}',{n:id});
+const allianceName=id=>M.allianceName(state,id);
 const groupName=id=>t('Gruppe {n}',{n:id});
 const seasonName=()=>state.season==='off'?t('Off Season'):t('Season {n}',{n:state.season});
 const referenceName=()=>t(M.isSeason4(state)?'Allianzzentrum':'Marshall');
@@ -24,7 +25,8 @@ const metrics=document.createElement('canvas').getContext('2d');
 const esc=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const h=(key,params)=>esc(t(key,params));
 const num=n=>n==='X'?'X':Number.isInteger(n)?String(n):String(Math.round(n*10)/10);
-const color=o=>M.allianceOf(o)!==1?M.ALLIANCE_COLORS[M.allianceOf(o)-1]:M.COLORS[((o.beacon?.charCodeAt(0)??65)-65)%M.COLORS.length];
+const themedSvg=source=>T.svg(source,(state.allianceProfiles??[]).map(a=>a.color));
+const color=o=>M.allianceOf(o)!==1||M.allianceColor(state,1)!==M.ALLIANCE_COLORS[0]?M.allianceColor(state,M.allianceOf(o)):M.COLORS[((o.beacon?.charCodeAt(0)??65)-65)%M.COLORS.length];
 const typeName=o=>t({base:o?.beacon?'Beacon':'Basis',center:'Zentrum',marshall:'Marshall',terrain:'Terrain',stronghold:'Stronghold',city:'Stadt',missile:'Missile',note:'Notiz'}[o?.type]??'');
 const selected=()=>state.objects.find(o=>o.id===selectedId)??null;
 const selectedObjects=()=>state.objects.filter(o=>selectedObjectIds.has(o.id));
@@ -44,12 +46,12 @@ function commit(next,message){
 function commitWorkspace(next,message){
  if(next===workspace)return false;
  lastAutofillResult=null;undoStack.push(workspace);if(undoStack.length>70)undoStack.shift();redoStack=[];
- workspace=next;state=W.activePlan(workspace);dirty=true;
+ workspace=next;state=W.activePlan(workspace);dirty=!savedFingerprint||D?.fingerprint(workspace)!==savedFingerprint;
  setMapSelection([...selectedObjectIds],selectedId);arrangement=null;checkResult=null;scheduleRecovery();refreshFillPreview();render();if(message)toast(message);return true;
 }
 function restoreHistory(direction){
  lastAutofillResult=null;const source=direction==='undo'?undoStack:redoStack,target=direction==='undo'?redoStack:undoStack;if(!source.length)return;
- const previous=state.season+':'+state.layout;target.push(workspace);workspace=source.pop();state=W.activePlan(workspace);dirty=true;
+ const previous=state.season+':'+state.layout;target.push(workspace);workspace=source.pop();state=W.activePlan(workspace);dirty=!savedFingerprint||D?.fingerprint(workspace)!==savedFingerprint;
  resetMapTools(true);scheduleRecovery();$('drag-ghost').hidden=true;clearOrganizationDrop();render();if(previous!==state.season+':'+state.layout)fitMap();
 }
 function activateAlliance(id){if(id===M.activeAlliance(state))return;resetMapTools(true);selectedPlayers.clear();lastAutofillResult=null;$('drag-ghost').hidden=true;clearOrganizationDrop();commit(M.setAlliance(state,id));}
@@ -93,13 +95,14 @@ function nameSvg(name,width,height,y,fill='#e0edf8',initial=.56){
  const start=y-(lines.length-1)*size*1.18/2;
  return `<text class="map-name" fill="${fill}" font-size="${size.toFixed(3)}" font-weight="550" text-anchor="middle">${lines.map((s,i)=>`<tspan x="0" y="${(start+i*size*1.18).toFixed(3)}">${esc(s)}</tspan>`).join('')}</text>`;
 }
-function definitions(){const b=M.worldBounds(state);return `<defs><clipPath id="world-clip"><rect x="${b.left}" y="${-b.top}" width="1000" height="1000"/></clipPath><pattern id="world-grid" x="${b.left}" y="${-b.top}" width="50" height="50" patternUnits="userSpaceOnUse"><path d="M50 0H0V50" fill="none" stroke="#3c5a70" stroke-width=".6"/></pattern><pattern id="medium-grid" x="${b.left}" y="${-b.top}" width="5" height="5" patternUnits="userSpaceOnUse"><path d="M5 0H0V5" fill="none" stroke="#345169" stroke-width=".08"/></pattern><pattern id="small-grid" x="-.5" y="-.5" width="1" height="1" patternUnits="userSpaceOnUse"><path d="M1 0H0V1" fill="none" stroke="#263b50" stroke-width=".025"/></pattern><pattern id="big-grid" x="-.5" y="-.5" width="5" height="5" patternUnits="userSpaceOnUse"><rect width="5" height="5" fill="url(#small-grid)"/><path d="M5 0H0V5" fill="none" stroke="#345169" stroke-width=".04"/></pattern><pattern id="terrain-hatch" width=".55" height=".55" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width=".55" height=".55" fill="#342d36"/><path d="M0 0V.55" stroke="#714e54" stroke-width=".1"/></pattern></defs>`;}
+function definitions(){const b=M.worldBounds(state);return `<defs><clipPath id="world-clip"><rect x="${b.left}" y="${-b.top}" width="1000" height="1000"/></clipPath><pattern id="big-grid" x="${b.left}" y="${-b.top}" width="1" height="1" patternUnits="userSpaceOnUse"><path d="M1 0H0V1" fill="none" stroke="#58716b" stroke-width=".035"/></pattern><pattern id="terrain-hatch" width=".55" height=".55" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width=".55" height=".55" fill="#342d36"/><path d="M0 0V.55" stroke="#714e54" stroke-width=".1"/></pattern></defs>`;}
+
 function objectSvg(o,exporting=false){
- const q=M.displayCoords(state,o),name=M.objectLabel(state,o)+(o.type==='base'&&o.customName&&M.playerFor(state,o)&&M.playerFor(state,o).name!==o.name?' · '+M.playerFor(state,o).name:''),alliance=M.allianceOf(o),tint=M.ALLIANCE_COLORS[alliance-1],active=!exporting&&selectedObjectIds.has(o.id),classes=`object-${o.type}${active?' map-object-selected':''}`;
+ const q=M.displayCoords(state,o),name=M.objectLabel(state,o)+(o.type==='base'&&o.customName&&M.playerFor(state,o)&&M.playerFor(state,o).name!==o.name?' · '+M.playerFor(state,o).name:''),alliance=M.allianceOf(o),tint=M.allianceColor(state,alliance),colored=alliance!==1||tint!==M.ALLIANCE_COLORS[0],active=!exporting&&selectedObjectIds.has(o.id),classes=`object-${o.type}${active?' map-object-selected':''}`;
  const attr=`${['terrain','stronghold','city','missile'].includes(o.type)?'data-theme-preserve="true" ':''}data-object="${esc(o.id)}" class="${classes}" transform="translate(${o.x} ${-o.y})" role="button" aria-label="${esc(name)}, X ${q.x}, Y ${q.y}"`;
  let content='';
  if(o.type==='center'){
-  content=`<rect x="-4.5" y="-4.5" width="9" height="9" fill="${alliance===1?'#27374b':tint+'30'}" stroke="${alliance===1?'#b1c5d7':tint}" stroke-width=".12"/><text y="-1.05" text-anchor="middle" fill="#edf5fc" font-size="1.55" font-weight="750">AC</text>${nameSvg(name,8,1,.55,'#d7e5f1',.65)}<text x="0" y="1.8" text-anchor="middle" fill="#afc7d7" font-size=".53">X ${num(q.x)}   Y ${num(q.y)}</text><text y="3.2" text-anchor="middle" fill="#8ca7bd" font-size=".48">${h('9 × 9 Felder')}</text>`;
+  content=`<rect x="-4.5" y="-4.5" width="9" height="9" fill="${!colored?'#27374b':tint+'30'}" stroke="${!colored?'#b1c5d7':tint}" stroke-width=".12"/><text y="-1.05" text-anchor="middle" fill="#edf5fc" font-size="1.55" font-weight="750">AC</text>${nameSvg(name,8,1,.55,'#d7e5f1',.65)}<text x="0" y="1.8" text-anchor="middle" fill="#afc7d7" font-size=".53">X ${num(q.x)}   Y ${num(q.y)}</text><text y="3.2" text-anchor="middle" fill="#8ca7bd" font-size=".48">${h('9 × 9 Felder')}</text>`;
  }else if(M.coreSize(o)){
   const f=M.solidFootprint(o),dx=f.x-o.x,dy=o.y-f.y,scale=Math.min(1,f.w/5,f.h/5);content=`<rect x="${dx-f.w/2}" y="${dy-f.h/2}" width="${f.w}" height="${f.h}" fill="#725039" stroke="#edc096" stroke-width=".15"/><g transform="translate(${dx} ${dy}) scale(${scale})">${nameSvg(name,f.w/scale-.3,1,-.6,'#fff2d7',.7)}<text y=".6" text-anchor="middle" fill="#fff2d7" font-size=".42">${f.w} × ${f.h}</text><text y="1.4" text-anchor="middle" fill="#fff2d7" font-size=".38">X ${num(q.x)} / Y ${num(q.y)}</text></g>`;
  }else if(o.type==='missile'){
@@ -110,7 +113,7 @@ function objectSvg(o,exporting=false){
  }else if(o.type==='terrain'){
   content=`<rect x="${-o.w/2}" y="${-o.h/2}" width="${o.w}" height="${o.h}" fill="${o.color??'url(#terrain-hatch)'}" stroke="${o.color??'#a8787d'}" stroke-width=".09"/>${nameSvg(name,o.w-.25,Math.max(.3,o.h-1.1),-.25,terrainInk(o),.6)}<text y="${o.h/2-.2}" text-anchor="middle" fill="${terrainInk(o)}" font-size=".35">${o.w} × ${o.h} · X ${num(q.x)} / Y ${num(q.y)}</text>`;
  }else{
-  const beacon=o.type==='base'&&o.beacon,guard=o.type==='marshall',stroke=alliance!==1?tint:guard?'#f3cd6a':beacon?color(o):'#5b829f',fill=alliance!==1?tint+'28':guard?'#51432b':beacon?'#173540':o.playerId?'#223f57':'#152c40';
+  const beacon=o.type==='base'&&o.beacon,guard=o.type==='marshall',stroke=colored?tint:guard?'#f3cd6a':beacon?color(o):'#5b829f',fill=colored?tint+'28':guard?'#51432b':beacon?'#173540':o.playerId?'#223f57':'#152c40';
   content=`<rect x="-1.5" y="-1.5" width="3" height="3" fill="${fill}" stroke="${stroke}" stroke-width="${(beacon||guard) ? .09 : .055}"/>`;
   if(beacon)content+=`<circle cx="-1.06" cy="-1.07" r=".28" fill="${color(o)}"/><text x="-1.06" y="-.95" text-anchor="middle" font-size=".35" font-weight="800" fill="#0a1824">${o.beacon}</text><circle cx="1.14" cy="-1.19" r=".4" fill="#f7ce66" stroke="#0b1926" stroke-width=".065"/><text x="1.14" y="-1.09" text-anchor="middle" font-size=".29" font-weight="750" fill="#252618">+${o.electricians}</text>`;
   content+=nameSvg(name,2.63,beacon?1.12:1.55,beacon?-.12:-.25,guard?'#ffe3a0':o.playerId?'#ecf7ff':beacon?'#bcf4f0':'#80a1bc',beacon?.49:.55);
@@ -128,12 +131,16 @@ function terrainHandles(o){
   return `<g class="terrain-handle" data-resize="${c}" data-object="${esc(o.id)}" role="button" tabindex="0" aria-label="${h(label)}"><title>${h(label)}</title><path d="M${x} ${-y}L${hx} ${-hy}" stroke="#9de8d3" stroke-width="${stroke}"/><rect x="${hx-size/2}" y="${-hy-size/2}" width="${size}" height="${size}" rx="${3/camera.scale}" fill="#d4fff0" stroke="#238269" stroke-width="${stroke}"/><text x="${hx}" y="${-hy+5/camera.scale}" text-anchor="middle" font-size="${16/camera.scale}" font-weight="800" fill="#124437">${{nw:'↖',ne:'↗',sw:'↙',se:'↘'}[c]}</text></g>`;
  }).join('');
 }
-function fillAreaHandles(area){
- const size=20/camera.scale,offset=Math.min(12/camera.scale,(area.right-area.left)/4,(area.top-area.bottom)/4),stroke=1.5/camera.scale;
- return ['nw','ne','sw','se'].map(c=>{const east=c.endsWith('e'),north=c.startsWith('n'),x=(east?area.right:area.left)+(east?-offset:offset),y=(north?area.top:area.bottom)+(north?-offset:offset),label={nw:'Oben links ziehen',ne:'Oben rechts ziehen',sw:'Unten links ziehen',se:'Unten rechts ziehen'}[c];
-  return `<g class="fill-area-handle" data-fill-resize="${c}" role="button" tabindex="0" aria-label="${h('Füllbereich: {corner}',{corner:t(label)})}"><title>${h('Füllbereich: {corner}',{corner:t(label)})}</title><rect x="${x-size/2}" y="${-y-size/2}" width="${size}" height="${size}" rx="${3/camera.scale}" fill="#ffe1a0" stroke="#9e7631" stroke-width="${stroke}"/><text x="${x}" y="${-y+5/camera.scale}" text-anchor="middle" font-size="${16/camera.scale}" font-weight="800" fill="#50390e">${{nw:'↖',ne:'↗',sw:'↙',se:'↘'}[c]}</text></g>`;
- }).join('');
+function fillAreaHandles(area,type='fill'){
+ const size=14/camera.scale,stroke=1.5/camera.scale,cx=(area.left+area.right)/2,cy=(area.bottom+area.top)/2;
+ const handles=['nw','n','ne','e','se','s','sw','w'].map(c=>{const x=c.includes('e')?area.right:c.includes('w')?area.left:cx,y=c.includes('n')?area.top:c.includes('s')?area.bottom:cy;return `<rect class="fill-area-handle" data-area-type="${type}" data-area-resize="${c}" ${type==='fill'?`data-fill-resize="${c}"`:''} role="button" tabindex="0" aria-label="${h(type==='fill'?'Füllbereich':'Prüfbereich')} ${c}" x="${x-size/2}" y="${-y-size/2}" width="${size}" height="${size}" rx="${2/camera.scale}" fill="#ffe1a0" stroke="#9e7631" stroke-width="${stroke}"/>`;}).join('');
+ return `<rect data-area-type="${type}" data-area-move="true" x="${area.left}" y="${-area.top}" width="${area.right-area.left}" height="${area.top-area.bottom}" fill="none" stroke="transparent" stroke-width="${10/camera.scale}" pointer-events="stroke"/><g data-area-type="${type}" data-area-move="true" tabindex="0" role="button" aria-label="${h('Bereich verschieben')}" transform="translate(${cx} ${-area.top-16/camera.scale})"><rect x="${-28/camera.scale}" y="${-10/camera.scale}" width="${56/camera.scale}" height="${20/camera.scale}" rx="${5/camera.scale}" fill="#6b542c"/><text text-anchor="middle" y="${5/camera.scale}" font-size="${15/camera.scale}" fill="#fff0cf">✥</text></g>`+handles;
 }
+function areaValue(type){return type==='check'?checkArea:fillArea;}
+function setAreaValue(type,value){if(type==='check')checkArea=value;else fillArea=value;}
+function moveArea(area,dx,dy){const w=M.worldBounds(state);dx=Math.max(w.left-area.left,Math.min(w.right-area.right,Math.round(dx)));dy=Math.max(w.bottom-area.bottom,Math.min(w.top-area.top,Math.round(dy)));return {left:area.left+dx,right:area.right+dx,bottom:area.bottom+dy,top:area.top+dy};}
+function finishArea(type){if(type==='check')runHiveCheck();else safely(refreshFillPreview);}
+function cancelAreaDrag(){pointerEvent=null;if(!drag)return false;if(['fill-resize','area-move'].includes(drag.kind))setAreaValue(drag.areaType??'fill',drag.original);else if(drag.kind==='selectbox'&&(drag.fill||drag.check))setAreaValue(drag.check?'check':'fill',drag.previousArea);else return false;const type=drag.areaType??(drag.check?'check':'fill');drag=null;ghost=null;finishArea(type);render();return true;}
 function terrainInk(o){const c=o.color;if(!c)return '#f0c4c4';const v=[1,3,5].map(i=>parseInt(c.slice(i,i+2),16));return v[0]*.299+v[1]*.587+v[2]*.114>145?'#14232c':'#ffffff';}
 function terrainColorField(o){return `<label>${h('Terrainfarbe')}<input id="terrain-color" type="color" value="${o.color??'#a8787d'}"></label>`;}
 function compoundTerrainSvg(parts,exporting=false){
@@ -141,32 +148,62 @@ function compoundTerrainSvg(parts,exporting=false){
  const fill=geometry.slices.map(r=>`M${r.left} ${-r.top}H${r.right}V${-r.bottom}H${r.left}Z`).join(' '),outline=geometry.edges.map(([x1,y1,x2,y2])=>`M${x1} ${-y1}L${x2} ${-y2}`).join(' '),label=parts.reduce((best,o)=>o.w*o.h>best.w*best.h?o:best),name=M.objectLabel(state,primary),r=M.objectBounds(parts),{x,y}=M.displayCoords({...state,objects:state.objects.map(o=>parts.find(p=>p.id===o.id)||o)},primary);
  return `<g data-theme-preserve="true" data-object="${esc(primary.id)}" class="object-terrain terrain-compound" role="button" aria-label="${esc(name)}, ${h('Objektzentrum')}, X ${num(x)}, Y ${num(y)}"><title>${esc(name)} · ${h('Verbundene Terrainfläche')} · X ${num(x)} / Y ${num(y)}</title><path d="${fill}" fill="${primary.color??'url(#terrain-hatch)'}"/><path d="${outline}" fill="none" stroke="${stroke}" stroke-width="${active?.16:.09}" pointer-events="none"/><g transform="translate(${label.x} ${-label.y})" pointer-events="none">${nameSvg(name,label.w-.25,Math.max(.3,label.h-1.1),-.2,terrainInk(primary),.6)}<text y="${label.h/2-.25}" text-anchor="middle" fill="${terrainInk(primary)}" font-size=".35">X ${num(x)} / Y ${num(y)}</text></g></g>`;
 }
-function scene(exporting=false){
- let s=globalThis.HiveWorldMap.render(state,exporting?null:viewBox(),camera.scale,!exporting,worldSelection);
- const displayObjects=state.objects.filter(o=>Q.visible(state,o,exporting)).map(o=>!exporting&&ghost?.objects?.find(g=>g.id===o.id)||(!exporting&&drag?.kind==='resize'&&ghost?.o?.id===o.id?ghost.o:o));
+function scene(exporting=false,layer='all'){
+ let s=layer==='all'?globalThis.HiveWorldMap.render(state,exporting?null:viewBox(),camera.scale,!exporting,worldSelection):'';
+ if(exporting&&globalThis.HiveWorldMap.options(state).grid){const b=M.worldBounds(state);s+=`<rect x="${b.left}" y="${-b.top}" width="1000" height="1000" fill="url(#big-grid)" pointer-events="none"/>`;}
+ const displayObjects=state.objects.filter(o=>Q.visible(state,o,exporting)).map(o=>layer==='all'&&!exporting&&ghost?.objects?.find(g=>g.id===o.id)||(layer==='all'&&!exporting&&drag?.kind==='resize'&&ghost?.o?.id===o.id?ghost.o:o));
+ if(layer!=='overlay'){
  for(const o of displayObjects)if(M.coreSize(o))s+=`<rect data-theme-preserve="true" data-object="${esc(o.id)}" x="${o.x-o.w/2}" y="${-o.y-o.h/2}" width="${o.w}" height="${o.h}" fill="#765638" fill-opacity=".5" stroke="#ad865f" stroke-width=".06"/>`;
  if(M.isSeason4(state)&&state.showLight)for(const o of displayObjects)if(o.type==='base'&&o.beacon)s+=`<rect x="${o.x-o.lightSize/2}" y="${-o.y-o.lightSize/2}" width="${o.lightSize}" height="${o.lightSize}" fill="${color(o)}" fill-opacity=".045" stroke="${color(o)}" stroke-opacity=".8" stroke-width=".09" pointer-events="none"/>`;
  const drawn=new Set();for(const o of displayObjects.filter(o=>o.type!=='missile')){if(o.terrainGroup){if(drawn.has(o.terrainGroup))continue;drawn.add(o.terrainGroup);s+=filterMapLabels(compoundTerrainSvg(displayObjects.filter(q=>q.terrainGroup===o.terrainGroup),exporting));}else s+=objectSvg(o,exporting);}
  for(const o of displayObjects)if(o.type==='missile')s+=objectSvg(o,exporting);
+ }
+ if(layer!=='overlay')for(const o of displayObjects){const flag=globalThis.HiveWorldMap.status(state,o);if(flag.blocked||o.type==='base'&&flag.mud&&!M.mudContact(state,o).edge)s+=`<rect data-theme-preserve="true" x="${o.x-o.w/2}" y="${-o.y-o.h/2}" width="${o.w}" height="${o.h}" fill="none" stroke="${flag.blocked?'#ff5c68':'#ffcb63'}" stroke-width=".16" stroke-dasharray=".25 .12" pointer-events="none"><title>${h(flag.blocked?'Konflikt mit der importierten Karte':'Schlamm: PvP jederzeit möglich')}</title></rect>`;}
+ if(layer==='objects')return s;
  const terrainSelection=!exporting&&selectedObjectIds.size===1&&(drag?.kind==='resize'&&ghost?ghost.o:selected());
  if(!M.allianceObjects(state).some(o=>o.type===M.anchorType(state)))s+=`<g transform="translate(${state.origin.mapX} ${-state.origin.mapY})" pointer-events="none"><path d="M-1 0H1M0-1V1" stroke="#c6d9e7" stroke-width=".07" stroke-dasharray=".2 .15"/><text x="1.3" y=".15" font-size=".55" fill="#91adbf">${h('Ursprung X {x} / Y {y}',M.referenceCoords(state))}</text></g>`;
  if(!exporting&&ghost?.o){const g=ghost.o,stroke=ghost.invalid?'#ff9691':'#adffe8';s+=`<rect x="${g.x-g.w/2}" y="${-g.y-g.h/2}" width="${g.w}" height="${g.h}" fill="${stroke}" fill-opacity=".15" stroke="${stroke}" stroke-width=".12" stroke-dasharray=".25 .12" pointer-events="none"/>`;const q=M.displayCoords({...state,objects:state.objects.map(o=>o.id===g.id?g:o)},g);s+=`<text x="${g.x}" y="${-g.y-g.h/2-.45}" text-anchor="middle" font-size=".6" fill="${stroke}" pointer-events="none">${drag?.kind==='resize'?`${g.w} × ${g.h} · `:''}X ${num(q.x)} / Y ${num(q.y)}</text>`;}
- if(!exporting&&ghost?.objects){const stroke=ghost.invalid?'#ff9691':'#adffe8';for(const o of ghost.objects)if(!o.terrainGroup)s+=`<rect x="${o.x-o.w/2}" y="${-o.y-o.h/2}" width="${o.w}" height="${o.h}" fill="none" stroke="${stroke}" stroke-width=".15" stroke-dasharray=".3 .15" pointer-events="none"/>`;}
+ if(!exporting&&ghost?.objects){s+=`<g pointer-events="none" opacity=".8">${ghost.objects.map(o=>objectSvg(o,true)).join('')}</g>`;const stroke=ghost.invalid?'#ff9691':'#adffe8';for(const o of ghost.objects)if(!o.terrainGroup)s+=`<rect x="${o.x-o.w/2}" y="${-o.y-o.h/2}" width="${o.w}" height="${o.h}" fill="none" stroke="${stroke}" stroke-width=".15" stroke-dasharray=".3 .15" pointer-events="none"/>`;}
  if(!exporting){
-  const box=drag?.kind==='selectbox'&&!drag.fill?selectionBox(drag.start,drag.current):fillArea;
+  const box=drag?.kind==='selectbox'&&!drag.fill?(drag.check?checkArea:selectionBox(drag.start,drag.current)):fillArea;
   if(box){const stroke=mapMode==='fill'?'#f5ce72':'#7ce7d2';s+=`<rect x="${box.left}" y="${-box.top}" width="${box.right-box.left}" height="${box.top-box.bottom}" fill="${stroke}" fill-opacity=".08" stroke="${stroke}" stroke-width=".12" stroke-dasharray=".4 .18" pointer-events="none"/>`;}
   if(fillPreview)for(const o of fillPreview.positions)s+=`<rect x="${o.x-1.5}" y="${-o.y-1.5}" width="3" height="3" fill="#78d7bf" fill-opacity=".20" stroke="#9ee6cb" stroke-width=".08" pointer-events="none"/>`;
   if(fillArea&&mapMode==='fill'&&drag?.kind!=='selectbox')s+=fillAreaHandles(fillArea);
+  if(checkArea&&['pan','check'].includes(mapMode)&&drag?.kind!=='selectbox')s+=fillAreaHandles(checkArea,'check');
  }
  if(M.resizable(terrainSelection)&&!terrainSelection.locked&&!pending&&mapMode!=='fill')s+=terrainHandles(terrainSelection);
- for(const o of displayObjects){const flag=globalThis.HiveWorldMap.status(state,o);if(flag.blocked||o.type==='base'&&flag.mud)s+=`<rect data-theme-preserve="true" x="${o.x-o.w/2}" y="${-o.y-o.h/2}" width="${o.w}" height="${o.h}" fill="none" stroke="${flag.blocked?'#ff5c68':'#ffcb63'}" stroke-width=".16" stroke-dasharray=".25 .12" pointer-events="none"><title>${h(flag.blocked?'Konflikt mit der importierten Karte':'Schlamm: PvP jederzeit möglich')}</title></rect>`;}
+
  return s+qolOverlay(exporting);
 }
+let mapDOM=null,staticKey='',objectState=null,objectKey='',definitionKey='',assetReady=false;
+const mapSignatures=new WeakMap();
+function staticSignature(s){if(!mapSignatures.has(s))mapSignatures.set(s,JSON.stringify([s.worldMap,s.origin,s.mapOptions,s.mapStyle]));return mapSignatures.get(s);}
 function renderMap(){
- updateView();const b=M.worldBounds(state),grid=camera.scale>=5?'big-grid':camera.scale>=1.5?'medium-grid':'world-grid',labelSize=13/camera.scale,pad=8/camera.scale;
- svg.innerHTML=T.svg(definitions()+`<rect x="${b.left}" y="${-b.top}" width="1000" height="1000" fill="#0b1726" pointer-events="none"/><rect x="${b.left}" y="${-b.top}" width="1000" height="1000" fill="${globalThis.HiveWorldMap.options(state).grid?`url(#${grid})`:"none"}" stroke="#5a819d" stroke-width="1.5" vector-effect="non-scaling-stroke" pointer-events="none"/><g clip-path="url(#world-clip)">${scene()}</g><g fill="#b9d0df" font-size="${labelSize}" pointer-events="none"><text x="${b.left+pad}" y="${-b.bottom-pad}">X 0 · Y 0</text><text x="${b.right-pad}" y="${-b.top+pad+labelSize}" text-anchor="end">X 999 · Y 999</text></g>`);
- svg.classList.toggle('adding',!!pending||mapMode==='fill'||mapMode==='select');svg.classList.toggle('moving',!!drag&&drag.kind!=='roster');
+ updateView();const b=M.worldBounds(state),theme=T.current??'night';
+ // Keep texture symbols and world geometry alive across camera and pointer updates.
+ if(!mapDOM||!svg.querySelector('#map-static')){
+  svg.innerHTML='<g id="map-definitions"></g><defs id="map-textures"></defs><g id="map-ground"></g><g id="map-static" clip-path="url(#world-clip)"></g><g id="map-grid"></g><g id="map-objects" clip-path="url(#world-clip)"></g><g id="map-overlay" clip-path="url(#world-clip)"></g><g id="map-border"></g>';
+  mapDOM=Object.fromEntries(['definitions','textures','ground','static','grid','objects','overlay','border'].map(k=>[k,svg.querySelector('#map-'+k)]));staticKey='';definitionKey='';objectState=null;assetReady=false;
+ }
+ // Small DOM doubles used by older unit tests do not parse SVG. Real browsers always take the layered path.
+ if(!mapDOM.static?.tagName){svg.innerHTML=themedSvg(definitions()+scene());return;}
+ const dk=JSON.stringify([b,theme]);
+ if(definitionKey!==dk){definitionKey=dk;mapDOM.definitions.innerHTML=themedSvg(definitions());mapDOM.ground.innerHTML=themedSvg(`<rect x="${b.left}" y="${-b.top}" width="1000" height="1000" fill="#0b1726"/>`);mapDOM.grid.innerHTML=themedSvg(`<defs><pattern id="cell-grid" x="${b.left}" y="${-b.top}" width="1" height="1" patternUnits="userSpaceOnUse"><path d="M1 0H0V1" fill="none" stroke="#58716b" stroke-width=".035"/></pattern></defs><rect x="${b.left}" y="${-b.top}" width="1000" height="1000" fill="url(#cell-grid)" pointer-events="none"/>`);}
+ if(state.mapStyle==='game'&&!assetReady){mapDOM.textures.innerHTML=Object.entries(globalThis.HiveMapAssets??{}).map(([key,uri])=>`<symbol id="asset-${key.replace(/[^a-zA-Z0-9]/g,'-')}" viewBox="0 0 1 1" preserveAspectRatio="xMidYMid meet"><image href="${uri}" width="1" height="1" preserveAspectRatio="xMidYMid meet"/></symbol>`).join('');assetReady=true;}
+ const sk=staticSignature(state)+theme+I.language+worldSelection;
+ if(sk!==staticKey){staticKey=sk;mapDOM.static.innerHTML=themedSvg(globalThis.HiveWorldMap.render(state,null,12,true,worldSelection,true));}
+ mapDOM.static.classList.toggle('hide-map-labels',camera.scale<4);
+ mapDOM.grid.style.display=globalThis.HiveWorldMap.options(state).grid&&camera.scale>=5?'':'none';
+ const ok=theme+I.language+[...selectedObjectIds].join(',');
+ if(objectState!==state||objectKey!==ok){objectState=state;objectKey=ok;mapDOM.objects.innerHTML=themedSvg(scene(false,'objects'));}
+ const moving=new Set(ghost?.objects?.map(o=>o.id)??(drag?.kind==='resize'&&ghost?.o?[ghost.o.id]:[]));
+ for(const el of mapDOM.objects.querySelectorAll('[data-object]'))el.style.visibility=moving.has(el.dataset.object)?'hidden':'';
+ mapDOM.overlay.innerHTML=themedSvg(scene(false,'overlay'));
+ if(drag?.kind==='resize'&&ghost?.o)mapDOM.overlay.insertAdjacentHTML('afterbegin',themedSvg(objectSvg(ghost.o,true)));
+ const labelSize=13/camera.scale,pad=8/camera.scale;mapDOM.border.innerHTML=themedSvg(`<g fill="#b9d0df" font-size="${labelSize}" pointer-events="none"><text x="${b.left+pad}" y="${-b.bottom-pad}">X 0 · Y 0</text><text x="${b.right-pad}" y="${-b.top+pad+labelSize}" text-anchor="end">X 999 · Y 999</text></g>`);
+ svg.classList.toggle('adding',!!pending||['fill','select','check'].includes(mapMode));svg.classList.toggle('moving',drag?.kind==='pan');
 }
+
 function priorityText(level){return `P${level} · ${M.priorityLabel(state,level)}`;}
 function playerBadges(p){const g=M.groupForPlayer(state,p.id),level=M.priorityOf(p);return `<span class="player-badges"><span class="priority-pill priority-${level}" title="${esc(priorityText(level))}">P${level}</span>${g?`<span class="group-pill">${esc(groupName(g.id))}</span>`:''}</span>`;}
 function visiblePlayers(){const search=$('player-search').value.trim().toLocaleLowerCase();return M.alliancePlayers(state).filter(p=>(filter==='all'||!M.objectForPlayer(state,p.id))&&p.name.toLocaleLowerCase().includes(search));}
@@ -256,7 +293,7 @@ function renderInspectorContent(){
  $('inspector').innerHTML=s;
 }
 function renderControls(){
- const alliance=M.activeAlliance(state);$('alliance-select').value=String(alliance);for(const option of $('alliance-select').options)option.textContent=allianceName(Number(option.value));$('alliance-swatch').style.background=M.ALLIANCE_COLORS[alliance-1];$('alliance-status').textContent=t('Aktiv: {alliance}. Import, Gruppen, Autofill und neue Objekte gehören zu dieser Allianz.',{alliance:allianceName(alliance)});
+ const alliance=M.activeAlliance(state);$('alliance-select').innerHTML=M.alliances(state).map(a=>`<option value="${a.id}">${esc(allianceName(a.id))}</option>`).join('');$('alliance-select').value=String(alliance);$('alliance-swatch').style.background=M.allianceColor(state,alliance);$('alliance-status').textContent=t('Aktiv: {alliance}. Import, Gruppen, Autofill und neue Objekte gehören zu dieser Allianz.',{alliance:allianceName(alliance)});
  const s4=M.isSeason4(state),ref=referenceName();
  $('season-select').value=state.season;$('season-badge').textContent=state.season==='off'?'OFF':`S0${state.season}`;
  for(const option of $('season-select').options)option.textContent=option.value==='off'?t('Off Season'):t('Season {n}',{n:option.value});
@@ -273,7 +310,7 @@ function renderControls(){
  $('app-version').textContent=t('Version {version}',{version:APP_VERSION});
  $('map-summary').textContent=t(s4?'{assigned} / {total} Plätze vergeben · {beacons} Beacons':'{assigned} / {total} Plätze vergeben',{assigned,total:bases.length,beacons});
  const sizes=[...new Set(bases.filter(o=>o.beacon).map(o=>o.lightSize))];$('light-legend').textContent=sizes.length>1?t('L4 individuell'):`L4 ${sizes[0]??25} × ${sizes[0]??25}`;
- $('save-status').textContent=t(dirty?'Ungespeicherte Änderungen':'Plan bereit');$('save-status').style.color=dirty?'#e6c97d':'';
+ $('save-status').textContent=savedRecord?(savedRecord.name+' · '+t(dirty?'Änderungen noch nicht gesichert':'Manuell gesichert')):t('Entwurf · noch keine gespeicherte Karte');if($('top-save'))$('top-save').title=t(savedRecord?'Aktuelle Karte sichern':'Als neue Karte sichern');globalThis.HiveArchiveRefreshState?.();$('save-status').style.color=dirty?'#e6c97d':'';
  $('undo').disabled=!undoStack.length;$('redo').disabled=!redoStack.length;
  renderAutofill();
  $('anchor-help').textContent=t('Verschiebt nur die ausgewählte Allianz. Andere Allianzen behalten ihre Kartenkoordinaten.');
@@ -289,17 +326,17 @@ function renderControls(){
  if(pending)ph.querySelector('span').textContent=pending.kind==='player'?t('{name}: gewünschten Platz anklicken',{name:M.alliancePlayers(state).find(p=>p.id===pending.playerId)?.name??t('Spieler')}):t('{name}: auf die Karte klicken',{name:typeName(pending.o)});
 }
 function renderFillControls(){
- $('area-fill-gap-note').hidden=Number($('fill-gap').value)!==2||!M.allianceObjects(state).some(o=>o.type==='center');
+ $('area-fill-gap-note').hidden=true;
  $('area-fill-options').hidden=mapMode!=='fill';$('apply-area-fill').disabled=!fillPreview?.positions.length||!!drag;
  $('area-fill-summary').textContent=fillPreview?t('{w} × {h} Felder · {n} neue Basen · {blocked} blockierte Plätze',{w:fillArea.right-fillArea.left,h:fillArea.top-fillArea.bottom,n:fillPreview.positions.length,blocked:fillPreview.skipped})+(fillPreview.limited?' '+t('Limit: 800 Kartenelemente.'):''):t('Ziehe auf der Karte den Bereich auf, der mit Basen gefüllt werden soll.');
- $('area-fill-anchor').textContent=M.allianceObjects(state).some(o=>o.type===M.anchorType(state))?t(M.isSeason4(state)?'Raster am Allianzzentrum: von innen nach außen, am Zentrum höchstens 1 Feld Abstand.':'Raster am Marshall: von innen nach außen.'):t('Ohne Zentrum bleibt das Raster am Kartenursprung ausgerichtet.');
+ $('area-fill-anchor').textContent=t('Abstand gilt auch zu Gebäuden und Terrain. Schlammrand blockieren hat am Schlamm Vorrang.');
 }
 function renderAutofill(){
  $('autofill-result').hidden=!lastAutofillResult?.splitGroups?.length;
  $('autofill-result').textContent=lastAutofillResult?.splitGroups?.length?t('Nicht vollständig zusammenhängend: {groups}. Freie Nachbarplätze oder feste Zuweisungen prüfen.',{groups:lastAutofillResult.splitGroups.map(groupName).join(', ')}):'';
- const {players,seats,reserved}=M.autofillOptions(state,$('autofill-beacons').checked);
+ const {players,seats,reserved,unsuitable}=M.autofillOptions(state,$('autofill-beacons').checked);
  $('autofill').disabled=!players.length||!seats.length;
- $('autofill-summary').textContent=!M.alliancePlayers(state).length?t('Füge zuerst Spieler hinzu.'):!players.length?t('Alle Spieler haben bereits einen Platz.'):t('{players} ohne Platz · {seats} freie Plätze.',{players:players.length,seats:seats.length})+(reserved?' '+t('{n} Beacon-Plätze bleiben frei.',{n:reserved}):'');
+ $('autofill-summary').textContent=!M.alliancePlayers(state).length?t('Füge zuerst Spieler hinzu.'):!players.length?t('Alle Spieler haben bereits einen Platz.'):t('{players} ohne Platz · {seats} freie Plätze.',{players:players.length,seats:seats.length})+(reserved?' '+t('{n} Beacon-Plätze bleiben frei.',{n:reserved}):'')+(unsuitable?' '+t('{n} ungeeignete Plätze werden übersprungen.',{n:unsuitable}):'');
 }
 function render(){renderWorldControls();renderControls();renderRoster();renderOrganizer();renderInspector();renderMap();renderQoL();}
 function clearPending(){resetMapTools();render();}
@@ -340,16 +377,17 @@ function newFillArea(start,end){
 }
 function resizeFillArea(area,corner,point){
  const next={...area},p=fillGridPoint(point);
- if(corner.endsWith('e'))next.right=Math.max(area.left+1,p.x);else next.left=Math.min(area.right-1,p.x);
- if(corner.startsWith('n'))next.top=Math.max(area.bottom+1,p.y);else next.bottom=Math.min(area.top-1,p.y);
+ if(corner.includes('e'))next.right=Math.max(area.left+1,p.x);if(corner.includes('w'))next.left=Math.min(area.right-1,p.x);
+ if(corner.includes('n'))next.top=Math.max(area.bottom+1,p.y);if(corner.includes('s'))next.bottom=Math.min(area.top-1,p.y);
  return next;
 }
 function updateFillDrag(point){
- if(drag.kind==='fill-resize'){
-  const a=drag.original,x=(drag.corner.endsWith('e')?a.right:a.left)+point.x-drag.point.x,y=(drag.corner.startsWith('n')?a.top:a.bottom)+point.y-drag.point.y;
-  fillArea=resizeFillArea(a,drag.corner,{x,y});
- }else {drag.current=point;fillArea=newFillArea(drag.start,point);}
- refreshFillPreview();renderFillControls();renderMap();
+ const type=drag.areaType??(drag.check?'check':'fill');let area;
+ if(drag.kind==='area-move')area=moveArea(drag.original,point.x-drag.point.x,point.y-drag.point.y);
+ else if(drag.kind==='fill-resize'){const a=drag.original,c=drag.corner,x=(c.includes('e')?a.right:a.left)+point.x-drag.point.x,y=(c.includes('n')?a.top:a.bottom)+point.y-drag.point.y;area=resizeFillArea(a,c,{x,y});}
+ else {drag.current=point;area=newFillArea(drag.start,point);}
+ setAreaValue(type,area);if(type==='fill')fillPreview=null;else checkResult=null;
+ renderFillControls();renderMap();
 }
 function moveSelection(dx,dy){if(!Number.isInteger(dx)||!Number.isInteger(dy))throw new Error(t('Die Verschiebung muss in ganzen Feldern erfolgen.'));const entries=selectedObjects().map(o=>({id:o.id,x:o.x+dx,y:o.y+dy}));if(entries.length)commit(M.moveObjects(state,entries,selectionScope));}
 function previewAt(point){
@@ -368,15 +406,15 @@ function previewAt(point){
 }
 svg.addEventListener('pointerdown',e=>{
  if(e.button!==0||drag)return;e.preventDefault();svg.focus({preventScroll:true});lastPoint=pointFromClient(e.clientX,e.clientY);
- const id=e.target.closest('[data-object]')?.dataset.object,handle=e.target.closest('[data-resize]'),fillHandle=e.target.closest('[data-fill-resize]');
+ const id=e.target.closest('[data-object]')?.dataset.object,handle=e.target.closest('[data-resize]'),fillHandle=e.target.closest('[data-area-resize]')??e.target.closest('[data-fill-resize]'),areaMove=e.target.closest('[data-area-move]');
  if(pasteObjects){safely(()=>placeCopies(lastPoint));return;}
  if(pending){safely(()=>placePending(lastPoint));return;}
- const mapArea=e.target.closest('[data-map-area]');if(mapArea&&mapMode==='pan'&&!e.shiftKey){selectWorldArea(mapArea.dataset.mapArea);return;}
+ const mapArea=e.target.closest('[data-map-area]');if(mapArea&&!fillHandle&&!areaMove&&mapMode==='pan'&&!e.shiftKey){selectWorldArea(mapArea.dataset.mapArea);return;}
  if(worldSelection){worldSelection=null;editorUI.inspectorKey=null;}
  if(id&&!['fill','check'].includes(mapMode)&&!e.shiftKey){const object=state.objects.find(o=>o.id===id);if(object&&!M.owns(state,object)&&!(selectionScope==='all'&&(e.ctrlKey||e.metaKey||selectedObjectIds.has(id))))activateAlliance(M.allianceOf(object));}
  const box=['fill','check'].includes(mapMode)||e.shiftKey||(!id&&(mapMode==='select'||e.ctrlKey||e.metaKey));
- if(fillHandle&&fillArea&&mapMode==='fill'){drag={kind:'fill-resize',original:{...fillArea},corner:fillHandle.dataset.fillResize,point:lastPoint,clientX:e.clientX,clientY:e.clientY,moved:false};renderFillControls();}
- else if(box){const previousArea=fillArea;fillArea=null;fillPreview=null;ghost=null;drag={kind:'selectbox',fill:mapMode==='fill',check:mapMode==='check',previousArea,start:lastPoint,current:lastPoint,clientX:e.clientX,clientY:e.clientY,moved:false,additive:e.ctrlKey||e.metaKey};renderControls();}
+ if(fillHandle||areaMove){const el=fillHandle??areaMove,type=el.dataset.areaType??'fill',area=areaValue(type);if(!area)return;drag={kind:fillHandle?'fill-resize':'area-move',areaType:type,original:{...area},corner:el.dataset.areaResize??el.dataset.fillResize,point:lastPoint,clientX:e.clientX,clientY:e.clientY,moved:false};renderFillControls();}
+ else if(box){const type=mapMode==='check'?'check':'fill',previousArea=areaValue(type);if(['fill','check'].includes(mapMode))setAreaValue(type,null);fillPreview=null;ghost=null;drag={kind:'selectbox',fill:mapMode==='fill',check:mapMode==='check',previousArea,start:lastPoint,current:lastPoint,clientX:e.clientX,clientY:e.clientY,moved:false,additive:e.ctrlKey||e.metaKey};renderControls();}
  else if(handle&&M.resizable(selected())&&selectedObjectIds.size===1){drag={kind:'resize',id:selectedId,original:M.clone(selected()),corner:handle.dataset.resize,point:lastPoint,clientX:e.clientX,clientY:e.clientY,moved:false};}
  else if(id){
   if(e.ctrlKey||e.metaKey){selectObject(id,false,true);return;}
@@ -386,31 +424,36 @@ svg.addEventListener('pointerdown',e=>{
  }else{setMapSelection([]);drag={kind:'pan',clientX:e.clientX,clientY:e.clientY,cameraX:camera.x,cameraY:camera.y,moved:false};renderControls();renderInspector();}
  svg.setPointerCapture(e.pointerId);renderMap();
 });
-svg.addEventListener('pointermove',e=>{
+function moveMapPointer(e){
  lastPoint=pointFromClient(e.clientX,e.clientY);
  if(!drag){previewAt(lastPoint);return;}if(drag.kind==='roster')return;
  if(Math.hypot(e.clientX-drag.clientX,e.clientY-drag.clientY)>4)drag.moved=true;
- if(drag.kind==='fill-resize'||drag.kind==='selectbox'&&drag.fill){if(drag.moved)safely(()=>updateFillDrag(lastPoint));return;}
+ if(['fill-resize','area-move'].includes(drag.kind)||drag.kind==='selectbox'&&(drag.fill||drag.check)){if(drag.moved)safely(()=>updateFillDrag(lastPoint));return;}
  if(drag.kind==='selectbox'){drag.current=lastPoint;renderMap();return;}
  if(!drag.moved)return;
  if(drag.kind==='pan'){camera.x=drag.cameraX-(e.clientX-drag.clientX)/camera.scale;camera.y=drag.cameraY-(e.clientY-drag.clientY)/camera.scale;renderMap();}else previewAt(lastPoint);
-});
+}
+let pointerFrame=null,pointerEvent=null;
+function flushPointer(){const event=pointerEvent;pointerEvent=null;pointerFrame=null;if(event)moveMapPointer(event);}
+svg.addEventListener('pointermove',e=>{pointerEvent=e;if(pointerFrame===null){pointerFrame=true;requestAnimationFrame(flushPointer);}});
 svg.addEventListener('pointerup',e=>{
+ flushPointer();
  if(!drag||drag.kind==='roster')return;
- if(drag.moved&&(drag.kind==='fill-resize'||drag.kind==='selectbox'&&drag.fill))safely(()=>updateFillDrag(pointFromClient(e.clientX,e.clientY)));
+ if(drag.moved&&(['fill-resize','area-move'].includes(drag.kind)||drag.kind==='selectbox'&&(drag.fill||drag.check)))safely(()=>updateFillDrag(pointFromClient(e.clientX,e.clientY)));
  if(drag.moved&&['resize','object'].includes(drag.kind))previewAt(pointFromClient(e.clientX,e.clientY));
  const d=drag,g=ghost;drag=null;ghost=null;if(svg.hasPointerCapture(e.pointerId))svg.releasePointerCapture(e.pointerId);
  if(d.kind==='resize'&&d.moved&&g)safely(()=>commit(M.resizeTerrain(state,d.id,d.corner,g.point.x,g.point.y),t('Größe angepasst.')));
  if(d.kind==='object'&&d.moved&&g?.objects)safely(()=>commit(M.moveObjects(state,g.objects.map(o=>({id:o.id,x:o.x,y:o.y})),selectionScope)));
+ if(['fill-resize','area-move'].includes(d.kind))finishArea(d.areaType??'fill');
  if(d.kind==='selectbox'){
   const area=selectionBox(d.start,pointFromClient(e.clientX,e.clientY));
-  if(d.check){checkArea=area;mapMode='pan';runHiveCheck();}
-  else if(d.fill&&!d.moved){fillArea=d.previousArea;safely(refreshFillPreview);}
+  if(d.check){checkArea=d.moved?newFillArea(d.start,pointFromClient(e.clientX,e.clientY)):d.previousArea;mapMode='check';finishArea('check');}
+  else if(d.fill){if(!d.moved)fillArea=d.previousArea;finishArea('fill');}
   else if(!d.fill){const picked=d.moved?(selectionScope==='all'?state.objects:M.allianceObjects(state)).filter(o=>{const r=M.rect(o);return selectionMatches(o)&&!o.locked&&r.left>=area.left&&r.right<=area.right&&r.bottom>=area.bottom&&r.top<=area.top;}).map(o=>o.id):[];setMapSelection(d.additive?[...selectedObjectIds,...picked]:picked);activateSelectionAlliance();}
  }
  render();
 });
-svg.addEventListener('pointercancel',()=>{if(drag?.kind==='fill-resize')fillArea=drag.original;else if(drag?.kind==='selectbox'&&drag.fill)fillArea=drag.previousArea;drag=null;ghost=null;safely(refreshFillPreview);render();});
+svg.addEventListener('pointercancel',()=>{if(cancelAreaDrag())return;drag=null;ghost=null;safely(refreshFillPreview);render();});
 svg.addEventListener('pointerleave',()=>{if(!drag){ghost=null;renderMap();}});
 svg.addEventListener('wheel',e=>{e.preventDefault();if(drag)return;zoom(Math.exp(-e.deltaY*.0014),e.clientX,e.clientY);},{passive:false});
 function startPlayerDrag(e){
@@ -556,13 +599,13 @@ $('plan-file').addEventListener('change',async e=>{
  try{
   if(file.size>W.MAX_FILE_BYTES)throw new Error(t('Die Plan-Datei ist zu groß (maximal 20 MB).'));
   const raw=JSON.parse(await file.text()),next=W.readFile(raw),legacy=raw.schema===M.SCHEMA;
-  const apply=()=>{resetMapTools(true);commitWorkspace(next);dirty=false;render();fitMap();toast(t(legacy?'Einzelplan geladen. Weitere Varianten stehen separat bereit.':'Alle Varianten geladen. Der zuletzt aktive Kartenstand ist geöffnet.'));};
+  const apply=()=>{saveRecovery();savedRecord=null;savedFingerprint=null;D?.newDraft();globalThis.HiveArchiveResetSelection?.();resetMapTools(true);commitWorkspace(next);dirty=true;render();fitMap();toast(t(legacy?'Einzelplan geladen. Weitere Varianten stehen separat bereit.':'Alle Varianten geladen. Der zuletzt aktive Kartenstand ist geöffnet.'));};
   if(dirty)confirm(t('Plan öffnen?'),t('Die Datei ersetzt alle aktuellen Varianten. Speichere deinen bisherigen Stand vorher. Mit Strg+Z kannst du das Öffnen rückgängig machen.'),apply);else apply();
  }catch(error){toast(error instanceof SyntaxError?t('Die Datei enthält kein gültiges Plan-JSON.'):error.message,true);}
 });
 function fileName(extension){return (state.title.toLowerCase().normalize('NFKD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9_-]+/g,'-').replace(/^-|-$/g,'')||'hive-plan')+'.'+extension;}
 function download(blob,name){const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.style.display='none';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);}
-function savePlan(){const valid=W.saveFile(workspace);download(new Blob([JSON.stringify(valid,null,2)],{type:'application/json'}),fileName('json'));dirty=false;renderControls();toast(t('Alle Varianten gespeichert. Beim Öffnen wird auch die aktive Season und das aktive Layout wiederhergestellt.'));}
+function savePlan(){const valid=W.saveFile(workspace);download(new Blob([JSON.stringify(valid,null,2)],{type:'application/json'}),fileName('json'));renderControls();toast(t('Alle Varianten als Datei exportiert. Beim Öffnen wird auch die aktive Season und das aktive Layout wiederhergestellt.'));}
 $('save-plan').addEventListener('click',()=>safely(savePlan));
 function csvExport(){
  const protect=value=>{let s=String(value??'');if(/^[=+@\-\t\r]/.test(s))s="'"+s;return '"'+s.replace(/"/g,'""')+'"';};
@@ -577,9 +620,9 @@ function exportSvg(){
  const summary=t('{assigned} / {total} Plätze vergeben · {name} X {x} / Y {y}',{assigned,total:bases.length,name:referenceName(),...M.referenceCoords(state)});
  const legend=t(M.isSeason4(state)?'Basis 3 × 3 · Zentrum 9 × 9 · Koordinaten: Objektzentrum · Welt 1000 × 1000':'Basis 3 × 3 · Marshall 3 × 3 · Koordinaten: Objektzentrum · Welt 1000 × 1000');
  const footnote=(M.isSeason4(state)?t(state.showLight?'Lichtflächen gemäß eingestellter Breite. L4-Standard: 25 × 25 Kartenfelder.':'Lichtflächen ausgeblendet.')+' · ':'')+t('Erstellt {date}',{date:new Date().toLocaleDateString(I.language)});
- const allianceLegend=[1,2,3,4,5].map((id,i)=>`<text x="${left+2+i*(w-4)/5}" y="${top+h-3.7}" fill="${M.ALLIANCE_COLORS[id-1]}" font-size="${exportTextSize(allianceName(id),(w-4)/5-.3,.42)}">${esc(allianceName(id))}</text>`).join('');
- const source=`<svg xmlns="http://www.w3.org/2000/svg" width="${Math.ceil(w*scale)}" height="${Math.ceil(h*scale)}" viewBox="${left} ${top} ${w} ${h}"><style>text{font-family:system-ui,-apple-system,Segoe UI,sans-serif}</style>${definitions()}<rect x="${left}" y="${top}" width="${w}" height="${h}" fill="#0b1726"/><text x="${left+2}" y="${top+2.6}" fill="#61ddcc" font-size="${exportTextSize('NOVA HIVE PLANNER · '+seasonName()+(M.isDeveloping(state)?' · '+t('Noch in Bearbeitung'):''),w-4,.65)}" font-weight="650">NOVA HIVE PLANNER · ${esc(seasonName())}${M.isDeveloping(state)?' · '+t('Noch in Bearbeitung'):''}</text><text x="${left+2}" y="${top+4.8}" fill="#eef7ff" font-size="${Math.min(1.4,(w-4)/(Math.max(1,state.title.length)*.65))}" font-weight="750">${esc(state.title)}</text><text x="${left+2}" y="${top+6.4}" fill="#9db9cc" font-size="${exportTextSize(summary,w-4,.55)}">${esc(summary)}</text><rect x="${left+1}" y="${top+8}" width="${w-2}" height="${h-12}" fill="url(#big-grid)"/><defs><clipPath id="export-map-clip"><rect x="${left+1}" y="${top+8}" width="${w-2}" height="${h-12}"/></clipPath></defs><g clip-path="url(#export-map-clip)"><g clip-path="url(#world-clip)">${scene(true)}</g></g>${allianceLegend}<text x="${left+2}" y="${top+h-2.6}" font-size="${exportTextSize(legend,w-4,.52)}" fill="#b5ccda">${esc(legend)}</text><text x="${left+2}" y="${top+h-1.3}" font-size="${exportTextSize(footnote,w-4,.44)}" fill="#7896ac">${esc(footnote)}</text></svg>`;
- return {source:T.svg(source),width:Math.ceil(w*scale),height:Math.ceil(h*scale)};
+ const profiles=M.alliances(state),allianceLegend=profiles.map(({id},i)=>`<text data-theme-preserve="true" x="${left+2+i*(w-4)/profiles.length}" y="${top+h-3.7}" fill="${M.allianceColor(state,id)}" font-size="${exportTextSize(allianceName(id),(w-4)/profiles.length-.3,.42)}">${esc(allianceName(id))}</text>`).join('');
+ const source=`<svg xmlns="http://www.w3.org/2000/svg" width="${Math.ceil(w*scale)}" height="${Math.ceil(h*scale)}" viewBox="${left} ${top} ${w} ${h}"><style>text{font-family:system-ui,-apple-system,Segoe UI,sans-serif}</style>${definitions()}<rect x="${left}" y="${top}" width="${w}" height="${h}" fill="#0b1726"/><text x="${left+2}" y="${top+2.6}" fill="#61ddcc" font-size="${exportTextSize('NOVA HIVE PLANNER · '+seasonName()+(M.isDeveloping(state)?' · '+t('Noch in Bearbeitung'):''),w-4,.65)}" font-weight="650">NOVA HIVE PLANNER · ${esc(seasonName())}${M.isDeveloping(state)?' · '+t('Noch in Bearbeitung'):''}</text><text x="${left+2}" y="${top+4.8}" fill="#eef7ff" font-size="${Math.min(1.4,(w-4)/(Math.max(1,state.title.length)*.65))}" font-weight="750">${esc(state.title)}</text><text x="${left+2}" y="${top+6.4}" fill="#9db9cc" font-size="${exportTextSize(summary,w-4,.55)}">${esc(summary)}</text><defs><clipPath id="export-map-clip"><rect x="${left+1}" y="${top+8}" width="${w-2}" height="${h-12}"/></clipPath></defs><g clip-path="url(#export-map-clip)"><g clip-path="url(#world-clip)">${scene(true)}</g></g>${allianceLegend}<text x="${left+2}" y="${top+h-2.6}" font-size="${exportTextSize(legend,w-4,.52)}" fill="#b5ccda">${esc(legend)}</text><text x="${left+2}" y="${top+h-1.3}" font-size="${exportTextSize(footnote,w-4,.44)}" fill="#7896ac">${esc(footnote)}</text></svg>`;
+ return {source:themedSvg(source),width:Math.ceil(w*scale),height:Math.ceil(h*scale)};
 }
 async function exportFile(format){
  try{
@@ -595,9 +638,9 @@ async function exportFile(format){
 document.querySelectorAll('[data-export]').forEach(b=>b.addEventListener('click',()=>exportFile(b.dataset.export)));
 document.addEventListener('keydown',e=>{
  const editing=!!e.target.closest('input,textarea,select,[contenteditable]:not([contenteditable=false])'),inDialog=!!e.target.closest('dialog[open]');
- if(e.key==='Escape'&&!inDialog){if(organizerOpen){setOrganizer(false);return;}resetMapTools(true);$('drag-ghost').hidden=true;render();return;}
+ if(e.key==='Escape'&&!inDialog){if(cancelAreaDrag()){e.preventDefault();return;}if(organizerOpen){setOrganizer(false);return;}resetMapTools(true);$('drag-ghost').hidden=true;render();return;}
  if(inDialog)return;
- if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();document.activeElement.blur();safely(savePlan);return;}
+ if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();document.activeElement.blur();globalThis.HiveArchiveSave?.();return;}
  if(editing||e.defaultPrevented)return;
  if(!organizerOpen&&!drag&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!e.repeat&&!e.isComposing&&!e.defaultPrevented){
   const type=TOOL_SHORTCUTS[e.key.toLowerCase()];
@@ -610,10 +653,10 @@ document.addEventListener('keydown',e=>{
  if(e.key.toLowerCase()==='f'){e.preventDefault();fitSelection();return;}
  if((e.key==='Delete'||e.key==='Backspace')&&selected()){e.preventDefault();safely(()=>commit(M.removeObjects(state,[...selectedObjectIds],selectionScope)));return;}
  const directions={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,1],ArrowDown:[0,-1]};
- const fillHandle=e.target.closest('[data-fill-resize]');
- if(directions[e.key]&&fillHandle&&fillArea&&mapMode==='fill'&&!drag){
-  e.preventDefault();const corner=fillHandle.dataset.fillResize,step=e.shiftKey?5:1,[dx,dy]=directions[e.key],x=(corner.endsWith('e')?fillArea.right:fillArea.left)+dx*step,y=(corner.startsWith('n')?fillArea.top:fillArea.bottom)+dy*step;
-  fillArea=resizeFillArea(fillArea,corner,{x,y});safely(refreshFillPreview);renderFillControls();renderMap();svg.querySelector(`[data-fill-resize="${corner}"]`)?.focus({preventScroll:true});return;
+ const fillHandle=e.target.closest('[data-area-resize]')??e.target.closest('[data-fill-resize]'),moveHandle=e.target.closest('[data-area-move]');
+ if(directions[e.key]&&(fillHandle||moveHandle)&&!drag){
+  const el=fillHandle??moveHandle,type=el.dataset.areaType??'fill',area=areaValue(type);if(!area)return;e.preventDefault();const c=el.dataset.areaResize??el.dataset.fillResize,step=e.shiftKey?5:1,[dx,dy]=directions[e.key];
+  setAreaValue(type,fillHandle?resizeFillArea(area,c,{x:(c.includes('e')?area.right:area.left)+dx*step,y:(c.includes('n')?area.top:area.bottom)+dy*step}):moveArea(area,dx*step,dy*step));finishArea(type);renderFillControls();renderMap();svg.querySelector(fillHandle?`[data-area-type="${type}"][data-area-resize="${c}"]`:`[data-area-type="${type}"][data-area-move]`)?.focus({preventScroll:true});return;
  }
  if(directions[e.key]&&selected()){
   e.preventDefault();const o=selected(),step=e.shiftKey?5:1,[dx,dy]=directions[e.key],handle=e.target.closest('[data-resize]');
@@ -632,8 +675,16 @@ function applyLanguage(previousLabel){
 $('language-select').addEventListener('change',e=>{const previousLabel=selected()?M.objectLabel(state,selected()):null;if(I.setLanguage(e.target.value))applyLanguage(previousLabel);});
 document.addEventListener('invalid',e=>{const el=e.target;if(!el.setCustomValidity)return;el.setCustomValidity('');el.setCustomValidity(t(el.validity.valueMissing?'Bitte dieses Feld ausfüllen.':'Bitte einen gültigen Wert eingeben.'));},true);
 document.addEventListener('input',e=>e.target.setCustomValidity?.(''));
-globalThis.HiveArchiveBridge={getWorkspace:()=>W.saveFile(workspace),isDirty:()=>dirty,markSaved:()=>{dirty=false;renderControls();},load:raw=>{const next=W.readFile(raw);resetMapTools(true);commitWorkspace(next);dirty=false;render();fitMap();},confirm:action=>{if(dirty)confirm(t('Gespeicherte Karte laden?'),t('Nicht gespeicherte Änderungen werden ersetzt.'),action);else action();},requestConfirm:confirm,toast};
-T.init('theme-select',renderMap);initQoL();initWorldControls();
+globalThis.HiveArchiveBridge={
+ getWorkspace:()=>W.saveFile(workspace),isDirty:()=>dirty,getSource:()=>savedRecord,getDraftToken:()=>D?.draftId,
+ markSaved:(record,snapshot,token)=>{if(token!==undefined&&token!==D?.draftId)return;savedRecord=record?{id:record.id,version:record.version,name:record.name,shared:!!record.shared}:savedRecord;savedFingerprint=D?.fingerprint(snapshot??workspace)??JSON.stringify(workspace);dirty=D?D.fingerprint(workspace)!==savedFingerprint:false;saveRecovery();renderControls();},
+ updateSource:(record,previousVersion)=>{if(savedRecord?.id===record.id&&savedRecord.version===previousVersion){savedRecord={id:record.id,version:record.version,name:record.name,shared:!!record.shared};saveRecovery();}},
+ detach:()=>{savedRecord=null;savedFingerprint=null;dirty=true;scheduleRecovery();renderControls();},
+ load:(raw,record=null)=>{const next=W.readFile(raw);saveRecovery();savedRecord=record?{id:record.id,version:record.version,name:record.name,shared:!!record.shared}:null;savedFingerprint=record?(D?.fingerprint(next)??JSON.stringify(next)):null;D?.newDraft();resetMapTools(true);commitWorkspace(next);dirty=!record;scheduleRecovery();render();fitMap();},
+ confirm:action=>{if(dirty)confirm(t('Gespeicherte Karte laden?'),t('Der aktuelle Entwurf bleibt in den automatischen Sicherungen. Gespeicherte Karten werden nicht verändert.'),action);else action();},requestConfirm:confirm,promptName,toast
+};
+
+T.init('theme-select',renderMap);initQoL();initWorldControls();initAllianceEditor();
 I.apply(document);$('language-select').value=I.language;render();requestAnimationFrame(fitMap);
 // Optional structured tools use exactly the same state and actions as the visible planner.
 const context=document.modelContext;
@@ -655,38 +706,56 @@ function duplicateSelection(){clipboardPlan=Q.capture(state,[...selectedObjectId
 function previewCopies(point){if(!pasteObjects)return;const b=M.objectBounds(pasteObjects),dx=Math.round(point.x-(b.left+b.right)/2),dy=Math.round(point.y-(b.bottom+b.top)/2);ghost={copies:pasteObjects.map(o=>({...o,x:o.x+dx,y:o.y+dy})),invalid:false};try{Q.pasteAt(state,pasteObjects,point.x,point.y);}catch(e){ghost.invalid=true;ghost.reason=e.message;}}
 function placeCopies(point){const r=Q.pasteAt(state,pasteObjects,point.x,point.y);resetMapTools(true);selectionScope='all';setMapSelection(r.ids);selectedObjectIds=new Set(r.ids);selectedId=r.ids[0];commit(r.state,t('Kopie platziert.'));}
 function previewArrange(){const entries=Q.arrange(state,[...selectedObjectIds],$('arrange-mode').value,Number($('arrange-gap').value));arrangement={entries,error:null};try{M.moveObjects(state,entries,selectionScope);}catch(e){arrangement.error=e.message;}$('arrange-status').textContent=arrangement.error||t('Vorschau bereit. Mit Übernehmen bestätigen.');$('arrange-apply').disabled=!!arrangement.error;renderMap();}
-function runHiveCheck(){if(shellEnabled())$('check-drawer').open=true;checkResult=Q.audit(state,checkArea);renderCheck();renderMap();}
+function runHiveCheck(){if(shellEnabled())$('check-drawer').open=true;checkResult=Q.audit(state,checkArea);landingPage=0;renderCheck();renderMap();}
 function focusCheck(x,y,w=3,h=3){highlightObject={x,y,w,h};fitObjects([highlightObject]);}
+function landingOverlay(result){
+ if(!result.landingMask)return '';const v=viewBox(),w=result.world,paths=['',''];
+ for(const r of result.rows){const y=w.bottom+r.y;if(-y<v.y-4||-y>v.y+v.h+4)continue;const l=Math.max(r.left,Math.floor(v.x-w.left)-3),right=Math.min(r.right,Math.ceil(v.x+v.w-w.left)+3);if(l>right)continue;
+  if(camera.scale>=12){for(let x=l;x<=right;x++)paths[r.kind-1]+=`M${w.left+x} ${-y-3}h3v3h-3Z`;}
+  else paths[r.kind-1]+=`M${w.left+l} ${-y-1}h${right-l+1}v1h-${right-l+1}Z`;
+ }
+ return paths.map((d,i)=>`<path data-theme-preserve="true" d="${d}" fill="${i?'#ff555f':'#e5b568'}" fill-opacity="${i?'.28':'.07'}" stroke="${i?'#ff555f':'#e5b568'}" stroke-opacity="${i?'.85':'.18'}" stroke-width="${camera.scale>=12?'.06':'0'}" pointer-events="none"/>`).join('');
+}
 function qolOverlay(exporting){if(exporting)return '';let s='';const outline=(o,color,width=.2)=>`<rect x="${o.x-o.w/2}" y="${-o.y-o.h/2}" width="${o.w}" height="${o.h}" fill="${color}" fill-opacity=".12" stroke="${color}" stroke-width="${width}" pointer-events="none"/>`;
  if(highlightObject){const o=typeof highlightObject==='string'?state.objects.find(o=>o.id===highlightObject):highlightObject;if(o&&(typeof highlightObject!=='string'||Q.visible(state,o)))s+=outline({...o,w:o.w+.5,h:o.h+.5},'#ffd56a');}
  if(checkArea)s+=outline({x:(checkArea.left+checkArea.right)/2,y:(checkArea.bottom+checkArea.top)/2,w:checkArea.right-checkArea.left,h:checkArea.top-checkArea.bottom},'#ecad61',.1);
- if(checkResult)for(const o of checkResult.landings)s+=outline(o,'#ff7474',.07);
+ if(checkResult)s+=landingOverlay(checkResult);
  if(arrangement)for(const e of arrangement.entries){const o=state.objects.find(o=>o.id===e.id);s+=outline({...o,...e},arrangement.error?'#ff7474':'#78e6ba');}
  if(ghost?.copies){s+=`<g opacity=".65" pointer-events="none">${ghost.copies.map(o=>objectSvg(o,true)+outline(o,ghost.invalid?'#ff7474':'#78e6ba')).join('')}</g>`;if(ghost.reason)s+=`<text x="${lastPoint.x}" y="${-lastPoint.y-3}" font-size=".65" text-anchor="middle" fill="#ffaaa5">${esc(ghost.reason)}</text>`;}
  if(ghost?.invalid){const candidates=ghost.objects??(ghost.o?[ghost.o]:ghost.copies??[]),ignored=new Set(candidates.map(o=>o.id));for(const o of candidates){const hit=M.collision(state,o,ignored);if(hit){s+=outline(hit,'#ff5050',.3);s+=`<text x="${hit.x}" y="${-hit.y-hit.h/2-.5}" text-anchor="middle" font-size=".55" fill="#ffb4ac">${esc(M.objectLabel(state,hit))} · ${esc(allianceName(M.allianceOf(hit)))}</text>`;}}}
  return s;
 }
 function recoveryKey(){return 'nova-hive-workspace-recovery-v1';}
-function saveRecovery(){if(!recoveryInitialized)return;try{if(!globalThis.localStorage)return;localStorage.setItem(recoveryKey(),JSON.stringify({date:new Date().toISOString(),workspace}));$('recovery-info').textContent=t('Arbeitsstand in diesem Browser gesichert.');}catch{$('recovery-info').textContent=t('Automatische Sicherung nicht möglich. Bitte Plan als Datei speichern.');}}
-function scheduleRecovery(){clearTimeout(recoveryTimer);recoveryTimer=setTimeout(saveRecovery,500);}
-function restoreRecovery(){try{const raw=globalThis.localStorage?.getItem(recoveryKey());if(raw){const data=JSON.parse(raw),saved=W.readFile(data.workspace);workspace=saved;state=W.activePlan(saved);dirty=true;$('recovery-status').hidden=false;$('recovery-status').innerHTML=`${h('Letzter Arbeitsstand wiederhergestellt.')} <button id="dismiss-recovery">${h('Schließen')}</button>`;$('dismiss-recovery').addEventListener('click',()=>{$('recovery-status').hidden=true;});}}catch{$('recovery-info').textContent=t('Automatische Sicherung konnte nicht geladen werden.');}recoveryInitialized=true;}
-function renderObjectTree(){const query=$('object-search').value.trim().normalize('NFC').toLocaleLowerCase(),list=$('object-tree'),open=new Set(Array.from(list.querySelectorAll('details[open]')).map(e=>e.dataset.fold)),scroll=list.scrollTop;let html='';for(let alliance=1;alliance<=5;alliance++){const objects=state.objects.filter(o=>M.allianceOf(o)===alliance&&(!query||(M.objectLabel(state,o)+' '+(M.playerFor(state,o)?.name??'')).toLocaleLowerCase().includes(query)));if(!objects.length)continue;html+=`<details data-fold="${alliance}" ${query||open.has(String(alliance))?'open':''}><summary>${esc(allianceName(alliance))} · ${objects.length}</summary>`;for(const type of ['center','marshall','base','terrain','stronghold','city','missile','note']){const items=objects.filter(o=>o.type===type);if(!items.length)continue;html+=`<details data-fold="${alliance}-${type}" ${query||open.has(alliance+'-'+type)?'open':''}><summary>${type==='base'?h('Basen'):esc(typeName(items[0]))} · ${items.length}</summary>`+items.map(o=>{const q=M.displayCoords(state,o);return `<div class="object-tree-row"><input type="checkbox" data-tree-select="${esc(o.id)}" aria-label="${h('{name} auswählen',{name:M.objectLabel(state,o)})}" ${selectedObjectIds.has(o.id)?'checked':''}><button data-reveal="${esc(o.id)}"><strong>${esc(M.objectLabel(state,o))}</strong><small>X ${q.x} / Y ${q.y}${Q.visible(state,o)?'':' · '+h('Ausgeblendet')}</small></button><button data-rename="${esc(o.id)}" title="${h('Umbenennen')}">✎</button><button data-lock="${esc(o.id)}" title="${h(o.locked?'Entsperren':'Sperren')}">${o.locked?'🔒':'🔓'}</button></div>`;}).join('')+'</details>';}html+='</details>';}list.innerHTML=html||`<p>${h('Keine Treffer.')}</p>`;list.scrollTop=scroll;}
+function recoveryStatus(message){recoveryMessage=message;const el=$('recovery-info');if(el)el.textContent=t(message);const status=$('draft-status');if(status)status.textContent=t(message);}
+async function saveRecovery(force=false){if(!recoveryInitialized||!D)return;const snapshot=workspace,source=savedRecord,changed=dirty;try{await D.save(snapshot,source,changed,{force:force===true});recoveryStatus('Entwurf automatisch in diesem Browser gesichert.');if($('drafts-details')?.open)renderRecoveryList();}catch{recoveryStatus('Automatische Sicherung fehlgeschlagen. Bitte den aktuellen Stand als Datei exportieren.');}}
+function scheduleRecovery(){clearTimeout(recoveryTimer);recoveryTimer=setTimeout(()=>saveRecovery(),800);}
+async function restoreRecovery(){
+ if(!D){recoveryInitialized=true;return;}const initial=workspace;
+ try{const entry=await D.init();recoveryReady=true;if(entry&&workspace===initial){loadRecovery(entry,false);$('recovery-status').hidden=false;$('recovery-status').innerHTML=`${h('Entwurf wiederhergestellt. Deine manuell gespeicherte Karte ist unverändert.')} <button id="dismiss-recovery">${h('Schließen')}</button>`;$('dismiss-recovery').addEventListener('click',()=>{$('recovery-status').hidden=true;});}recoveryStatus('Automatische Sicherung bereit.');}
+ catch{recoveryStatus('Automatische Sicherung konnte nicht geladen werden. Der bisherige lokale Stand bleibt erhalten.');}
+ recoveryInitialized=true;if(workspace!==initial)scheduleRecovery();
+}
+function loadRecovery(entry,retain=true){const next=W.readFile(entry.workspace);if(retain)saveRecovery(true);D?.newDraft();savedRecord=entry.source??null;savedFingerprint=!entry.dirty?(D?.fingerprint(next)??null):null;resetMapTools(true);workspace=next;state=W.activePlan(next);dirty=entry.dirty!==false;undoStack=[];redoStack=[];globalThis.HiveArchiveRestoreSource?.(savedRecord);if(qolInitialized){render();fitMap();}if(retain)scheduleRecovery();}
+async function renderRecoveryList(){const list=$('draft-list');if(!list||!D)return;try{const rows=await D.list();list.replaceChildren();for(const row of rows){const article=document.createElement('article'),label=document.createElement('span'),button=document.createElement('button');article.className='draft-row';label.textContent=(row.source?.name??row.workspace.variants?.find(v=>v.season===row.workspace.active.season&&v.layout===row.workspace.active.layout)?.title??t('Entwurf'))+' · '+new Date(row.updatedAt).toLocaleString(I.language);button.textContent=t('Wiederherstellen');button.addEventListener('click',()=>confirm(t('Entwurf wiederherstellen?'),t('Manuell gespeicherte Karten bleiben unverändert.'),()=>safely(()=>loadRecovery(row))));article.append(label,button);list.append(article);}if(!rows.length)list.textContent=t('Noch keine automatischen Sicherungen.');}catch{recoveryStatus('Automatische Sicherungen konnten nicht geladen werden.');}}
+function renderObjectTree(){const query=$('object-search').value.trim().normalize('NFC').toLocaleLowerCase(),list=$('object-tree'),open=new Set(Array.from(list.querySelectorAll('details[open]')).map(e=>e.dataset.fold)),scroll=list.scrollTop;let html='';for(const {id:alliance} of M.alliances(state)){const objects=state.objects.filter(o=>M.allianceOf(o)===alliance&&(!query||(M.objectLabel(state,o)+' '+(M.playerFor(state,o)?.name??'')).toLocaleLowerCase().includes(query)));if(!objects.length)continue;html+=`<details data-fold="${alliance}" ${query||open.has(String(alliance))?'open':''}><summary>${esc(allianceName(alliance))} · ${objects.length}</summary>`;for(const type of ['center','marshall','base','terrain','stronghold','city','missile','note']){const items=objects.filter(o=>o.type===type);if(!items.length)continue;html+=`<details data-fold="${alliance}-${type}" ${query||open.has(alliance+'-'+type)?'open':''}><summary>${type==='base'?h('Basen'):esc(typeName(items[0]))} · ${items.length}</summary>`+items.map(o=>{const q=M.displayCoords(state,o);return `<div class="object-tree-row"><input type="checkbox" data-tree-select="${esc(o.id)}" aria-label="${h('{name} auswählen',{name:M.objectLabel(state,o)})}" ${selectedObjectIds.has(o.id)?'checked':''}><button data-reveal="${esc(o.id)}"><strong>${esc(M.objectLabel(state,o))}</strong><small>X ${q.x} / Y ${q.y}${Q.visible(state,o)?'':' · '+h('Ausgeblendet')}</small></button><button data-rename="${esc(o.id)}" title="${h('Umbenennen')}">✎</button><button data-lock="${esc(o.id)}" title="${h(o.locked?'Entsperren':'Sperren')}">${o.locked?'🔒':'🔓'}</button></div>`;}).join('')+'</details>';}html+='</details>';}list.innerHTML=html||`<p>${h('Keine Treffer.')}</p>`;list.scrollTop=scroll;}
 function renderSavedGroups(){const groups=[...new Set(state.objects.map(o=>o.selectionGroup).filter(Boolean))];$('object-groups').innerHTML=groups.map(name=>`<div class="qol-row"><button data-object-group="${esc(name)}">${esc(name)}</button><button data-delete-group="${esc(name)}" aria-label="${h('Gruppe auflösen')}">×</button></div>`).join('')||`<p class="field-help">${h('Noch keine Objektgruppen.')}</p>`;}
 function renderBlueprints(){ $('blueprint-list').innerHTML=(state.blueprints??[]).map(b=>`<div class="qol-row"><button data-blueprint="${esc(b.id)}">${esc(b.name)} · ${b.plan.objects.length}</button><button data-blueprint-delete="${esc(b.id)}" aria-label="${h('Entfernen')}">×</button></div>`).join('')||`<p class="field-help">${h('Noch keine Bausteine.')}</p>`;}
-function renderCheck(){const el=$('check-results');if(!checkResult){el.innerHTML='';return;}const r=checkResult;let html=`<p>${checkArea?h('Freie 3×3-Positionen: {n}',{n:r.totalLandings}):h('Prüfbereich zeichnen')}${r.totalLandings>200?' · '+h('Erste 200 Positionen angezeigt.'):''}</p>`;
- const positions=r.landings.map(o=>{const q=M.coords(state,o);return `<button data-check-x="${o.x}" data-check-y="${o.y}">X ${q.x} / Y ${q.y}</button>`;}).join('');html+=`<details><summary>${h('Landeflächen')}</summary><div class="check-list">${positions}</div></details>`;
+function renderCheck(){const el=$('check-results');if(!checkResult){el.innerHTML='';return;}const r=checkResult;let html=`<p>${checkArea?h('Freie 3×3-Positionen: {n}',{n:r.totalLandings}):h('Prüfbereich zeichnen')}${checkArea?' · '+h('{near} nahe am Hive · {far} im Außenbereich',{near:r.nearCount??0,far:r.farCount??0}):''}</p>`;
+ const limit=100,offset=landingPage*limit,page=[];let seen=0;
+ for(const kind of [2,1]){for(const row of r.rows??[]){if(row.kind!==kind)continue;const size=row.right-row.left+1;if(seen+size<=offset){seen+=size;continue;}for(let x=row.left+Math.max(0,offset-seen);x<=row.right&&page.length<limit;x++)page.push({x:r.world.left+x+1.5,y:r.world.bottom+row.y+1.5});seen+=size;if(page.length===limit)break;}if(page.length===limit)break;}
+ const positions=page.map(o=>{const q=M.coords(state,o);return `<button data-check-x="${o.x}" data-check-y="${o.y}">X ${q.x} / Y ${q.y}</button>`;}).join('');html+=`<details ${landingPage?'open':''}><summary>${h('Landeflächen')} · ${Math.min(offset+1,r.totalLandings)}–${Math.min(offset+limit,r.totalLandings)} / ${r.totalLandings}</summary><div class="check-list">${positions}</div><div class="qol-actions"><button id="check-prev" ${!landingPage?'disabled':''}>←</button><button id="check-next" ${(landingPage+1)*limit>=r.totalLandings?'disabled':''}>→</button></div></details>`;
  for(const [key,label] of [['full','Vollständig im Licht'],['partial','Teilweise im Licht'],['outside','Außerhalb des Lichts'],['empty','Freie Plätze']]){if(!M.isSeason4(state)&&['full','partial','outside'].includes(key))continue;html+=`<details><summary>${h(label)} · ${r[key].length}</summary><div class="check-list">${r[key].map(o=>`<button data-reveal="${esc(o.id)}">${esc(M.objectLabel(state,o))} · ${esc(allianceName(M.allianceOf(o)))}</button>`).join('')}</div></details>`;}
  html+=`<details><summary>${h('Spieler ohne Platz')} · ${r.unassigned.length}</summary><div class="check-list">${r.unassigned.map(p=>`<button data-unassigned="${esc(p.id)}">${esc(p.name)} · ${esc(allianceName(M.allianceOf(p)))}</button>`).join('')}</div></details>`;el.innerHTML=html;
 }
 function renderQoL(){if(!qolInitialized)return;const objects=selectedObjects();for(const id of ['qol-copy','qol-duplicate','qol-lock','qol-unlock','save-object-group','save-blueprint'])$(id).disabled=!objects.length;$('qol-paste').disabled=!clipboardPlan;$('qol-swap').disabled=objects.length!==2||objects.some(o=>o.type!=='base')||M.allianceOf(objects[0])!==M.allianceOf(objects[1]);$('arrange-preview').disabled=objects.length<2;$('arrange-apply').disabled=!arrangement||!!arrangement.error;$('fit-selection').disabled=!objects.length;
- const v=Q.view(state);for(const key of ['names','coordinates','notes','missiles','exportNotes'])$('view-'+key).checked=v[key];for(let a=1;a<=5;a++)$('view-alliance-'+a).checked=v.alliances.includes(a);$('selection-filter').value=selectionFilter;
+ const v=Q.view(state);for(const key of ['names','coordinates','notes','missiles','exportNotes'])$('view-'+key).checked=v[key];renderAllianceFilters(v);$('selection-filter').value=selectionFilter;
  renderObjectTree();renderSavedGroups();renderBlueprints();renderCheck();renderShellState();}
 function promptName(title,action,initial=''){$('qol-name-title').textContent=title;$('qol-name-input').value=initial;nameAction=action;$('qol-name-dialog').showModal();$('qol-name-input').focus();}
 function initQoL(){
  beforeQoLRebuild();
  $('qol-panel').innerHTML=`<details class="settings-section" open><summary>${h('Auswahlaktionen')}</summary><div class="qol-actions"><button id="qol-lock">${h('Sperren')}</button><button id="qol-unlock">${h('Entsperren')}</button><button id="qol-copy" title="Ctrl/Cmd+C">${h('Kopieren')}</button><button id="qol-paste" title="Ctrl/Cmd+V">${h('Einfügen')}</button><button id="qol-duplicate" title="Ctrl/Cmd+D">${h('Duplizieren')}</button><button id="qol-swap">${h('Spielerplätze tauschen')}</button></div><label>${h('Kopien zuordnen')}<select id="paste-alliance"><option value="keep">${h('Allianzen beibehalten')}</option><option value="active">${h('Aktuelle Allianz')}</option></select></label><p class="field-help">${h('Kopien enthalten keine Spielerzuweisungen. Zentrum und Marshall: höchstens eines je Allianz.')}</p><details><summary>${h('Ausrichten und verteilen')}</summary><select id="arrange-mode"><option value="row">${h('Horizontale Reihe')}</option><option value="column">${h('Vertikale Reihe')}</option><option value="alignX">${h('Gleiche X-Koordinate')}</option><option value="alignY">${h('Gleiche Y-Koordinate')}</option></select><label>${h('Abstand zwischen Außenkanten')}<select id="arrange-gap"><option>0</option><option selected>1</option><option>2</option></select></label><div class="qol-actions"><button id="arrange-preview">${h('Vorschau')}</button><button id="arrange-apply" disabled>${h('Übernehmen')}</button><button id="arrange-cancel">${h('Abbrechen')}</button></div><p id="arrange-status" class="field-help"></p></details></details>
  <details class="settings-section"><summary>${h('Objektübersicht und Suche')}</summary><input id="object-search" aria-label="${h('Spieler oder Objekt suchen')}" placeholder="${h('Spieler oder Objekt suchen')}"><div id="object-tree" class="object-tree"></div><form id="goto-form"><h3>${h('Koordinaten anspringen')}</h3><div class="inline-fields"><label>X<input id="goto-x" type="number" min="0" max="999" step="1" required></label><label>Y<input id="goto-y" type="number" min="0" max="999" step="1" required></label></div><button>${h('Anzeigen')}</button></form></details>
- <details class="settings-section"><summary>${h('Anzeige')}</summary>${['names','coordinates','notes','missiles','exportNotes'].map((key,i)=>`<label class="check-label"><input id="view-${key}" type="checkbox" data-view="${key}" checked>${h(['Namen anzeigen','Koordinaten anzeigen','Notizen anzeigen','Raketenflächen anzeigen','Notizen exportieren'][i])}</label>`).join('')}${[1,2,3,4,5].map(a=>`<label class="check-label"><input id="view-alliance-${a}" type="checkbox" data-view-alliance="${a}" checked>${esc(allianceName(a))}</label>`).join('')}<p class="field-help">${h('Ausgeblendete Objekte blockieren weiterhin. Anzeige gilt auch für Viewer und Bildexport.')}</p></details>
+ <details class="settings-section"><summary>${h('Anzeige')}</summary>${['names','coordinates','notes','missiles','exportNotes'].map((key,i)=>`<label class="check-label"><input id="view-${key}" type="checkbox" data-view="${key}" checked>${h(['Namen anzeigen','Koordinaten anzeigen','Notizen anzeigen','Raketenflächen anzeigen','Notizen exportieren'][i])}</label>`).join('')}<div id="alliance-filters"></div><p class="field-help">${h('Ausgeblendete Objekte blockieren weiterhin. Anzeige gilt auch für Viewer und Bildexport.')}</p></details>
  <details class="settings-section"><summary>${h('Objektgruppen')}</summary><button id="save-object-group">${h('Auswahl als Objektgruppe speichern')}</button><div id="object-groups"></div></details>
  <details class="settings-section"><summary>${h('Bausteine')}</summary><button id="save-blueprint">${h('Auswahl als Baustein speichern')}</button><div id="blueprint-list"></div><div class="qol-actions"><button id="export-blueprints">${h('Bausteine exportieren')}</button><button id="import-blueprints">${h('Bausteine importieren')}</button></div><input id="blueprint-file" type="file" accept=".json" hidden><p class="field-help">${h('Bausteine werden mit dem Plan gespeichert. Export und Import übertragen sie in andere Karten.')}</p></details>
  <details id="check-panel" class="settings-section"><summary>${h('Hive prüfen')}</summary><div class="qol-actions"><button id="draw-check-area">${h('Prüfbereich zeichnen')}</button><button id="check-selection">${h('Auswahl als Prüfbereich')}</button><button id="run-check">${h('Prüfung starten')}</button><button id="clear-check">${h('Markierungen entfernen')}</button></div><p class="field-help">${h('Prüft freie 3×3-Flächen im gewählten Rechteck, Lichtabdeckung und Belegung aller Allianzen. Terrain und feste Kerne blockieren; Schlamm, Notizen und Raketenflächen nicht. Licht wird je Allianz geometrisch geprüft. Keine Prüfung weiterer Spielregeln.')}</p><div id="check-results"></div></details><p id="recovery-info" class="field-help"></p>`;
@@ -717,10 +786,10 @@ function initQoL(){
  if(id==='import-blueprints')return $('blueprint-file').click();
  if(id==='draw-check-area'){resetMapTools();checkResult=null;mapMode='check';$('check-panel').open=true;if(shellEnabled())$('check-drawer').open=true;toast(t('Rechteck für die Prüfung aufziehen.'));render();return;}
  if(id==='check-selection'){if(!selectedObjects().length)throw Error(t('Keine Elemente zum Verschieben ausgewählt.'));checkArea=M.objectBounds(selectedObjects());return runHiveCheck();}
- if(id==='run-check')return runHiveCheck();if(id==='clear-check'){checkArea=null;checkResult=null;highlightObject=null;render();}
+ if(id==='check-prev'||id==='check-next'){landingPage+=id==='check-next'?1:-1;renderCheck();return;}if(id==='run-check')return runHiveCheck();if(id==='clear-check'){checkArea=null;checkResult=null;highlightObject=null;render();}
  }));
  $('blueprint-file').addEventListener('change',async e=>{const file=e.target.files?.[0];e.target.value='';if(!file)return;try{if(file.size>W.MAX_FILE_BYTES)throw Error(t('Ungültiger Baustein.'));const data=JSON.parse(await file.text());if(data.schema!=='nova-hive-blueprints'||data.version!==1||!Array.isArray(data.blueprints))throw Error(t('Ungültiger Baustein.'));const items=data.blueprints.map(b=>({...b,id:M.uid('blueprint')})),next=M.validate({...state,blueprints:[...(state.blueprints??[]),...items]});commit(next);}catch(e){toast(e.message,true);}});
- if(!qolInitialized){window.addEventListener('pagehide',saveRecovery);$('language-select').addEventListener('change',()=>{initQoL();renderQoL();});restoreRecovery();}qolInitialized=true;mountQoL();
+ if(!qolInitialized){$('drafts-details')?.addEventListener('toggle',()=>{if($('drafts-details').open)renderRecoveryList();});document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden')saveRecovery();});window.addEventListener('pagehide',()=>saveRecovery());$('language-select').addEventListener('change',()=>{initQoL();renderQoL();});restoreRecovery();}qolInitialized=true;mountQoL();
 }
 
 // Stable editor chrome is UI state only; it never changes the workspace or undo history.
@@ -737,13 +806,13 @@ function initEditorShell(){
  const dock=document.createElement('div');dock.id='inspector-actions-dock';wrap.append(dock,$('anchor-section'));
  document.querySelectorAll('[data-left-tab],[data-inspector-tab]').forEach(button=>{const kind=button.dataset.leftTab?'left':'inspector',key=button.dataset.leftTab??button.dataset.inspectorTab;button.addEventListener('click',()=>shellTab(kind,key));button.addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();const values=kind==='left'?['players','objects','blueprints']:['position','properties','actions'],i=values.indexOf(editorUI[kind]);shellTab(kind,e.key==='Home'?values[0]:e.key==='End'?values.at(-1):values[(i+(e.key==='ArrowRight'?1:values.length-1))%values.length],true);});});
  $('inspector-apply').addEventListener('click',()=>{$('position-form')?.requestSubmit();if(!$('position-form'))$('selection-position-form')?.requestSubmit();});
- $('new-plan').addEventListener('click',()=>confirm(t('Neuen Plan erstellen?'),t('Speichere deinen aktuellen Plan zuerst. Eine neue leere Karte wird geöffnet.'),()=>{resetMapTools(true);commitWorkspace(W.createWorkspace(M.makeLayout('empty',{season:state.season,title:t('Mein Hive')})));globalThis.HiveArchiveResetSelection?.();$('plans-menu').open=false;fitMap();}));
+ $('new-plan').addEventListener('click',()=>confirm(t('Neuen Plan erstellen?'),t('Speichere deinen aktuellen Plan zuerst. Eine neue leere Karte wird geöffnet.'),()=>{saveRecovery(true);savedRecord=null;savedFingerprint=null;D?.newDraft();resetMapTools(true);commitWorkspace(W.createWorkspace(M.makeLayout('empty',{season:state.season,title:t('Mein Hive')})));globalThis.HiveArchiveResetSelection?.();$('plans-menu').open=false;fitMap();}));
  $('inspector-name').addEventListener('click',()=>{const o=selected();if(selectedObjects().length!==1||!o)return;promptName(t('Umbenennen'),name=>commit(M.updateObject(state,o.id,{name})),M.objectLabel(state,o));});
  $('toggle-hive-check').addEventListener('click',()=>{$('check-drawer').open=!$('check-drawer').open;$('toggle-hive-check').setAttribute('aria-expanded',String($('check-drawer').open));});
  $('check-drawer').addEventListener('toggle',()=>$('toggle-hive-check').setAttribute('aria-expanded',String($('check-drawer').open)));
  document.addEventListener('click',e=>{for(const menu of document.querySelectorAll('.header-menu[open],.export-menu[open]'))if(!menu.contains(e.target))menu.open=false;const action=e.target.closest('[data-tool],[data-export]');if(action)action.closest('details')?.removeAttribute('open');});
  document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.header-menu[open],.export-menu[open]').forEach(menu=>menu.open=false);});
- $('archive-viewer').addEventListener('click',()=>{if(!$('archive-name').value.trim())$('archive-name').value=state.title;});
+
 }
 function beforeQoLRebuild(){
  if(!shellEnabled())return;
@@ -791,20 +860,33 @@ function renderShellState(){
 }
 
 // Imported world layer controls. The immutable source layer cannot be dragged accidentally.
+function renderAllianceFilters(v){const target=$('alliance-filters');if(!target)return;const html=M.alliances(state).map(a=>`<label class="check-label"><input id="view-alliance-${a.id}" type="checkbox" data-view-alliance="${a.id}" ${v.alliances.includes(a.id)?'checked':''}>${esc(allianceName(a.id))}</label>`).join('');if(target.innerHTML!==html)target.innerHTML=html;}
+function editAllianceDialog(add=false){
+ const list=M.alliances(state),id=add?Math.max(...list.map(a=>a.id))+1:M.activeAlliance(state),a=list.find(a=>a.id===id);if(id>50)throw Error(t('Maximal 50 Allianzen.'));
+ $('alliance-edit-name').value=a?allianceName(id):'';$('alliance-edit-color').value=a?.color??M.ALLIANCE_COLORS[(id-1)%5];$('alliance-delete').hidden=add;$('alliance-dialog').dataset.alliance=String(id);$('alliance-dialog').showModal();$('alliance-edit-name').focus();
+}
+function initAllianceEditor(){
+ $('alliance-edit')?.addEventListener('click',()=>safely(()=>editAllianceDialog()));$('alliance-add')?.addEventListener('click',()=>safely(()=>editAllianceDialog(true)));
+ $('alliance-cancel')?.addEventListener('click',()=>$('alliance-dialog').close());
+ $('alliance-form')?.addEventListener('submit',e=>{e.preventDefault();safely(()=>{commit(M.editAlliance(state,Number($('alliance-dialog').dataset.alliance),$('alliance-edit-name').value,$('alliance-edit-color').value));$('alliance-dialog').close();});});
+ $('alliance-delete')?.addEventListener('click',()=>safely(()=>{commitWorkspace(W.removeAlliance(workspace,Number($('alliance-dialog').dataset.alliance)));$('alliance-dialog').close();}));
+}
 function initWorldControls(){
  const label=(key,body)=>`<label><span data-i18n="${key}">${h(key)}</span>${body}</label>`;
  $('layout-select').closest('label').insertAdjacentHTML('afterend',label('Darstellung','<select id="map-style"><option value="plan" data-i18n="Planansicht">Planansicht</option><option value="game" data-i18n="Spieloptik">Spieloptik</option></select>'));
  const button='<button data-import-world data-i18n="Kartendaten importieren">Kartendaten importieren</button>';
- $('display-menu').insertAdjacentHTML('beforebegin',button);
+
  $('open-plan').insertAdjacentHTML('afterend',button);
  $('display-content').insertAdjacentHTML('beforeend','<fieldset id="world-display"><legend data-i18n="Kartenebene">Kartenebene</legend>'+[['terrain','Terrain'],['buildings','Feste Gebäude'],['mud','Schlamm'],['labels','Kartenbeschriftungen'],['grid','Raster']].map(([key,name])=>`<label class="check-label"><input type="checkbox" data-world-option="${key}"><span data-i18n="${name}">${h(name)}</span></label>`).join('')+'<label class="check-label"><input id="world-edit" type="checkbox"><span data-i18n="Kartenebene bearbeiten">Kartenebene bearbeiten</span></label><button id="world-remove" data-i18n="Kartenebene entfernen">Kartenebene entfernen</button></fieldset>');
- $('autofill-beacons').closest('label').insertAdjacentHTML('afterend','<label class="check-label"><input type="checkbox" id="avoid-mud"><span data-i18n="Schlamm bei Autofill und Flächenfüllung vermeiden">Schlamm bei Autofill und Flächenfüllung vermeiden</span></label>');
+ $('autofill-beacons').closest('label').insertAdjacentHTML('afterend','<label class="check-label"><input type="checkbox" id="avoid-mud"><span data-i18n="Schlammrand blockieren">Schlammrand blockieren</span></label>');
+ $('fill-gap').closest('label').insertAdjacentHTML('afterend','<label class="check-label"><input id="fill-mud-edge" type="checkbox"><span data-i18n="Schlammrand blockieren">Schlammrand blockieren</span></label>');
+ $('fill-mud-edge').addEventListener('change',e=>commit({...state,mapOptions:{...state.mapOptions,mudEdge:e.target.checked}}));
  $('stage').insertAdjacentHTML('beforebegin','<p id="world-status" class="field-help world-status" role="status" hidden></p>');
  document.body.insertAdjacentHTML('beforeend','<input type="file" id="world-file" accept=".json,application/json" hidden><dialog id="world-dialog"><form id="world-form"><h2 data-i18n="Kartendaten importieren">Kartendaten importieren</h2><p id="world-preview"></p><p data-i18n="Ausgewählte Ebenen werden ersetzt. Bestehende Basen bleiben erhalten.">Ausgewählte Ebenen werden ersetzt. Bestehende Basen bleiben erhalten.</p>'+[['terrain','Terrain'],['buildings','Feste Gebäude'],['mud','Schlamm']].map(([key,name])=>`<label class="check-label"><input type="checkbox" id="import-${key}" checked><span data-i18n="${name}">${h(name)}</span></label>`).join('')+'<p id="world-import-error" role="alert"></p><div class="dialog-footer"><button type="button" id="world-cancel" data-i18n="Abbrechen">Abbrechen</button><button type="submit" class="primary" data-i18n="Übernehmen">Übernehmen</button></div></form></dialog>');
  document.querySelectorAll('[data-import-world]').forEach(b=>b.addEventListener('click',()=>$('world-file').click()));
  $('map-style').addEventListener('change',e=>commit({...state,mapStyle:e.target.value}));
  for(const el of document.querySelectorAll('[data-world-option]'))el.addEventListener('change',()=>commit({...state,mapOptions:{...state.mapOptions,[el.dataset.worldOption]:el.checked}}));
- $('avoid-mud').addEventListener('change',e=>commit({...state,mapOptions:{...state.mapOptions,avoidMud:e.target.checked}}));
+ $('avoid-mud').addEventListener('change',e=>commit({...state,mapOptions:{...state.mapOptions,mudEdge:e.target.checked}}));
  $('world-edit').addEventListener('change',e=>{worldEditing=e.target.checked;renderWorldInspector();});
  $('world-remove').addEventListener('click',()=>confirm(t('Kartenebene entfernen'),t('Bestehende Basen bleiben erhalten.'),()=>{const next={...state};delete next.worldMap;worldSelection=null;commit(next);}));
  $('world-cancel').addEventListener('click',()=>$('world-dialog').close());
@@ -817,8 +899,8 @@ function selectWorldArea(id){editorUI.inspectorKey=null;worldSelection=id;setMap
 function renderWorldControls(){
  if(!$('map-style'))return;
  $('map-style').value=state.mapStyle??'plan';const opt=globalThis.HiveWorldMap.options(state);
- document.querySelectorAll('[data-world-option]').forEach(el=>el.checked=opt[el.dataset.worldOption]);$('avoid-mud').checked=!!opt.avoidMud;$('world-edit').checked=worldEditing;$('world-remove').disabled=!state.worldMap;
- const flags=state.objects.map(o=>({o,...globalThis.HiveWorldMap.status(state,o)})),blocked=flags.filter(f=>f.blocked).length,mud=flags.filter(f=>f.o.type==='base'&&f.mud).length;
+ document.querySelectorAll('[data-world-option]').forEach(el=>el.checked=opt[el.dataset.worldOption]);$('avoid-mud').checked=!!opt.mudEdge;if($('fill-mud-edge'))$('fill-mud-edge').checked=!!opt.mudEdge;$('world-edit').checked=worldEditing;$('world-remove').disabled=!state.worldMap;
+ const flags=state.objects.map(o=>({o,...globalThis.HiveWorldMap.status(state,o)})),blocked=flags.filter(f=>f.blocked).length,mud=flags.filter(f=>f.o.type==='base'&&f.mud&&!M.mudContact(state,f.o).edge).length;
  $('world-status').hidden=!state.worldMap;$('world-status').textContent=`S04 · ${t('Konflikte')}: ${blocked} · ${t('Basen im Schlamm')}: ${mud} · ${t('Schlamm: PvP jederzeit möglich')}`;
  if(worldSelection&&![...(state.worldMap?.areas??[]),...(state.worldMap?.mud??[])].some(a=>a.id===worldSelection))worldSelection=null;
 }

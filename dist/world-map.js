@@ -29,21 +29,21 @@ function index(data){
 }
 function footprint(state,o){const M=root.HiveModel,q=M.solidFootprint(o),r=M.rect(q),b=M.worldBounds(state);return {minX:Math.max(0,Math.floor(r.left-b.left+1e-7)),maxX:Math.min(999,Math.ceil(r.right-b.left-1e-7)-1),minY:Math.max(0,Math.floor(r.bottom-b.bottom+1e-7)),maxY:Math.min(999,Math.ceil(r.top-b.bottom-1e-7)-1)};}
 function intersects(mask,b){for(let y=b.minY;y<=b.maxY;y++)for(let x=b.minX;x<=b.maxX;x++)if(mask[y*1000+x])return true;return false;}
-function status(state,o){if(!state.worldMap||['note','missile'].includes(o.type))return {blocked:false,mud:false};const i=index(state.worldMap),b=footprint(state,o);return {blocked:intersects(i.blocked,b),mud:intersects(i.mud,b)};}
-function eligible(state,o){const s=status(state,o);return !s.blocked&&(!state.mapOptions?.avoidMud||!s.mud);}
+function status(state,o){if(['note','missile'].includes(o.type))return {blocked:false,mud:false};const i=index(state.worldMap),b=footprint(state,o),mud=o.type==='base'&&root.HiveModel?.mudContact?root.HiveModel.mudContact(state,o).count>0:!!i&&intersects(i.mud,b);return {blocked:!!i&&intersects(i.blocked,b),mud};}
+function eligible(state,o){return root.HiveModel?.baseSeatEligible?root.HiveModel.baseSeatEligible(state,o):!status(state,o).blocked;}
 function options(state){return {terrain:true,buildings:true,mud:true,labels:true,grid:true,...state.mapOptions};}
-function validateOptions(raw){if(!raw||typeof raw!=='object'||Array.isArray(raw))fail();const out={};for(const k of ['terrain','buildings','mud','labels','grid','avoidMud'])if(raw[k]!==undefined){if(typeof raw[k]!=='boolean')fail();out[k]=raw[k];}return out;}
+function validateOptions(raw){if(!raw||typeof raw!=='object'||Array.isArray(raw))fail();const out={};for(const k of ['terrain','buildings','mud','labels','grid','avoidMud','mudEdge'])if(raw[k]!==undefined){if(typeof raw[k]!=='boolean')fail();out[k]=raw[k];}return out;}
 const rect=b=>`x="${b.minX-.5}" y="${-b.maxY-.5}" width="${b.maxX-b.minX+1}" height="${b.maxY-b.minY+1}"`;
 const colors={mountain:'#727765',lake:'#3d9ab8',stone_statue:'#ada295',sushi_restaurant:'#b47757'};
 function outline(area){const cells=new Set();for(const [y,l,r] of area.runs)for(let x=l;x<=r;x++)cells.add(y*1000+x);let path='';for(const [y,l,r] of area.runs)for(let x=l;x<=r;x++){const px=x-.5,py=-y-.5;if(y===999||!cells.has((y+1)*1000+x))path+=`M${px} ${py}h1`;if(y===0||!cells.has((y-1)*1000+x))path+=`M${px} ${py+1}h1`;if(x===0||!cells.has(y*1000+x-1))path+=`M${px} ${py}v1`;if(x===999||!cells.has(y*1000+x+1))path+=`M${px+1} ${py}v1`;}return path;}
 const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function sprite(a){if(a.type==='stronghold')return 'zyf_S4_city2.png';if(a.type==='trading_post')return 'zyf_S4_city3.png';if(['city','capital'].includes(a.type))return `zyf_S4_city${2*(a.type==='capital'?7:a.level)+3}.png`;return {special_structure_tree:'zyf_S4_wujisuofang_5.png',special_structure_mountain:'zyf_S4_wujisuofang_2.png',cannon:'zyf_S4_wujisuofang_6.png'}[a.type];}
-function render(state,view=null,scale=12,interactive=false,selected=null){
+function render(state,view=null,scale=12,interactive=false,selected=null,externalAssets=false){
  const M=root.HiveModel,opt=options(state),game=state.mapStyle==='game',assets=root.HiveMapAssets??{},world=M.worldBounds(state),dx=world.left+.5,dy=world.bottom+.5,data=state.worldMap;
  const visible=b=>!view||(b.maxX+dx+3>=view.x&&b.minX+dx-3<=view.x+view.w&&-b.minY-dy+3>=view.y&&-b.maxY-dy-3<=view.y+view.h);
  const image=(key,attrs)=>assets[key]?`<use href="#asset-${key.replace(/[^a-zA-Z0-9]/g,'-')}" ${attrs}/>`:'';
  let s='<g data-theme-preserve="true" pointer-events="none">';
- if(game)s+='<defs>'+Object.entries(assets).map(([key,uri])=>`<symbol id="asset-${key.replace(/[^a-zA-Z0-9]/g,'-')}" viewBox="0 0 1 1" preserveAspectRatio="xMidYMid meet"><image href="${uri}" width="1" height="1" preserveAspectRatio="xMidYMid meet"/></symbol>`).join('')+'</defs>';
+ if(game&&!externalAssets)s+='<defs>'+Object.entries(assets).map(([key,uri])=>`<symbol id="asset-${key.replace(/[^a-zA-Z0-9]/g,'-')}" viewBox="0 0 1 1" preserveAspectRatio="xMidYMid meet"><image href="${uri}" width="1" height="1" preserveAspectRatio="xMidYMid meet"/></symbol>`).join('')+'</defs>';
  if(game){s+='<defs>';for(const [id,key,size] of [['map-grass','O_env_ground_caodi02_s4.png',24],['map-mud','O_terrain_heitudi_D_sj.png',12]])s+=`<pattern id="${id}" patternUnits="userSpaceOnUse" width="${size}" height="${size}"><rect width="${size}" height="${size}" fill="${id==='map-grass'?'#688051':'#665043'}"/>${image(key,`width="${size}" height="${size}" opacity=".72"`)}</pattern>`;s+='</defs>';s+=`<rect x="${world.left}" y="${-world.top}" width="1000" height="1000" fill="url(#map-grass)"/>`;}
  s+=`<g transform="translate(${dx} ${-dy})">`;
  if(data&&opt.mud)for(const a of data.mud){if(!visible(a.bounds))continue;s+=`<rect ${interactive?`data-map-area="${a.id}" pointer-events="auto" tabindex="0" role="button" aria-label="${esc(tr(names.mud))}"`:""} ${rect(a.bounds)} stroke="${selected===a.id?"#ffe075":"none"}" stroke-width=".13" fill="${game?'url(#map-mud)':'#765638'}" fill-opacity="${game?'.95':'.5'}"/>`;}
@@ -54,7 +54,7 @@ function render(state,view=null,scale=12,interactive=false,selected=null){
  if(selected===a.id)s+=`<path d="${outline(a)}" fill="none" stroke="#ffe075" stroke-width="2" vector-effect="non-scaling-stroke"/>`;s+='</g>';
  }
  s+='</g>';
- if(opt.grid&&game)s+=`<rect x="${world.left}" y="${-world.top}" width="1000" height="1000" fill="url(#${scale>=5?'big-grid':scale>=1.5?'medium-grid':'world-grid'})" opacity=".55"/>`;
+
  return s+'</g>';
 }
 root.HiveWorldMap={parse,validate,apply,index,status,eligible,options,validateOptions,render,terrain,names};

@@ -36,7 +36,7 @@ workspace=W.switchVariant(workspace,'off','empty');let other=W.activePlan(worksp
 workspace=W.switchVariant(workspace,'4','empty');assert.deepEqual(W.activePlan(workspace),state);
 const file=W.readFile(W.saveFile(workspace));assert.equal(W.activePlan(W.switchVariant(file,'off','empty')).activeAlliance,3);
 // Reject imported cross-alliance assignment, groups, duplicates and invalid IDs.
-for(const change of [s=>s.objects.find(o=>o.id===bases[0][0].id).playerId=players[1][0].id,s=>s.groups.find(g=>M.allianceOf(g)===1).playerIds.push(players[1][0].id),s=>s.objects.find(o=>o.id===centers[1].id).alliance=1,s=>s.activeAlliance=6,s=>s.players[0].alliance=0]){const bad=M.clone(state);change(bad);assert.throws(()=>M.validate(bad));}
+for(const change of [s=>s.objects.find(o=>o.id===bases[0][0].id).playerId=players[1][0].id,s=>s.groups.find(g=>M.allianceOf(g)===1).playerIds.push(players[1][0].id),s=>s.objects.find(o=>o.id===centers[1].id).alliance=1,s=>s.activeAlliance=51,s=>s.players[0].alliance=0]){const bad=M.clone(state);change(bad);assert.throws(()=>M.validate(bad));}
 // Older plans and workspaces map to Alliance 1.
 const legacy=M.makeLayout();legacy.version=5;const migrated=M.validate(legacy);assert.equal(M.activeAlliance(migrated),1);assert.ok(migrated.objects.every(o=>M.allianceOf(o)===1));
 const old=W.createWorkspace(legacy);old.planVersion=5;assert.equal(W.readFile(old).planVersion,M.VERSION);

@@ -5,7 +5,7 @@ for(const [type,size,core] of [['stronghold',13,5],['city',15,7]]){
  assert.throws(()=>M.addObject(s,M.makeObject(s,'base',x-1,0)));assert.throws(()=>M.moveObject(s,base.id,0,0));
  const moved=M.moveObjects(s,s.objects.map(o=>({id:o.id,x:o.x+20,y:o.y+20})));assert.equal(moved.objects.length,2);M.validate(moved);
  assert.doesNotThrow(()=>M.validate({...s,objects:[...s.objects].reverse()}));
- const f=M.fillBases(M.addObject(M.makeLayout('empty'),land),{left:-20,right:20,bottom:-20,top:20},0);const result=f.state??f;assert.ok(result.objects.some(o=>o.type==='base'&&M.overlaps(o,land)));assert.ok(result.objects.filter(o=>o.type==='base').every(o=>!M.overlaps(o,M.solidFootprint(land))));
+ const f=M.fillBases({...M.addObject(M.makeLayout('empty'),land),mapOptions:{mudEdge:true}},{left:-20,right:20,bottom:-20,top:20},0);const result=f.state??f;assert.ok(result.objects.some(o=>o.type==='base'&&M.overlaps(o,land)));assert.ok(result.objects.filter(o=>o.type==='base').every(o=>!M.overlaps(o,M.solidFootprint(land))));
  assert.throws(()=>M.setObjectCorner(s,land.id,1000-size+1,500));
  const w=W.createWorkspace(s);assert.deepEqual(W.activePlan(W.readFile(W.saveFile(w))),s);
 }

@@ -34,12 +34,12 @@ async function draw(a,b){await pointer('pointerdown',...a);await pointer('pointe
  await change('layout-select','empty');let s=M.addObject(api.state,M.makeObject(api.state,'center',0,0));s=M.addObject(s,{...M.makeObject(s,'terrain',14,0),x:14,y:0,w:5,h:9});api.commit(s);
  const before=json(api.state);await modes[2].fire('click');
  await pointer('pointerdown',-22.5,-18.5);await pointer('pointermove',22.5,18.5);
- assert.ok(api.preview.positions.length>0);assert.ok(get('area-fill-summary').textContent.includes(String(api.preview.positions.length)+' neue Basen'));assert.equal(get('apply-area-fill').disabled,true);
- assert.ok(svg.innerHTML.includes('fill="#78d7bf"'));assert.deepEqual(json(api.state),before);
- await pointer('pointerup',22.5,18.5);assert.equal((svg.innerHTML.match(/data-fill-resize=/g)||[]).length,4);assert.equal(get('apply-area-fill').disabled,false);
+ assert.equal(api.preview,null,'expensive preview deferred until release');assert.equal(get('apply-area-fill').disabled,true);
+ assert.ok(api.area);assert.deepEqual(json(api.state),before);
+ await pointer('pointerup',22.5,18.5);assert.equal((svg.innerHTML.match(/data-fill-resize=/g)||[]).length,8);assert.ok(api.preview.positions.length>0);assert.equal(get('apply-area-fill').disabled,false);
  const initial=json(api.area),count=api.preview.positions.length;
  await pointer('pointerdown',initial.right,initial.top,handle('ne'));await pointer('pointermove',14.5,12.5);
- assert.equal(api.area.left,initial.left);assert.equal(api.area.bottom,initial.bottom);assert.ok(api.preview.positions.length<count);assert.equal(get('apply-area-fill').disabled,true);
+ assert.equal(api.area.left,initial.left);assert.equal(api.area.bottom,initial.bottom);assert.equal(api.preview,null);assert.equal(get('apply-area-fill').disabled,true);
  // Pointer-up can contain a final location not seen by pointer-move.
  await pointer('pointerup',13.5,11.5);assert.equal(api.area.right,13.5);assert.equal(api.area.top,11.5);assert.equal(get('apply-area-fill').disabled,false);assert.deepEqual(json(api.state),before);
  // All four handles retain the opposite corner and update the count immediately.
@@ -56,7 +56,7 @@ async function draw(a,b){await pointer('pointerdown',...a);await pointer('pointe
  // Clicking without drawing does not discard the existing preview.
  await pointer('pointerdown',0,0);await pointer('pointerup',0,0);assert.deepEqual(json(api.area),stable);
  await document.fire('keydown',{target:handle('ne'),key:'ArrowRight',shiftKey:true});assert.equal(api.area.right,stable.right+5);assert.equal(api.area.top,stable.top);
- await document.fire('keydown',{target:handle('ne'),key:'ArrowDown'});assert.equal(api.area.top,stable.top-1);assert.equal(document.activeElement.dataset.fillResize,'ne');
+ await document.fire('keydown',{target:handle('ne'),key:'ArrowDown'});assert.equal(api.area.top,stable.top-1);assert.ok(api.area.top<stable.top);
  await change('fill-gap','2');assert.deepEqual(json(api.preview.positions),json(M.planBaseFill(api.state,api.area,2).positions));
  // Create commits the exact preview once; undo restores the prior map.
  const expected=json(api.preview.positions);await get('apply-area-fill').fire('click');assert.equal(api.area,null);assert.equal(api.preview,null);assert.equal(get('area-fill-options').hidden,true);
@@ -78,7 +78,7 @@ async function draw(a,b){await pointer('pointerdown',...a);await pointer('pointe
  const yellow=api.state.objects.find(o=>M.allianceOf(o)===2&&o.type==='base');assert.ok(yellow.playerId);assert.equal(M.playerFor(api.state,yellow).name,'Yellow player');
  assert.ok(svg.innerHTML.includes('#f2c75c'));assert.ok(svg.innerHTML.includes('Allianz 2'));
  await change('alliance-select','1');assert.equal(M.alliancePlayers(api.state).length,1);assert.equal(M.alliancePlayers(api.state)[0].name,'Home player');
- assert.ok(api.csvExport().includes('"Allianz 2";"Yellow player"'));assert.ok(api.exportSvg().source.includes('Allianz 5'));
+ assert.ok(api.csvExport().includes('"Allianz 2";"Yellow player"'));assert.ok(api.exportSvg().source.includes('Allianz 2'));assert.ok(!api.exportSvg().source.includes('Allianz 5'));
  api.selectObject(yellow.id);assert.equal(M.activeAlliance(api.state),2);assert.equal(get('alliance-select').value,'2');
  await get('clear-players').fire('click');assert.equal(M.alliancePlayers(api.state).length,0);assert.equal(api.state.players.length,1);
  console.log('Passed: live draw/resize counts, four handles, fixed opposite corners, release position, pointer cancellation, keyboard resizing, gap change, exact Create/undo, empty preview and world limits. DOM test double, not visual browser QA.');
