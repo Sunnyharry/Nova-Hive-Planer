@@ -1,6 +1,10 @@
 # Nova Hive Planner
 
-Current application release: **1.2.3**. Increase the final number once per subsequent delivered update (1.2.1, 1.2.2, …); see `AGENTS.md`. The JSON schema version remains independent.
+Current application release: **1.2.4**. Increase the final number once per subsequent delivered update (1.2.1, 1.2.2, …); see `AGENTS.md`. The JSON schema version remains independent.
+
+## Landing display, game artwork and viewer appearance (1.2.4)
+
+See [RELEASE-1.2.4.md](RELEASE-1.2.4.md). Hive checks use only collision-free 3×3 footprints, including mud and touching edges. Overview highlights now cover full footprints instead of anchor tiles. Game view adds original mountain previews, static lake water and larger city artwork. Viewers can choose their own appearance without altering the saved plan.
 
 ## Plan-view object labels (1.2.3)
 

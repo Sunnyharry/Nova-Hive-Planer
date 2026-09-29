@@ -4,7 +4,7 @@ const T=globalThis.HiveThemes??{svg:s=>s,init(){}},I=globalThis.HiveI18n,t=(key,
 const Q=globalThis.HiveQoL;
 const M=globalThis.HiveModel,W=globalThis.HiveWorkspace,$=id=>document.getElementById(id),svg=$('map'),stage=$('stage');
 // User-facing release: increment the final number for each later delivered update.
-const APP_VERSION='1.2.3';
+const APP_VERSION='1.2.4';
 const editorUI={ready:false,left:'players',inspector:'position',inspectorKey:null,selectionKey:null};
 const TOOL_SHORTCUTS={b:'base',m:'marshall',a:'center',t:'terrain',l:'beacon'};
 const shortcutFor=type=>Object.keys(TOOL_SHORTCUTS).find(key=>TOOL_SHORTCUTS[key]===type)?.toUpperCase();
@@ -189,7 +189,7 @@ function renderMap(){
  if(!mapDOM.static?.tagName){svg.innerHTML=themedSvg(definitions()+scene());return;}
  const dk=JSON.stringify([b,theme]);
  if(definitionKey!==dk){definitionKey=dk;mapDOM.definitions.innerHTML=themedSvg(definitions());mapDOM.ground.innerHTML=themedSvg(`<rect x="${b.left}" y="${-b.top}" width="1000" height="1000" fill="#0b1726"/>`);mapDOM.grid.innerHTML=themedSvg(`<defs><pattern id="cell-grid" x="${b.left}" y="${-b.top}" width="1" height="1" patternUnits="userSpaceOnUse"><path d="M1 0H0V1" fill="none" stroke="#58716b" stroke-width=".035"/></pattern></defs><rect x="${b.left}" y="${-b.top}" width="1000" height="1000" fill="url(#cell-grid)" pointer-events="none"/>`);}
- if(state.mapStyle==='game'&&!assetReady){mapDOM.textures.innerHTML=Object.entries(globalThis.HiveMapAssets??{}).map(([key,uri])=>`<symbol id="asset-${key.replace(/[^a-zA-Z0-9]/g,'-')}" viewBox="0 0 1 1" preserveAspectRatio="xMidYMid meet"><image href="${uri}" width="1" height="1" preserveAspectRatio="xMidYMid meet"/></symbol>`).join('');assetReady=true;}
+ if(state.mapStyle==='game'&&!assetReady){mapDOM.textures.innerHTML=globalThis.HiveWorldMap.assetDefinitions();assetReady=true;}
  const sk=staticSignature(state)+theme+I.language+worldSelection;
  if(sk!==staticKey){staticKey=sk;mapDOM.static.innerHTML=themedSvg(globalThis.HiveWorldMap.render(state,null,12,true,worldSelection,true));}
  mapDOM.static.classList.toggle('hide-map-labels',state.mapStyle==='game'&&camera.scale<4);
@@ -707,17 +707,17 @@ function previewCopies(point){if(!pasteObjects)return;const b=M.objectBounds(pas
 function placeCopies(point){const r=Q.pasteAt(state,pasteObjects,point.x,point.y);resetMapTools(true);selectionScope='all';setMapSelection(r.ids);selectedObjectIds=new Set(r.ids);selectedId=r.ids[0];commit(r.state,t('Kopie platziert.'));}
 function previewArrange(){const entries=Q.arrange(state,[...selectedObjectIds],$('arrange-mode').value,Number($('arrange-gap').value));arrangement={entries,error:null};try{M.moveObjects(state,entries,selectionScope);}catch(e){arrangement.error=e.message;}$('arrange-status').textContent=arrangement.error||t('Vorschau bereit. Mit Übernehmen bestätigen.');$('arrange-apply').disabled=!!arrangement.error;renderMap();}
 function runHiveCheck(){if(shellEnabled())$('check-drawer').open=true;checkResult=Q.audit(state,checkArea);landingPage=0;renderCheck();renderMap();}
-function focusCheck(x,y,w=3,h=3){highlightObject={x,y,w,h};fitObjects([highlightObject]);}
+function focusCheck(x,y,w=3,h=3){highlightObject={x,y,w,h,exact:true};fitObjects([highlightObject]);}
 function landingOverlay(result){
  if(!result.landingMask)return '';const v=viewBox(),w=result.world,paths=['',''];
  for(const r of result.rows){const y=w.bottom+r.y;if(-y<v.y-4||-y>v.y+v.h+4)continue;const l=Math.max(r.left,Math.floor(v.x-w.left)-3),right=Math.min(r.right,Math.ceil(v.x+v.w-w.left)+3);if(l>right)continue;
   if(camera.scale>=12){for(let x=l;x<=right;x++)paths[r.kind-1]+=`M${w.left+x} ${-y-3}h3v3h-3Z`;}
-  else paths[r.kind-1]+=`M${w.left+l} ${-y-1}h${right-l+1}v1h-${right-l+1}Z`;
+  else paths[r.kind-1]+=`M${w.left+l} ${-y-3}h${right-l+3}v3h-${right-l+3}Z`;
  }
  return paths.map((d,i)=>`<path data-theme-preserve="true" d="${d}" fill="${i?'#ff555f':'#e5b568'}" fill-opacity="${i?'.28':'.07'}" stroke="${i?'#ff555f':'#e5b568'}" stroke-opacity="${i?'.85':'.18'}" stroke-width="${camera.scale>=12?'.06':'0'}" pointer-events="none"/>`).join('');
 }
 function qolOverlay(exporting){if(exporting)return '';let s='';const outline=(o,color,width=.2)=>`<rect x="${o.x-o.w/2}" y="${-o.y-o.h/2}" width="${o.w}" height="${o.h}" fill="${color}" fill-opacity=".12" stroke="${color}" stroke-width="${width}" pointer-events="none"/>`;
- if(highlightObject){const o=typeof highlightObject==='string'?state.objects.find(o=>o.id===highlightObject):highlightObject;if(o&&(typeof highlightObject!=='string'||Q.visible(state,o)))s+=outline({...o,w:o.w+.5,h:o.h+.5},'#ffd56a');}
+ if(highlightObject){const o=typeof highlightObject==='string'?state.objects.find(o=>o.id===highlightObject):highlightObject;if(o&&(typeof highlightObject!=='string'||Q.visible(state,o)))s+=outline({...o,w:o.w+(o.exact?0:.5),h:o.h+(o.exact?0:.5)},'#ffd56a');}
  if(checkArea)s+=outline({x:(checkArea.left+checkArea.right)/2,y:(checkArea.bottom+checkArea.top)/2,w:checkArea.right-checkArea.left,h:checkArea.top-checkArea.bottom},'#ecad61',.1);
  if(checkResult)s+=landingOverlay(checkResult);
  if(arrangement)for(const e of arrangement.entries){const o=state.objects.find(o=>o.id===e.id);s+=outline({...o,...e},arrangement.error?'#ff7474':'#78e6ba');}
@@ -741,6 +741,7 @@ function renderObjectTree(){const query=$('object-search').value.trim().normaliz
 function renderSavedGroups(){const groups=[...new Set(state.objects.map(o=>o.selectionGroup).filter(Boolean))];$('object-groups').innerHTML=groups.map(name=>`<div class="qol-row"><button data-object-group="${esc(name)}">${esc(name)}</button><button data-delete-group="${esc(name)}" aria-label="${h('Gruppe auflösen')}">×</button></div>`).join('')||`<p class="field-help">${h('Noch keine Objektgruppen.')}</p>`;}
 function renderBlueprints(){ $('blueprint-list').innerHTML=(state.blueprints??[]).map(b=>`<div class="qol-row"><button data-blueprint="${esc(b.id)}">${esc(b.name)} · ${b.plan.objects.length}</button><button data-blueprint-delete="${esc(b.id)}" aria-label="${h('Entfernen')}">×</button></div>`).join('')||`<p class="field-help">${h('Noch keine Bausteine.')}</p>`;}
 function renderCheck(){const el=$('check-results');if(!checkResult){el.innerHTML='';return;}const r=checkResult;let html=`<p>${checkArea?h('Freie 3×3-Positionen: {n}',{n:r.totalLandings}):h('Prüfbereich zeichnen')}${checkArea?' · '+h('{near} nahe am Hive · {far} im Außenbereich',{near:r.nearCount??0,far:r.farCount??0}):''}</p>`;
+ if(checkArea)html+='<p class="field-help">'+h("Nur Überschneidungen blockieren. Schlamm und direkter Kontakt sind erlaubt.")+'</p>';
  const limit=100,offset=landingPage*limit,page=[];let seen=0;
  for(const kind of [2,1]){for(const row of r.rows??[]){if(row.kind!==kind)continue;const size=row.right-row.left+1;if(seen+size<=offset){seen+=size;continue;}for(let x=row.left+Math.max(0,offset-seen);x<=row.right&&page.length<limit;x++)page.push({x:r.world.left+x+1.5,y:r.world.bottom+row.y+1.5});seen+=size;if(page.length===limit)break;}if(page.length===limit)break;}
  const positions=page.map(o=>{const q=M.coords(state,o);return `<button data-check-x="${o.x}" data-check-y="${o.y}">X ${q.x} / Y ${q.y}</button>`;}).join('');html+=`<details ${landingPage?'open':''}><summary>${h('Landeflächen')} · ${Math.min(offset+1,r.totalLandings)}–${Math.min(offset+limit,r.totalLandings)} / ${r.totalLandings}</summary><div class="check-list">${positions}</div><div class="qol-actions"><button id="check-prev" ${!landingPage?'disabled':''}>←</button><button id="check-next" ${(landingPage+1)*limit>=r.totalLandings?'disabled':''}>→</button></div></details>`;

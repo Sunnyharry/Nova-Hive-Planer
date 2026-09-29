@@ -31,7 +31,7 @@ SVG und PNG verwenden die gewählte Darstellung. Bei einem leeren Plan mit Karte
 
 ## Grafik und Grenzen
 
-Verwendet werden die aus dem lokalen Spiel extrahierten Gras-/Schlammtexturen, S04-Stadtsymbole nach Level sowie Stronghold-, Trading-Post- und Sonderbauwerksymbole. PNG-Dateien sind unverändert als Daten-URLs eingebettet. Bilder sind rein optisch; ihre Schatten ändern niemals die Grundfläche. Ohne Bildmaterial bleiben farbige Flächen sichtbar. Berge, Seen, Statuen und Sushi-Restaurants werden derzeit als exakte farbige Feldformen dargestellt; es gibt dafür noch keine vollständigen 2D-Gebäudeabbildungen.
+Die Spieloptik verwendet extrahierte Gras-/Schlammtexturen, Gebäudeillustrationen und Symbole. Seit 1.2.4 kommen aus Originalmodellen erzeugte Bergansichten und eine statische Wasseransicht hinzu. Statuen und Sushi-Restaurants bleiben exakte Farbflächen. Die Grafikzuordnung benötigt keinen erneuten Import vorhandener S04-Karten. Bildmaterial definiert niemals Blockerfelder. Quellen und Darstellungsgrenzen stehen in [MAP-ART.md](MAP-ART.md).
 
 Die extrahierten S04-Daten enthalten 282 Blockflächen mit 25.597 Feldern und 187 Schlammrechtecke mit 48.298 eindeutigen Feldern. Spielerbasen, Allianzzentren, Minen und temporäre Belegungen sind nicht enthalten. Neu ermittelte Gebäude- und Schlammränder müssen weiterhin im Spiel gegengeprüft werden; die Karte erfasst keine zusätzlichen serverseitigen Platzierungsregeln.
 

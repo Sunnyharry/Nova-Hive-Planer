@@ -616,7 +616,8 @@ function audit(state,area){
  const world=M.worldBounds(state),left=Math.max(world.left,area.left),right=Math.min(world.right,area.right),bottom=Math.max(world.bottom,area.bottom),top=Math.min(world.top,area.top);
  const x0=Math.ceil(left-world.left),x1=Math.floor(right-world.left)-3,y0=Math.ceil(bottom-world.bottom),y1=Math.floor(top-world.bottom)-3;
  const g=M.geometry(state),mask=new Uint8Array(1000000);result.landingMask=mask;result.world=world;result.nearCount=0;result.farCount=0;result.rows=[];
- // Retain every legal anchor in a compact mask; aggregate display never truncates the scan.
+ // Enemy landing check: ONLY the nine occupied cells, never mud, spacing or fill options.
+ // Edge/corner contact is legal. Retain every legal anchor for the aggregate display.
  const near=[],far=[];
  for(let y=y0;y<=y1;y++){let run=null;for(let x=x0;x<=x1;x++){
   const legal=!M.tileCount(g.hardSums,x,y,3,3),kind=legal?(g.near[(y+1)*1000+x+1]?2:1):0;
