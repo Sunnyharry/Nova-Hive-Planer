@@ -1,6 +1,10 @@
 # Nova Hive Planner
 
-Current application release: **1.2.4**. Increase the final number once per subsequent delivered update (1.2.1, 1.2.2, …); see `AGENTS.md`. The JSON schema version remains independent.
+Current application release: **1.2.5**. Increase the final number once per subsequent delivered update (1.2.1, 1.2.2, …); see `AGENTS.md`. The JSON schema version remains independent.
+
+## Detailed landmarks and HQ 27 bases (1.2.5)
+
+Game view uses the selected HQ 27 base illustration in editor, viewer and image exports. Names, coordinates, beacon badges and alliance borders stay visible; the base footprint remains 3×3. The Sacred Tree, Sacred Mountain, stone statues and Trading Posts now use detailed original artwork. See [RELEASE-1.2.5.md](RELEASE-1.2.5.md).
 
 ## Landing display, game artwork and viewer appearance (1.2.4)
 

@@ -7,3 +7,13 @@ Die Bergansichten wurden aus dem Original-Mesh `O_env_mountain_01` und den Mater
 Seen verwenden die Tiefenmaske und Tief-/Flachwasserfarben des Materials von `shangjihe_s4` (Objekt 49). Das ist eine statische Annäherung; die animierten Unity-Wasser- und Beleuchtungsshader laufen nicht im Planer. Städte/Hauptstadt verwenden die originalen `Mjc_S4_csjs_build_lv1` bis `lv7`-Illustrationen. Transparente Ränder wurden beschnitten und die Bilder für die Anzeige verkleinert. Strongholds und Trading Posts behalten ihre originalen Symbole.
 
 Die neuen Ansichten sind als komprimierte WebP-Grafiken eingebettet. Berge und Seen werden auf ihre bestehenden Feldmasken zugeschnitten; Bilder ändern niemals Blockerfelder, Abstände oder Koordinaten. In der Planansicht bleiben die exakten farbigen Formen und mittigen Beschriftungen erhalten.
+
+Version 1.2.5 ergänzt fünf komprimierte WebP-Bilder aus dem lokalen Spielcache:
+
+- Basis: `UI_building_10100027` aus `BuildIconOutCity`, die vom Nutzer gewählte Standard-HQ-27-Illustration (Vorschlag Nr. 4).
+- Heiliger Baum: `O_env_S4_shijieshu_D` aus `worldcity_S4_shijieshu`, die Originaltextur der Nahansicht.
+- Heiliger Berg: `O_env_S4_fushishan_` (559 Vertices) mit `O_env_S4_fushishan_D` aus `worldcity_S4_fushishan`. Statische orthografische Ansicht aus Modell und UV-Daten; Unity-Beleuchtung und Animationen werden nicht nachgebildet.
+- Samurai-Statue: `O_env_S4_shixiang_D` aus S04-Dekorationsdefinition 67 (`shixiang_02`).
+- Trading Post: `maoyizhan` aus `worldCityTrading_S4`, die Originaltextur der Nahansicht.
+
+Die normalen Prefabs liefern die natürlichen Farben; die separaten `_wuran`-Varianten wurden nicht verwendet. Baum, Statue und Trading Post besitzen im Spiel bereits flache Bildflächen für diese Ansicht. Ihre Schatten sind Teil der Originalbilder. Die Grafiken ändern keine Kollisionsflächen. Strongholds behalten vorerst ihr bisheriges Symbol.

@@ -37,10 +37,14 @@ const rect=b=>`x="${b.minX-.5}" y="${-b.maxY-.5}" width="${b.maxX-b.minX+1}" hei
 const colors={mountain:'#727765',lake:'#3d9ab8',stone_statue:'#ada295',sushi_restaurant:'#b47757'};
 function outline(area){const cells=new Set();for(const [y,l,r] of area.runs)for(let x=l;x<=r;x++)cells.add(y*1000+x);let path='';for(const [y,l,r] of area.runs)for(let x=l;x<=r;x++){const px=x-.5,py=-y-.5;if(y===999||!cells.has((y+1)*1000+x))path+=`M${px} ${py}h1`;if(y===0||!cells.has((y-1)*1000+x))path+=`M${px} ${py+1}h1`;if(x===0||!cells.has(y*1000+x-1))path+=`M${px} ${py}v1`;if(x===999||!cells.has(y*1000+x+1))path+=`M${px+1} ${py}v1`;}return path;}
 const esc=v=>String(v).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-function sprite(a){if(a.type==='stronghold')return 'zyf_S4_city2.png';if(a.type==='trading_post')return 'zyf_S4_city3.png';if(['city','capital'].includes(a.type)){const level=a.type==='capital'?7:a.level;return root.HiveMapAssets?.['city-'+level+'.webp']?'city-'+level+'.webp':`zyf_S4_city${2*level+3}.png`;}return {special_structure_tree:'zyf_S4_wujisuofang_5.png',special_structure_mountain:'zyf_S4_wujisuofang_2.png',cannon:'zyf_S4_wujisuofang_6.png'}[a.type];}
+function sprite(a){const detailed={special_structure_tree:'sacred-tree.webp',special_structure_mountain:'sacred-mountain.webp',stone_statue:'statue.webp',trading_post:'trading-post.webp'}[a.type];if(detailed&&root.HiveMapAssets?.[detailed])return detailed;if(a.type==='stronghold')return 'zyf_S4_city2.png';if(a.type==='trading_post')return 'zyf_S4_city3.png';if(['city','capital'].includes(a.type)){const level=a.type==='capital'?7:a.level;return root.HiveMapAssets?.['city-'+level+'.webp']?'city-'+level+'.webp':`zyf_S4_city${2*level+3}.png`;}return {special_structure_tree:'zyf_S4_wujisuofang_5.png',special_structure_mountain:'zyf_S4_wujisuofang_2.png',cannon:'zyf_S4_wujisuofang_6.png'}[a.type];}
 const visualCache=new WeakMap();
 function terrainVisual(a){if(visualCache.has(a))return visualCache.get(a);const v=root.HiveMapVisuals?.[a.id];let hash=2166136261;if(v?.type===a.type)for(const [y,l,r] of a.runs)for(let x=l;x<=r;x++)hash=Math.imul(hash^(y*1000+x),16777619)>>>0;const result=v?.type===a.type&&v.signature===hash?v:null;visualCache.set(a,result);return result;}
 function assetDefinitions(){return Object.entries(root.HiveMapAssets??{}).map(([key,uri])=>{const aspect=/^(mountain-|lake-s4)/.test(key)?'none':'xMidYMid meet';return `<symbol id="asset-${key.replace(/[^a-zA-Z0-9]/g,'-')}" viewBox="0 0 1 1" preserveAspectRatio="${aspect}"><image href="${uri}" width="1" height="1" preserveAspectRatio="${aspect}"/></symbol>`;}).join('');}
+function baseArtwork(o,caption=true){
+ if(!root.HiveMapAssets?.['base-hq27.webp'])return '';
+ return `<g data-base-art="hq27" data-theme-preserve="true" pointer-events="none" transform="translate(${o.x} ${-o.y})"><use href="#asset-base-hq27-webp" x="-1.4" y="-1.44" width="2.8" height="${caption?2.05:2.8}"/>${caption?'<rect x="-1.43" y=".12" width="2.86" height="1.31" rx=".1" fill="#0c1723" fill-opacity=".88"/>':''}</g>`;
+}
 function planLabel(a){
  const b=a.bounds,cx=(b.minX+b.maxX)/2,cy=(b.minY+b.maxY)/2,w=b.maxX-b.minX+1,h=b.maxY-b.minY+1;
  const name=tr(names[a.type])+(['city','capital'].includes(a.type)?' · '+tr('Stufe')+' '+a.level:''),coords=`X ${cx} / Y ${cy}`,dimensions=`${w} × ${h}`;
@@ -58,14 +62,14 @@ function render(state,view=null,scale=12,interactive=false,selected=null,externa
  if(data&&opt.mud)for(const a of data.mud){if(!visible(a.bounds))continue;s+=`<rect ${interactive?`data-map-area="${a.id}" pointer-events="auto" tabindex="0" role="button" aria-label="${esc(tr(names.mud))}"`:""} ${rect(a.bounds)} stroke="${selected===a.id?"#ffe075":"none"}" stroke-width=".13" fill="${game?'url(#map-mud)':'#765638'}" fill-opacity="${game?'.95':'.5'}"/>`;}
  if(data)for(const a of data.areas){if(!opt[terrain.has(a.type)?'terrain':'buildings']||!visible(a.bounds))continue;const b=a.bounds,cx=(b.minX+b.maxX)/2,cy=(b.minY+b.maxY)/2,w=b.maxX-b.minX+1,h=b.maxY-b.minY+1,path=a.runs.map(([y,l,r])=>`M${l-.5} ${-y-.5}h${r-l+1}v1h-${r-l+1}z`).join('');
  s+=`<g ${interactive?`data-map-area="${a.id}" pointer-events="auto" tabindex="0" role="button" aria-label="${esc(tr(names[a.type]))} X ${cx} Y ${cy}"`:''}><title>${esc(tr(names[a.type]))} · X ${cx} / Y ${cy} · ${w} × ${h}</title><path d="${path}" fill="${colors[a.type]??'#8996ad'}" fill-opacity="${game&&!terrain.has(a.type)?'.4':'.9'}"/>`;
- if(game&&!terrain.has(a.type))s+=image(sprite(a),`x="${cx-w*.7}" y="${-cy-h*.9}" width="${w*1.4}" height="${h*1.4}" pointer-events="none"`);
+ if(game&&(!terrain.has(a.type)||a.type==='stone_statue'))s+=image(sprite(a),`x="${cx-w*.7}" y="${-cy-h*.9}" width="${w*1.4}" height="${h*1.4}" pointer-events="none"`);
  if(game&&terrain.has(a.type)){const visual=terrainVisual(a);if(visual){s+=`<defs><clipPath id="map-art-${a.id}"><path d="${path}"/></clipPath></defs><g data-map-art="${a.id}" clip-path="url(#map-art-${a.id})" pointer-events="none">`;for(const o of visual.instances)s+=`<g transform="translate(${o.cx} ${-o.cy}) rotate(${o.angle}) scale(${o.scale})">`+image(o.asset,`x="${o.x}" y="${o.y}" width="${o.w}" height="${o.h}"`)+'</g>';s+='</g>';}}
- if(opt.labels){if(!game)s+=planLabel(a);else if(scale>=4&&!terrain.has(a.type))s+=`<text x="${cx}" y="${-cy+h/2+.9}" text-anchor="middle" font-size=".65" fill="white" stroke="#182620" stroke-width=".16" paint-order="stroke">${esc(tr(names[a.type]))}${['city','capital'].includes(a.type)?' '+a.level:''}</text>`;}
+ if(opt.labels){if(!game)s+=planLabel(a);else if(scale>=4&&(!terrain.has(a.type)||a.type==='stone_statue'))s+=`<text x="${cx}" y="${-cy+h/2+.9}" text-anchor="middle" font-size=".65" fill="white" stroke="#182620" stroke-width=".16" paint-order="stroke">${esc(tr(names[a.type]))}${['city','capital'].includes(a.type)?' '+a.level:''}</text>`;}
  if(selected===a.id)s+=`<path d="${outline(a)}" fill="none" stroke="#ffe075" stroke-width="2" vector-effect="non-scaling-stroke"/>`;s+='</g>';
  }
  s+='</g>';
 
  return s+'</g>';
 }
-root.HiveWorldMap={parse,validate,apply,index,status,eligible,options,validateOptions,render,terrain,names,assetDefinitions};
+root.HiveWorldMap={parse,validate,apply,index,status,eligible,options,validateOptions,render,terrain,names,assetDefinitions,baseArtwork};
 })(globalThis);

@@ -4,7 +4,7 @@ const T=globalThis.HiveThemes??{svg:s=>s,init(){}},I=globalThis.HiveI18n,t=(key,
 const Q=globalThis.HiveQoL;
 const M=globalThis.HiveModel,W=globalThis.HiveWorkspace,$=id=>document.getElementById(id),svg=$('map'),stage=$('stage');
 // User-facing release: increment the final number for each later delivered update.
-const APP_VERSION='1.2.4';
+const APP_VERSION='1.2.5';
 const editorUI={ready:false,left:'players',inspector:'position',inspectorKey:null,selectionKey:null};
 const TOOL_SHORTCUTS={b:'base',m:'marshall',a:'center',t:'terrain',l:'beacon'};
 const shortcutFor=type=>Object.keys(TOOL_SHORTCUTS).find(key=>TOOL_SHORTCUTS[key]===type)?.toUpperCase();
@@ -99,7 +99,7 @@ function definitions(){const b=M.worldBounds(state);return `<defs><clipPath id="
 
 function objectSvg(o,exporting=false){
  const q=M.displayCoords(state,o),name=M.objectLabel(state,o)+(o.type==='base'&&o.customName&&M.playerFor(state,o)&&M.playerFor(state,o).name!==o.name?' · '+M.playerFor(state,o).name:''),alliance=M.allianceOf(o),tint=M.allianceColor(state,alliance),colored=alliance!==1||tint!==M.ALLIANCE_COLORS[0],active=!exporting&&selectedObjectIds.has(o.id),classes=`object-${o.type}${active?' map-object-selected':''}`;
- const attr=`${['terrain','stronghold','city','missile'].includes(o.type)?'data-theme-preserve="true" ':''}data-object="${esc(o.id)}" class="${classes}" transform="translate(${o.x} ${-o.y})" role="button" aria-label="${esc(name)}, X ${q.x}, Y ${q.y}"`;
+ const attr=`${['terrain','stronghold','city','missile'].includes(o.type)||o.type==='base'&&state.mapStyle==='game'&&globalThis.HiveMapAssets?.['base-hq27.webp']?'data-theme-preserve="true" ':''}data-object="${esc(o.id)}" class="${classes}" transform="translate(${o.x} ${-o.y})" role="button" aria-label="${esc(name)}, X ${q.x}, Y ${q.y}"`;
  let content='';
  if(o.type==='center'){
   content=`<rect x="-4.5" y="-4.5" width="9" height="9" fill="${!colored?'#27374b':tint+'30'}" stroke="${!colored?'#b1c5d7':tint}" stroke-width=".12"/><text y="-1.05" text-anchor="middle" fill="#edf5fc" font-size="1.55" font-weight="750">AC</text>${nameSvg(name,8,1,.55,'#d7e5f1',.65)}<text x="0" y="1.8" text-anchor="middle" fill="#afc7d7" font-size=".53">X ${num(q.x)}   Y ${num(q.y)}</text><text y="3.2" text-anchor="middle" fill="#8ca7bd" font-size=".48">${h('9 × 9 Felder')}</text>`;
@@ -113,11 +113,12 @@ function objectSvg(o,exporting=false){
  }else if(o.type==='terrain'){
   content=`<rect x="${-o.w/2}" y="${-o.h/2}" width="${o.w}" height="${o.h}" fill="${o.color??'url(#terrain-hatch)'}" stroke="${o.color??'#a8787d'}" stroke-width=".09"/>${nameSvg(name,o.w-.25,Math.max(.3,o.h-1.1),-.25,terrainInk(o),.6)}<text y="${o.h/2-.2}" text-anchor="middle" fill="${terrainInk(o)}" font-size=".35">${o.w} × ${o.h} · X ${num(q.x)} / Y ${num(q.y)}</text>`;
  }else{
-  const beacon=o.type==='base'&&o.beacon,guard=o.type==='marshall',stroke=colored?tint:guard?'#f3cd6a':beacon?color(o):'#5b829f',fill=colored?tint+'28':guard?'#51432b':beacon?'#173540':o.playerId?'#223f57':'#152c40';
+  const gameBase=o.type==='base'&&state.mapStyle==='game'&&!!globalThis.HiveMapAssets?.['base-hq27.webp'],beacon=o.type==='base'&&o.beacon,guard=o.type==='marshall',stroke=colored?tint:guard?'#f3cd6a':beacon?color(o):'#5b829f',fill=colored?tint+'28':guard?'#51432b':beacon?'#173540':o.playerId?'#223f57':'#152c40';
   content=`<rect x="-1.5" y="-1.5" width="3" height="3" fill="${fill}" stroke="${stroke}" stroke-width="${(beacon||guard) ? .09 : .055}"/>`;
+  if(gameBase)content+=globalThis.HiveWorldMap.baseArtwork({x:0,y:0},Q.view(state).names||Q.view(state).coordinates);
   if(beacon)content+=`<circle cx="-1.06" cy="-1.07" r=".28" fill="${color(o)}"/><text x="-1.06" y="-.95" text-anchor="middle" font-size=".35" font-weight="800" fill="#0a1824">${o.beacon}</text><circle cx="1.14" cy="-1.19" r=".4" fill="#f7ce66" stroke="#0b1926" stroke-width=".065"/><text x="1.14" y="-1.09" text-anchor="middle" font-size=".29" font-weight="750" fill="#252618">+${o.electricians}</text>`;
-  content+=nameSvg(name,2.63,beacon?1.12:1.55,beacon?-.12:-.25,guard?'#ffe3a0':o.playerId?'#ecf7ff':beacon?'#bcf4f0':'#80a1bc',beacon?.49:.55);
-  content+=`<text text-anchor="middle" fill="${guard?'#e0c282':'#8fb4ca'}" font-size=".36" font-weight="450"><tspan x="0" y=".89">X ${num(q.x)}</tspan><tspan x="0" y="1.29">Y ${num(q.y)}</tspan></text>`;
+  content+=nameSvg(name,2.63,gameBase?.8:beacon?1.12:1.55,gameBase?.43:beacon?-.12:-.25,gameBase?'#ecf7ff':guard?'#ffe3a0':o.playerId?'#ecf7ff':beacon?'#bcf4f0':'#80a1bc',gameBase?.42:beacon?.49:.55);
+  content+=`<text text-anchor="middle" fill="${guard?'#e0c282':'#8fb4ca'}" font-size="${gameBase?.29:.36}" font-weight="450"><tspan x="0" y="${gameBase?1.02:.89}">X ${num(q.x)}</tspan><tspan x="0" y="${gameBase?1.36:1.29}">Y ${num(q.y)}</tspan></text>`;
  }
  if(!exporting&&o.locked)content+=`<text x="${o.w/2-.3}" y="${-o.h/2+.5}" font-size=".55" text-anchor="end" fill="#ffd56a">🔒</text>`;
  const key=shortcutFor(o.beacon?'beacon':o.type),shortcut=!exporting&&key?' · '+h('Tastenkürzel: {key}',{key}):'';
