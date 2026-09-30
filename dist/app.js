@@ -4,8 +4,9 @@ const T=globalThis.HiveThemes??{svg:s=>s,init(){}},I=globalThis.HiveI18n,t=(key,
 const Q=globalThis.HiveQoL;
 const M=globalThis.HiveModel,W=globalThis.HiveWorkspace,$=id=>document.getElementById(id),svg=$('map'),stage=$('stage');
 // User-facing release: increment the final number for each later delivered update.
-const APP_VERSION='1.2.5';
-const editorUI={ready:false,left:'players',inspector:'position',inspectorKey:null,selectionKey:null};
+const APP_VERSION='2.0.0';
+let atelier=null;
+const editorUI={ready:false,left:'objects',inspector:'position',inspectorKey:null,selectionKey:null};
 const TOOL_SHORTCUTS={b:'base',m:'marshall',a:'center',t:'terrain',l:'beacon'};
 const shortcutFor=type=>Object.keys(TOOL_SHORTCUTS).find(key=>TOOL_SHORTCUTS[key]===type)?.toUpperCase();
 let workspace=W.createWorkspace(),state=W.activePlan(workspace),selectedId=null,pending=null,filter='all',dirty=false,undoStack=[],redoStack=[],drag=null,suppressClick=false,confirmAction=null,toastTimer=null;
@@ -311,7 +312,7 @@ function renderControls(){
  $('app-version').textContent=t('Version {version}',{version:APP_VERSION});
  $('map-summary').textContent=t(s4?'{assigned} / {total} Plätze vergeben · {beacons} Beacons':'{assigned} / {total} Plätze vergeben',{assigned,total:bases.length,beacons});
  const sizes=[...new Set(bases.filter(o=>o.beacon).map(o=>o.lightSize))];$('light-legend').textContent=sizes.length>1?t('L4 individuell'):`L4 ${sizes[0]??25} × ${sizes[0]??25}`;
- $('save-status').textContent=savedRecord?(savedRecord.name+' · '+t(dirty?'Änderungen noch nicht gesichert':'Manuell gesichert')):t('Entwurf · noch keine gespeicherte Karte');if($('top-save'))$('top-save').title=t(savedRecord?'Aktuelle Karte sichern':'Als neue Karte sichern');globalThis.HiveArchiveRefreshState?.();$('save-status').style.color=dirty?'#e6c97d':'';
+ $('save-status').textContent=savedRecord?(savedRecord.name+' · '+t(dirty?'Änderungen noch nicht gesichert':'Manuell gesichert')):t('Entwurf · noch keine gespeicherte Karte');if($('top-save'))$('top-save').title=t(savedRecord?'Aktuelle Karte sichern':'Als neue Karte sichern');globalThis.HiveArchiveRefreshState?.();$('save-status').style.color='';$('save-status').classList.toggle('unsaved',dirty);
  $('undo').disabled=!undoStack.length;$('redo').disabled=!redoStack.length;
  renderAutofill();
  $('anchor-help').textContent=t('Verschiebt nur die ausgewählte Allianz. Andere Allianzen behalten ihre Kartenkoordinaten.');
@@ -686,6 +687,7 @@ globalThis.HiveArchiveBridge={
 };
 
 T.init('theme-select',renderMap);initQoL();initWorldControls();initAllianceEditor();
+atelier=globalThis.HiveAtelier?.mount({tab:(value,focus)=>shellTab('left',value,focus),getState:()=>state,clearSelection:()=>{worldSelection=null;setMapSelection([]);render();},createPlan:next=>{const apply=()=>{saveRecovery(true);savedRecord=null;savedFingerprint=null;D?.newDraft();resetMapTools(true);commitWorkspace(next);globalThis.HiveArchiveResetSelection?.();$('plans-menu').open=false;fitMap();};if(dirty)confirm(t('Neuen Plan erstellen?'),t('Der aktuelle Entwurf bleibt in den automatischen Sicherungen. Gespeicherte Karten werden nicht verändert.'),apply);else apply();}});
 I.apply(document);$('language-select').value=I.language;render();requestAnimationFrame(fitMap);
 // Optional structured tools use exactly the same state and actions as the visible planner.
 const context=document.modelContext;
@@ -707,7 +709,7 @@ function duplicateSelection(){clipboardPlan=Q.capture(state,[...selectedObjectId
 function previewCopies(point){if(!pasteObjects)return;const b=M.objectBounds(pasteObjects),dx=Math.round(point.x-(b.left+b.right)/2),dy=Math.round(point.y-(b.bottom+b.top)/2);ghost={copies:pasteObjects.map(o=>({...o,x:o.x+dx,y:o.y+dy})),invalid:false};try{Q.pasteAt(state,pasteObjects,point.x,point.y);}catch(e){ghost.invalid=true;ghost.reason=e.message;}}
 function placeCopies(point){const r=Q.pasteAt(state,pasteObjects,point.x,point.y);resetMapTools(true);selectionScope='all';setMapSelection(r.ids);selectedObjectIds=new Set(r.ids);selectedId=r.ids[0];commit(r.state,t('Kopie platziert.'));}
 function previewArrange(){const entries=Q.arrange(state,[...selectedObjectIds],$('arrange-mode').value,Number($('arrange-gap').value));arrangement={entries,error:null};try{M.moveObjects(state,entries,selectionScope);}catch(e){arrangement.error=e.message;}$('arrange-status').textContent=arrangement.error||t('Vorschau bereit. Mit Übernehmen bestätigen.');$('arrange-apply').disabled=!!arrangement.error;renderMap();}
-function runHiveCheck(){if(shellEnabled())$('check-drawer').open=true;checkResult=Q.audit(state,checkArea);landingPage=0;renderCheck();renderMap();}
+function runHiveCheck(){if(shellEnabled()){$('check-drawer').open=true;if(atelier)shellTab('left','check');}checkResult=Q.audit(state,checkArea);landingPage=0;renderCheck();renderMap();}
 function focusCheck(x,y,w=3,h=3){highlightObject={x,y,w,h,exact:true};fitObjects([highlightObject]);}
 function landingOverlay(result){
  if(!result.landingMask)return '';const v=viewBox(),w=result.world,paths=['',''];
@@ -737,7 +739,7 @@ async function restoreRecovery(){
  recoveryInitialized=true;if(workspace!==initial)scheduleRecovery();
 }
 function loadRecovery(entry,retain=true){const next=W.readFile(entry.workspace);if(retain)saveRecovery(true);D?.newDraft();savedRecord=entry.source??null;savedFingerprint=!entry.dirty?(D?.fingerprint(next)??null):null;resetMapTools(true);workspace=next;state=W.activePlan(next);dirty=entry.dirty!==false;undoStack=[];redoStack=[];globalThis.HiveArchiveRestoreSource?.(savedRecord);if(qolInitialized){render();fitMap();}if(retain)scheduleRecovery();}
-async function renderRecoveryList(){const list=$('draft-list');if(!list||!D)return;try{const rows=await D.list();list.replaceChildren();for(const row of rows){const article=document.createElement('article'),label=document.createElement('span'),button=document.createElement('button');article.className='draft-row';label.textContent=(row.source?.name??row.workspace.variants?.find(v=>v.season===row.workspace.active.season&&v.layout===row.workspace.active.layout)?.title??t('Entwurf'))+' · '+new Date(row.updatedAt).toLocaleString(I.language);button.textContent=t('Wiederherstellen');button.addEventListener('click',()=>confirm(t('Entwurf wiederherstellen?'),t('Manuell gespeicherte Karten bleiben unverändert.'),()=>safely(()=>loadRecovery(row))));article.append(label,button);list.append(article);}if(!rows.length)list.textContent=t('Noch keine automatischen Sicherungen.');}catch{recoveryStatus('Automatische Sicherungen konnten nicht geladen werden.');}}
+async function renderRecoveryList(){const list=$('draft-list');if(!list||!D)return;try{const rows=await D.list();list.replaceChildren();for(const row of rows){const article=document.createElement('article'),label=document.createElement('span'),button=document.createElement('button');article.className='draft-row';label.textContent=(row.source?.name??row.workspace.variants?.find(v=>v.season===row.workspace.active.season&&v.layout===row.workspace.active.layout)?.title??t('Entwurf'))+' · '+new Date(row.updatedAt).toLocaleString(I.language);button.textContent=t('Vorschau');button.addEventListener('click',()=>safely(()=>globalThis.HiveAtelier.previewRecovery(row,()=>confirm(t('Entwurf wiederherstellen?'),t('Manuell gespeicherte Karten bleiben unverändert.'),()=>safely(()=>loadRecovery(row))))));article.append(label,button);list.append(article);}if(!rows.length)list.textContent=t('Noch keine automatischen Sicherungen.');}catch{recoveryStatus('Automatische Sicherungen konnten nicht geladen werden.');}}
 function renderObjectTree(){const query=$('object-search').value.trim().normalize('NFC').toLocaleLowerCase(),list=$('object-tree'),open=new Set(Array.from(list.querySelectorAll('details[open]')).map(e=>e.dataset.fold)),scroll=list.scrollTop;let html='';for(const {id:alliance} of M.alliances(state)){const objects=state.objects.filter(o=>M.allianceOf(o)===alliance&&(!query||(M.objectLabel(state,o)+' '+(M.playerFor(state,o)?.name??'')).toLocaleLowerCase().includes(query)));if(!objects.length)continue;html+=`<details data-fold="${alliance}" ${query||open.has(String(alliance))?'open':''}><summary>${esc(allianceName(alliance))} · ${objects.length}</summary>`;for(const type of ['center','marshall','base','terrain','stronghold','city','missile','note']){const items=objects.filter(o=>o.type===type);if(!items.length)continue;html+=`<details data-fold="${alliance}-${type}" ${query||open.has(alliance+'-'+type)?'open':''}><summary>${type==='base'?h('Basen'):esc(typeName(items[0]))} · ${items.length}</summary>`+items.map(o=>{const q=M.displayCoords(state,o);return `<div class="object-tree-row"><input type="checkbox" data-tree-select="${esc(o.id)}" aria-label="${h('{name} auswählen',{name:M.objectLabel(state,o)})}" ${selectedObjectIds.has(o.id)?'checked':''}><button data-reveal="${esc(o.id)}"><strong>${esc(M.objectLabel(state,o))}</strong><small>X ${q.x} / Y ${q.y}${Q.visible(state,o)?'':' · '+h('Ausgeblendet')}</small></button><button data-rename="${esc(o.id)}" title="${h('Umbenennen')}">✎</button><button data-lock="${esc(o.id)}" title="${h(o.locked?'Entsperren':'Sperren')}">${o.locked?'🔒':'🔓'}</button></div>`;}).join('')+'</details>';}html+='</details>';}list.innerHTML=html||`<p>${h('Keine Treffer.')}</p>`;list.scrollTop=scroll;}
 function renderSavedGroups(){const groups=[...new Set(state.objects.map(o=>o.selectionGroup).filter(Boolean))];$('object-groups').innerHTML=groups.map(name=>`<div class="qol-row"><button data-object-group="${esc(name)}">${esc(name)}</button><button data-delete-group="${esc(name)}" aria-label="${h('Gruppe auflösen')}">×</button></div>`).join('')||`<p class="field-help">${h('Noch keine Objektgruppen.')}</p>`;}
 function renderBlueprints(){ $('blueprint-list').innerHTML=(state.blueprints??[]).map(b=>`<div class="qol-row"><button data-blueprint="${esc(b.id)}">${esc(b.name)} · ${b.plan.objects.length}</button><button data-blueprint-delete="${esc(b.id)}" aria-label="${h('Entfernen')}">×</button></div>`).join('')||`<p class="field-help">${h('Noch keine Bausteine.')}</p>`;}
@@ -786,7 +788,7 @@ function initQoL(){
  if(id==='save-blueprint')return promptName(t('Baustein benennen'),name=>{if((state.blueprints??[]).length>=30)throw Error(t('Maximal 30 Bausteine.'));commit({...M.clone(state),blueprints:[...(state.blueprints??[]),{id:M.uid('blueprint'),name,plan:Q.capture(state,[...selectedObjectIds])}]});});
  if(id==='export-blueprints')return download(new Blob([JSON.stringify({schema:'nova-hive-blueprints',version:1,blueprints:state.blueprints??[]})],{type:'application/json'}),'nova-bausteine.json');
  if(id==='import-blueprints')return $('blueprint-file').click();
- if(id==='draw-check-area'){resetMapTools();checkResult=null;mapMode='check';$('check-panel').open=true;if(shellEnabled())$('check-drawer').open=true;toast(t('Rechteck für die Prüfung aufziehen.'));render();return;}
+ if(id==='draw-check-area'){resetMapTools();checkResult=null;mapMode='check';$('check-panel').open=true;if(shellEnabled()){$('check-drawer').open=true;if(atelier)shellTab('left','check');}toast(t('Rechteck für die Prüfung aufziehen.'));render();return;}
  if(id==='check-selection'){if(!selectedObjects().length)throw Error(t('Keine Elemente zum Verschieben ausgewählt.'));checkArea=M.objectBounds(selectedObjects());return runHiveCheck();}
  if(id==='check-prev'||id==='check-next'){landingPage+=id==='check-next'?1:-1;renderCheck();return;}if(id==='run-check')return runHiveCheck();if(id==='clear-check'){checkArea=null;checkResult=null;highlightObject=null;render();}
  }));
@@ -797,20 +799,19 @@ function initQoL(){
 // Stable editor chrome is UI state only; it never changes the workspace or undo history.
 function shellEnabled(){return document.body.hasAttribute?.('data-editor-shell')===true;}
 function shellTab(kind,value,focus=false){
- editorUI[kind]=value;if(kind==='inspector'&&worldSelection)renderWorldInspector();const attr=kind==='left'?'leftTab':'inspectorTab';
+ if(kind==='left'&&value==='blueprints'){value='objects';if($('blueprints-fold'))$('blueprints-fold').open=true;}editorUI[kind]=value;if(kind==='inspector'&&worldSelection)renderWorldInspector();const attr=kind==='left'?'leftTab':'inspectorTab';
  document.querySelectorAll(`[data-${kind==='left'?'left-tab':'inspector-tab'}]`).forEach(b=>{const active=b.dataset[attr]===value;b.setAttribute('aria-selected',String(active));b.tabIndex=active?0:-1;if(active&&focus)b.focus();});
- if(kind==='left'){for(const key of ['players','objects','blueprints'])$('left-'+key).hidden=key!==value;if(value!=='players'&&organizerOpen){organizerOpen=false;renderOrganizer();renderSelection();}}
+ if(kind==='left'){for(const key of ['players','objects','check'])if($('left-'+key))$('left-'+key).hidden=key!==value;if(value!=='players'&&organizerOpen){organizerOpen=false;renderOrganizer();renderSelection();}}
  else{document.querySelectorAll('[data-inspector-pane]').forEach(p=>p.hidden=p.dataset.inspectorPane!==value);$('inspector-actions-dock').hidden=!!worldSelection||value!=='actions';$('anchor-section').hidden=value!=='actions'||selectedObjects().length!==1||selected()?.type!==M.anchorType(state);$('inspector-apply').disabled=value!=='position'||!selectedObjects().length||selectedObjects().some(o=>o.locked);$('inspector-apply').hidden=false;$('inspector-footer-hint').textContent=value==='properties'?t('Änderungen werden direkt übernommen.'):value==='actions'?t('Aktionen gelten für die aktuelle Auswahl.'):t('Koordinaten bezeichnen den Mittelpunkt.');}
 }
 function initEditorShell(){
  if(!shellEnabled()||editorUI.ready)return;editorUI.ready=true;
  const wrap=document.createElement('div');wrap.id='inspector-scroll';$('inspector').before(wrap);wrap.append($('inspector'));
  const dock=document.createElement('div');dock.id='inspector-actions-dock';wrap.append(dock,$('anchor-section'));
- document.querySelectorAll('[data-left-tab],[data-inspector-tab]').forEach(button=>{const kind=button.dataset.leftTab?'left':'inspector',key=button.dataset.leftTab??button.dataset.inspectorTab;button.addEventListener('click',()=>shellTab(kind,key));button.addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();const values=kind==='left'?['players','objects','blueprints']:['position','properties','actions'],i=values.indexOf(editorUI[kind]);shellTab(kind,e.key==='Home'?values[0]:e.key==='End'?values.at(-1):values[(i+(e.key==='ArrowRight'?1:values.length-1))%values.length],true);});});
+ document.querySelectorAll('[data-left-tab],[data-inspector-tab]').forEach(button=>{const kind=button.dataset.leftTab?'left':'inspector',key=button.dataset.leftTab??button.dataset.inspectorTab;button.addEventListener('click',()=>shellTab(kind,key));button.addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight','Home','End'].includes(e.key))return;e.preventDefault();const values=kind==='left'?['objects','players','check']:['position','properties','actions'],i=values.indexOf(editorUI[kind]);shellTab(kind,e.key==='Home'?values[0]:e.key==='End'?values.at(-1):values[(i+(e.key==='ArrowRight'?1:values.length-1))%values.length],true);});});
  $('inspector-apply').addEventListener('click',()=>{$('position-form')?.requestSubmit();if(!$('position-form'))$('selection-position-form')?.requestSubmit();});
- $('new-plan').addEventListener('click',()=>confirm(t('Neuen Plan erstellen?'),t('Speichere deinen aktuellen Plan zuerst. Eine neue leere Karte wird geöffnet.'),()=>{saveRecovery(true);savedRecord=null;savedFingerprint=null;D?.newDraft();resetMapTools(true);commitWorkspace(W.createWorkspace(M.makeLayout('empty',{season:state.season,title:t('Mein Hive')})));globalThis.HiveArchiveResetSelection?.();$('plans-menu').open=false;fitMap();}));
  $('inspector-name').addEventListener('click',()=>{const o=selected();if(selectedObjects().length!==1||!o)return;promptName(t('Umbenennen'),name=>commit(M.updateObject(state,o.id,{name})),M.objectLabel(state,o));});
- $('toggle-hive-check').addEventListener('click',()=>{$('check-drawer').open=!$('check-drawer').open;$('toggle-hive-check').setAttribute('aria-expanded',String($('check-drawer').open));});
+ $('toggle-hive-check').addEventListener('click',()=>{if(atelier){shellTab('left',editorUI.left==='check'?'objects':'check');return;}$('check-drawer').open=!$('check-drawer').open;$('toggle-hive-check').setAttribute('aria-expanded',String($('check-drawer').open));});
  $('check-drawer').addEventListener('toggle',()=>$('toggle-hive-check').setAttribute('aria-expanded',String($('check-drawer').open)));
  document.addEventListener('click',e=>{for(const menu of document.querySelectorAll('.header-menu[open],.export-menu[open]'))if(!menu.contains(e.target))menu.open=false;const action=e.target.closest('[data-tool],[data-export]');if(action)action.closest('details')?.removeAttribute('open');});
  document.addEventListener('keydown',e=>{if(e.key==='Escape')document.querySelectorAll('.header-menu[open],.export-menu[open]').forEach(menu=>menu.open=false);});
@@ -829,10 +830,10 @@ function mountQoL(){
  for(const id of ['qol-lock','qol-unlock']){const b=$(id);b.dataset.qolOwned='true';$('inspector-locks').append(b);}
  for(const id of ['arrange-apply','arrange-cancel']){const b=$(id);b.dataset.qolOwned='true';$('inspector-preview-footer').append(b);}
  for(const [id,value] of Object.entries(editorUI.qolValues??{}))if($(id))$(id).value=value;
- shellTab('left',editorUI.left);shellTab('inspector',editorUI.inspector);
+ shellTab('left',editorUI.left);shellTab('inspector',editorUI.inspector);atelier?.refresh();
 }
 function renderInspector(){
- if(renderWorldInspector())return;
+ syncAtelier();if(renderWorldInspector())return;
  if(!shellEnabled()){renderInspectorContent();return;}
  const key=JSON.stringify({objects:selectedObjects(),players:state.players,origin:state.origin,season:state.season,lang:I.language,groups:state.groups,scope:selectionScope,confirmed:selectionCenterEntry,all:state.objects});
  const scroll=$('inspector-scroll')?.scrollTop??0;
@@ -851,11 +852,12 @@ function renderInspector(){
   editorUI.inspectorKey=key;editorUI.selectionKey=[...selectedObjectIds].sort().join('|');
  }
  const objects=selectedObjects(),o=selected();$('inspector-name').textContent=objects.length===1?M.objectLabel(state,o):objects.length?selectionSummary():t('Keine Auswahl');$('inspector-name').disabled=objects.length!==1;
- $('selection-type').hidden=false;$('selection-type').textContent=objects.length===1?allianceName(M.allianceOf(o))+' · '+typeName(o):objects.length?selectionSummary():'—';
+ $('selection-type').hidden=false;$('selection-type').textContent=objects.length===1?[allianceName(M.allianceOf(o)),typeName(o),o.w+'×'+o.h,'X '+M.displayCoords(state,o).x+' / Y '+M.displayCoords(state,o).y,o.level?'Lv '+o.level:null].filter(Boolean).join(' · '):objects.length?selectionSummary():'—';
  shellTab('inspector',editorUI.inspector);if($('inspector-scroll'))$('inspector-scroll').scrollTop=scroll;
 }
+function syncAtelier(){atelier?.sync({selection:!!worldSelection||selectedObjects().length>0,left:editorUI.left,mode:mapMode,season:seasonName(),layout:t(state.layout==='empty'?'Leere Karte':state.layout==='compact'?'Kompakt':'Mit Abstand')});}
 function renderShellState(){
- if(!shellEnabled())return;
+ if(!shellEnabled())return;syncAtelier();
  $('inspector-preview-footer').hidden=editorUI.inspector!=='actions';$('arrange-cancel').disabled=!arrangement;
  $('check-selection').disabled=!selectedObjects().length;
  for(const fold of editorUI.folds??[])document.querySelectorAll('#object-tree details').forEach(e=>{if(e.dataset.fold===fold)e.open=true;});editorUI.folds=null;
@@ -907,7 +909,7 @@ function renderWorldControls(){
  if(worldSelection&&![...(state.worldMap?.areas??[]),...(state.worldMap?.mud??[])].some(a=>a.id===worldSelection))worldSelection=null;
 }
 function renderWorldInspector(){
- const a=[...(state.worldMap?.areas??[]),...(state.worldMap?.mud??[]).map(a=>({...a,type:'mud'}))].find(a=>a.id===worldSelection);if(!a)return false;
+ syncAtelier();const a=[...(state.worldMap?.areas??[]),...(state.worldMap?.mud??[]).map(a=>({...a,type:'mud'}))].find(a=>a.id===worldSelection);if(!a)return false;
  const b=a.bounds,key=editorUI.inspector,name=t(globalThis.HiveWorldMap.names[a.type]);
  $('inspector-name').textContent=name;$('inspector-name').disabled=true;$('selection-type').hidden=false;$('selection-type').textContent=t('Kartenebene');$('anchor-section').hidden=true;
  $('inspector').innerHTML=`<div class="selection-form"><p>${esc(name)} · ${h('Kartenebene')}</p>${key==='position'?`<p>X ${(b.minX+b.maxX)/2} / Y ${(b.minY+b.maxY)/2}</p><p>X ${b.minX}–${b.maxX} · Y ${b.minY}–${b.maxY}</p>`:key==='properties'?`<p>${h(a.type==='mud'?'Schlamm: PvP jederzeit möglich':'Nicht bebaubar')} · ${a.runs?a.runs.reduce((n,r)=>n+r[2]-r[1]+1,0):(b.maxX-b.minX+1)*(b.maxY-b.minY+1)} ${h('Felder')}</p>${a.level?`<p>${h('Stufe')} ${a.level}</p>`:''}`:`<p>${h('Kartenebene bearbeiten')}</p><button id="world-area-remove" ${worldEditing?'':'disabled'}>${h('Auswahl entfernen')}</button>`}</div>`;

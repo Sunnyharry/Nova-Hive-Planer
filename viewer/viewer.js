@@ -1,6 +1,7 @@
 (function(){
 'use strict';
 const T=globalThis.HiveThemes??{svg:s=>s,init(){}},M=globalThis.HiveModel,Q=globalThis.HiveQoL,I=globalThis.HiveI18n,$=id=>document.getElementById(id),svg=$('map'),stage=$('stage'),t=(k,p)=>I.t(k,p),esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+document.addEventListener?.('keydown',e=>{if(e.key==='Escape'&&$('viewer-settings')?.open){$('viewer-settings').open=false;$('viewer-settings').querySelector('summary')?.focus();}});
 let viewStyle=null;try{const saved=localStorage.getItem('nova-hive-viewer-style-v1');if(['plan','game'].includes(saved))viewStyle=saved;}catch{}
 let plan=null,record=null,chosen=null,cam={x:0,y:0,scale:12},pointers=new Map(),gesture=null,loading=false,missileDrag=null;
 const text=(x,y,s,size=.55,color='#e6f2fa',weight=500)=>(plan&&!Q.view(plan).coordinates&&/^[XY] /.test(String(s)))?'':`<text x="${x}" y="${y}" text-anchor="middle" fill="${color}" font-size="${size}" font-weight="${weight}">${esc(s)}</text>`;

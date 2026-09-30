@@ -3,8 +3,10 @@
 The user requires a version number at the bottom of the planner, starting with
 1.2.0 for the stable workspace redesign requested by the user.
 
+The user explicitly requested the major Kartenatelier release **2.0.0** on
+30 September 2026. This overrides the previous patch-only rule for this release.
 For each subsequent delivered change, increment only the final numeric segment
-of `APP_VERSION` in `dist/app.js` once (1.2.1, 1.2.2, ...). Intermediate edits and
+of `APP_VERSION` in `dist/app.js` once (2.0.1, 2.0.2, ...). Intermediate edits and
 verification within the same release do not require additional increments.
 Apply the same release to the hosted Site and the standalone HTML file, and
 update the release noted in README.md. Keep the JSON plan schema version in

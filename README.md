@@ -1,7 +1,12 @@
 # Nova Hive Planner
 
-Current application release: **1.2.5**. Increase the final number once per subsequent delivered update (1.2.1, 1.2.2, …); see `AGENTS.md`. The JSON schema version remains independent.
+Current application release: **2.0.0**. This user-requested major release introduces the Kartenatelier interface. Subsequent ordinary updates increment the final segment; see `AGENTS.md`. The JSON schema version remains independent.
 
+## Kartenatelier (2.0.0)
+
+A warm, readable workspace with three task areas: Build, Players and Check. The map uses the full remaining width until an object is selected. New maps have a brief optional-data setup, one editable alliance, and an empty-map default. Plans groups manual saves, map import and a separate automatic draft history with a read-only preview. Viewers use the same visual language and retain their own appearance selection. Original geometry, graphics, coordinates, archive IDs and all 21 variants remain compatible.
+
+See [release notes](RELEASE-2.0.0.md) and [function mapping and verification](VERIFICATION-2.0.0.md).
 ## Detailed landmarks and HQ 27 bases (1.2.5)
 
 Game view uses the selected HQ 27 base illustration in editor, viewer and image exports. Names, coordinates, beacon badges and alliance borders stay visible; the base footprint remains 3×3. The Sacred Tree, Sacred Mountain, stone statues and Trading Posts now use detailed original artwork. See [RELEASE-1.2.5.md](RELEASE-1.2.5.md).
@@ -54,9 +59,9 @@ The terrain inspector offers a full hex color picker. Colors survive JSON save/o
 
 **Missile** is a red 35×35 overlay by default, with editable width/height and corner resize handles. It can overlap any object or another missile in either placement order and never blocks base-area filling. Select it by its red border, label, or the central warning-symbol drag handle, leaving underlying bases clickable. Viewer visitors can drag the same central handle to simulate missile positions (whole tiles, within world bounds), or focus it and use arrow keys; Shift moves five tiles. Viewer simulations affect only the current view: they never write to the archive or change other visitors’ views. Reset missiles or Refresh restores saved positions. Other objects remain read-only. Only the world boundary limits its placement. Both new dimensions and missiles persist through save/open, archive, viewer and SVG/PNG export. Geometry schema 8 preserves support for schemas 1–7 and old default landmark sizes.
 
-## Mega Hive: five alliances
+## Multiple alliances
 
-The dropdown beside the object tools selects Alliance 1–5. Alliance 1 keeps the original appearance; Alliances 2–5 use yellow, green, purple and orange. All alliances share one finite map and remain visible. Their buildings block one another, and terrain remains impassable to every building. Each alliance can have one Alliance Center in Season 4 and one Marshall. Beacon letters can repeat between alliances, and coverage checks use only the target object's own alliance.
+New maps start with one alliance. Use the context row to select it, or Manage alliance to change its name/color and add another. Existing alliance IDs and colors remain intact. All alliances share one finite map and remain visible. Their buildings block one another, and terrain remains impassable to every building. Each alliance can have one Alliance Center in Season 4 and one Marshall. Beacon letters can repeat between alliances, and coverage checks use only the target object's own alliance.
 
 The selected alliance owns new bases, beacons, centers, Marshall and terrain. Imports, the roster, ten friend groups, priorities and priority labels, Autofill, area filling, clearing players and clearing assignments apply only to that alliance. Each alliance supports 300 players; the map retains the combined 800-object limit. Names can repeat in different alliances. Cross-alliance assignments and groups are rejected. Click another alliance's object to select that alliance automatically. Selection boxes act on the active alliance. Coordinate entry and dragging still operate in the same shared world.
 
