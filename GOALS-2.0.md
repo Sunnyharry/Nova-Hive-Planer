@@ -4,7 +4,7 @@ Stand: 30. September 2026. Ausgangsversion: 1.2.5. Zielrelease: 2.0.0.
 
 Beschlossen ist Kartenatelier als Hauptoberfläche mit einer kurzen geführten Einrichtung für neue Pläne. Die Oberfläche soll ruhiger, natürlicher und einfacher werden. Bestehende Plan-, Karten-, Allianz-, Prüf-, Füll-, Speicher- und Viewer-Funktionen bleiben erhalten.
 
-Der Folgeauftrag „Arbeite alle goals ab“ autorisiert die Umsetzung und Veröffentlichung. G01–G11 sind umgesetzt und geprüft; G12 befindet sich in der Veröffentlichung.
+Der Folgeauftrag „Arbeite alle goals ab“ autorisiert die Umsetzung und Veröffentlichung. G01–G12 sind vollständig umgesetzt, geprüft und veröffentlicht.
 
 ## Status und Reihenfolge
 
@@ -20,7 +20,7 @@ Der Folgeauftrag „Arbeite alle goals ab“ autorisiert die Umsetzung und Verö
 - [x] G09 Kartenoptik und Viewer vereinheitlichen
 - [x] G10 Kleine Bildschirme und flüssige Bedienung
 - [x] G11 Kompatibilität und vollständige Abnahme
-- [ ] G12 Version 2.0.0 veröffentlichen und rücksetzbar halten
+- [x] G12 Version 2.0.0 veröffentlichen und rücksetzbar halten
 
 Die Goals werden in dieser Reihenfolge abgearbeitet. Die Abhängigkeiten erlauben klar getrennte Arbeitspakete; sie sind keine Erlaubnis, neue Chats oder Subagenten zu starten. Ein Goal gilt erst nach seinen Abnahmekriterien als erledigt. Zu jedem Abschluss werden geänderte Dateien, Prüfungen und verbleibende Einschränkungen festgehalten.
 
@@ -297,7 +297,7 @@ Abschlussnachweis: Umsetzung und geprüfte Zugänge in `VERIFICATION-2.0.0.md`; 
 
 ## G12 Version 2.0.0 veröffentlichen und rücksetzbar halten
 
-Status: in Veröffentlichung. Voraussetzung: G11.
+Status: abgeschlossen. Voraussetzung: G11.
 
 Ergebnis: Ein einheitlicher, geprüfter Release mit weiterhin verfügbarem Rückweg zu 1.2.5.
 
@@ -311,9 +311,9 @@ Umfang:
 
 Abnahme:
 
-- [ ] Editor, Viewer und Standalone verwenden zusammenpassende Quellen; sichtbare Version und Releasehinweise stimmen überein.
-- [ ] Die tatsächlichen veröffentlichten Hauptabläufe funktionieren; ein fehlgeschlagenes Deployment wird nicht als abgeschlossen gemeldet.
-- [ ] Das Backup von 1.2.5 bleibt unverändert erhalten und die Wiederherstellung ist nachvollziehbar dokumentiert.
+- [x] Editor, Viewer und Standalone verwenden zusammenpassende Quellen; sichtbare Version und Releasehinweise stimmen überein.
+- [x] Die tatsächlichen veröffentlichten Hauptabläufe funktionieren; ein fehlgeschlagenes Deployment wird nicht als abgeschlossen gemeldet.
+- [x] Das Backup von 1.2.5 bleibt unverändert erhalten und die Wiederherstellung ist nachvollziehbar dokumentiert.
 
-Abschlussnachweis: wird bei Umsetzung ergänzt.
+Abschlussnachweis: Version 2.0.0 ist auf der privaten Editor-Site und dem öffentlichen Viewer erfolgreich veröffentlicht. GitHub/Pages liefert 2.0.0; der veröffentlichte Git-Baum stimmt mit dem geprüften lokalen Release überein. Die Live-Prüfung am 30.09.2026 um 00:41 UTC bestätigte Sichern, Laden aller 21 Varianten, private/unveröffentlichte Daten, bereinigten öffentlichen Viewer, Aktualisierung unter gleicher ID und Konfliktabwehr. Ausschließlich ein neuer Testdatensatz wurde benutzt und anschließend gelöscht. Standalone und verifizierter Abschluss-Snapshot liegen unter `outputs/Releases/Nova-Hive-Planer-2.0.0/`. Das 1.2.5-Backup wurde erneut mit SHA-256 geprüft und ist unverändert. Siehe `VERIFICATION-2.0.0.md`.
 

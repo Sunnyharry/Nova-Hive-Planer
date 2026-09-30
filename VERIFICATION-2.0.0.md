@@ -63,3 +63,12 @@ Messdateien, Screenshots, S04-Regressionsarbeitsstand und vollständige Testprot
 ## Bewusste Grenzen
 
 Die Sicherungsvorschau ist eine Text-/Objektvorschau, kein zweiter Karteneditor. Auf kleinen Displays liegt die zeitweise Werkzeugfläche über der Karte und schließt nach Werkzeugwahl. Online-Sichern braucht weiterhin eine Verbindung; die lokale Bearbeitung und Dateiexporte funktionieren ohne Archivdienst. Vorhandene Sprach-/Theme-Wahl wird respektiert, deshalb startet ein bestehender Browser nicht zwingend in der neuen hellen Grundeinstellung.
+
+
+## Veröffentlichung erfolgreich
+
+Am 30.09.2026 veröffentlicht: [Editor](https://nova-hive-planner.georgiadis-c.chatgpt.site), [Viewer-Dienst](https://nova-hive-viewer.georgiadis-c.chatgpt.site), [GitHub Pages](https://sunnyharry.github.io/Nova-Hive-Planer/dist/index.html). Editor weiterhin privat, Viewer und GitHub unverändert öffentlich. Bestehende Viewer-Links bleiben gültig.
+
+Live-Prüfung um 00:41 UTC: neuen isolierten Datensatz manuell gesichert, alle 21 Varianten geladen, Unveröffentlichtes nicht anonym lesbar, bewusst veröffentlicht, öffentliche Spielerinformationen bereinigt, erneutes Sichern unter derselben Viewer-ID sichtbar, veraltete Version mit 409 abgelehnt. Testdatensatz anschließend gelöscht und Viewer-Zugriff wieder 404. Keine vorhandenen Nutzerkarten verändert. GitHub Pages liefert App 2.0.0, Atelier-Modul und Viewer 2.0.0 jeweils mit HTTP 200.
+
+Standalone zusätzlich in echtem Chrome geprüft: geführter Import der vollständigen S04-Datei mit 282 Objektflächen und 187 Schlammflächen, genau einer Allianz, 21 Varianten, korrekter X865/Y713-Prüfung und tatsächlichem SVG-Download. Der Produktions-Snapshot und die Standalone-Datei liegen lokal unter `outputs/Releases/Nova-Hive-Planer-2.0.0/`; Manifest und ZIP-Inhalte sind hash-/CRC-geprüft. Die SHA-256 des 1.2.5-Backups wurde nach Abschluss erneut unverändert bestätigt.
