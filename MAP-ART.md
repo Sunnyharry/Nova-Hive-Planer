@@ -17,3 +17,5 @@ Version 1.2.5 ergänzt fünf komprimierte WebP-Bilder aus dem lokalen Spielcache
 - Trading Post: `maoyizhan` aus `worldCityTrading_S4`, die Originaltextur der Nahansicht.
 
 Die normalen Prefabs liefern die natürlichen Farben; die separaten `_wuran`-Varianten wurden nicht verwendet. Baum, Statue und Trading Post besitzen im Spiel bereits flache Bildflächen für diese Ansicht. Ihre Schatten sind Teil der Originalbilder. Die Grafiken ändern keine Kollisionsflächen. Strongholds behalten vorerst ihr bisheriges Symbol.
+
+Version 2.0.1 ergänzt das Allianzzentrum: `build_Zhudian` (512 × 512) aus `Assets/Main/SeasonRes/S4/Sprites/AllianceBuilding/build_Zhudian.png`, Bundle 19443. Verwendet wird die originale farbige Gebäudeillustration des zentralen Stromturms, nicht die einfache Plattform `build_Qianyidian` oder das Lager `build_Cangku`. Transparente Ränder beschnitten, WebP Qualität 88. Keine Animationen oder zusätzlichen Anbauten. Die Spielfläche bleibt 9 × 9; der optionale Stromaufladebereich ist separat 41 × 41.

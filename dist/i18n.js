@@ -4,6 +4,7 @@
 const languages=['en','de','fr','es','pt','vi','ko'];
 const columns=['en','fr','es','pt','vi','ko'];
 const messages={
+"Stromaufladebereich": ["Electricity recharge area", "Zone de recharge électrique", "Área de recarga eléctrica", "Área de recarga elétrica", "Vùng sạc điện", "전력 충전 구역"], "Stromaufladebereich anzeigen (41 × 41)": ["Show electricity recharge area (41 × 41)", "Afficher la zone de recharge électrique (41 × 41)", "Mostrar área de recarga eléctrica (41 × 41)", "Mostrar área de recarga elétrica (41 × 41)", "Hiện vùng sạc điện (41 × 41)", "전력 충전 구역 표시 (41 × 41)"], "Zentriert auf dem Allianzzentrum. Die Anzeige wird mit dem Plan gespeichert.": ["Centered on the Alliance Center. This display setting is saved with the plan.", "Centrée sur le centre de l’alliance. Cet affichage est enregistré avec le plan.", "Centrada en el centro de la alianza. Esta opción se guarda con el plan.", "Centralizada no centro da aliança. Esta opção é salva com o plano.", "Lấy trung tâm liên minh làm tâm. Tùy chọn hiển thị được lưu cùng kế hoạch.", "연맹 센터를 중심으로 표시합니다. 표시 설정은 계획과 함께 저장됩니다."],
  "Sprache": [
   "Language",
   "Langue",

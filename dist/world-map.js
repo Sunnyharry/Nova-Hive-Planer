@@ -45,6 +45,15 @@ function baseArtwork(o,caption=true){
  if(!root.HiveMapAssets?.['base-hq27.webp'])return '';
  return `<g data-base-art="hq27" data-theme-preserve="true" pointer-events="none" transform="translate(${o.x} ${-o.y})"><use href="#asset-base-hq27-webp" x="-1.4" y="-1.44" width="2.8" height="${caption?2.05:2.8}"/>${caption?'<rect x="-1.43" y=".12" width="2.86" height="1.31" rx=".1" fill="#0c1723" fill-opacity=".88"/>':''}</g>`;
 }
+function centerArtwork(o,caption=true){
+ if(!root.HiveMapAssets?.['alliance-center.webp'])return '';
+ return `<g data-center-art="s4" data-theme-preserve="true" pointer-events="none" transform="translate(${o.x} ${-o.y})"><use href="#asset-alliance-center-webp" x="-4.35" y="-4.35" width="8.7" height="${caption?6.8:8.7}"/>${caption?'<rect x="-4.35" y="1.35" width="8.7" height="2.95" rx=".18" fill="#0c1723" fill-opacity=".88"/>':''}</g>`;
+}
+function rechargeOverlay(state,o){
+ const M=root.HiveModel,r=M.rechargeBounds(state,o);if(!r)return '';
+ const color=M.allianceColor(state,M.allianceOf(o)),label=esc(tr('Stromaufladebereich'))+' · 41 × 41';
+ return `<g data-recharge-range="${esc(o.id)}" data-theme-preserve="true" pointer-events="none"><title>${label}</title><rect x="${r.left}" y="${-r.top}" width="${r.right-r.left}" height="${r.top-r.bottom}" fill="${color}" fill-opacity=".075" stroke="${color}" stroke-width=".16" stroke-dasharray=".65 .3"/><text x="${(r.left+r.right)/2}" y="${-r.top+1.1}" text-anchor="middle" font-size=".65" fill="#fff" stroke="#182620" stroke-width=".16" paint-order="stroke">${label}</text></g>`;
+}
 function planLabel(a){
  const b=a.bounds,cx=(b.minX+b.maxX)/2,cy=(b.minY+b.maxY)/2,w=b.maxX-b.minX+1,h=b.maxY-b.minY+1;
  const name=tr(names[a.type])+(['city','capital'].includes(a.type)?' · '+tr('Stufe')+' '+a.level:''),coords=`X ${cx} / Y ${cy}`,dimensions=`${w} × ${h}`;
@@ -71,5 +80,5 @@ function render(state,view=null,scale=12,interactive=false,selected=null,externa
 
  return s+'</g>';
 }
-root.HiveWorldMap={parse,validate,apply,index,status,eligible,options,validateOptions,render,terrain,names,assetDefinitions,baseArtwork};
+root.HiveWorldMap={parse,validate,apply,index,status,eligible,options,validateOptions,render,terrain,names,assetDefinitions,baseArtwork,centerArtwork,rechargeOverlay};
 })(globalThis);

@@ -4,7 +4,7 @@ const T=globalThis.HiveThemes??{svg:s=>s,init(){}},I=globalThis.HiveI18n,t=(key,
 const Q=globalThis.HiveQoL;
 const M=globalThis.HiveModel,W=globalThis.HiveWorkspace,$=id=>document.getElementById(id),svg=$('map'),stage=$('stage');
 // User-facing release: increment the final number for each later delivered update.
-const APP_VERSION='2.0.0';
+const APP_VERSION='2.0.1';
 let atelier=null;
 const editorUI={ready:false,left:'objects',inspector:'position',inspectorKey:null,selectionKey:null};
 const TOOL_SHORTCUTS={b:'base',m:'marshall',a:'center',t:'terrain',l:'beacon'};
@@ -100,10 +100,12 @@ function definitions(){const b=M.worldBounds(state);return `<defs><clipPath id="
 
 function objectSvg(o,exporting=false){
  const q=M.displayCoords(state,o),name=M.objectLabel(state,o)+(o.type==='base'&&o.customName&&M.playerFor(state,o)&&M.playerFor(state,o).name!==o.name?' · '+M.playerFor(state,o).name:''),alliance=M.allianceOf(o),tint=M.allianceColor(state,alliance),colored=alliance!==1||tint!==M.ALLIANCE_COLORS[0],active=!exporting&&selectedObjectIds.has(o.id),classes=`object-${o.type}${active?' map-object-selected':''}`;
- const attr=`${['terrain','stronghold','city','missile'].includes(o.type)||o.type==='base'&&state.mapStyle==='game'&&globalThis.HiveMapAssets?.['base-hq27.webp']?'data-theme-preserve="true" ':''}data-object="${esc(o.id)}" class="${classes}" transform="translate(${o.x} ${-o.y})" role="button" aria-label="${esc(name)}, X ${q.x}, Y ${q.y}"`;
+ const attr=`${['terrain','stronghold','city','missile'].includes(o.type)||(['base','center'].includes(o.type)&&state.mapStyle==='game')?'data-theme-preserve="true" ':''}data-object="${esc(o.id)}" class="${classes}" transform="translate(${o.x} ${-o.y})" role="button" aria-label="${esc(name)}, X ${q.x}, Y ${q.y}"`;
  let content='';
  if(o.type==='center'){
+  const gameCenter=state.mapStyle==='game'&&!!globalThis.HiveMapAssets?.['alliance-center.webp'];
   content=`<rect x="-4.5" y="-4.5" width="9" height="9" fill="${!colored?'#27374b':tint+'30'}" stroke="${!colored?'#b1c5d7':tint}" stroke-width=".12"/><text y="-1.05" text-anchor="middle" fill="#edf5fc" font-size="1.55" font-weight="750">AC</text>${nameSvg(name,8,1,.55,'#d7e5f1',.65)}<text x="0" y="1.8" text-anchor="middle" fill="#afc7d7" font-size=".53">X ${num(q.x)}   Y ${num(q.y)}</text><text y="3.2" text-anchor="middle" fill="#8ca7bd" font-size=".48">${h('9 × 9 Felder')}</text>`;
+  if(gameCenter)content=`<rect x="-4.5" y="-4.5" width="9" height="9" fill="${tint}30" stroke="${tint}" stroke-width=".12"/>`+globalThis.HiveWorldMap.centerArtwork({x:0,y:0},Q.view(state).names||Q.view(state).coordinates)+nameSvg(name,8,.95,2,'#ecf7ff',.7)+`<text y="3.1" text-anchor="middle" fill="#bed1dd" font-size=".53">X ${num(q.x)}   Y ${num(q.y)}</text><text y="3.85" text-anchor="middle" fill="#bed1dd" font-size=".48">${h('9 × 9 Felder')}</text>`;
  }else if(M.coreSize(o)){
   const f=M.solidFootprint(o),dx=f.x-o.x,dy=o.y-f.y,scale=Math.min(1,f.w/5,f.h/5);content=`<rect x="${dx-f.w/2}" y="${dy-f.h/2}" width="${f.w}" height="${f.h}" fill="#725039" stroke="#edc096" stroke-width=".15"/><g transform="translate(${dx} ${dy}) scale(${scale})">${nameSvg(name,f.w/scale-.3,1,-.6,'#fff2d7',.7)}<text y=".6" text-anchor="middle" fill="#fff2d7" font-size=".42">${f.w} × ${f.h}</text><text y="1.4" text-anchor="middle" fill="#fff2d7" font-size=".38">X ${num(q.x)} / Y ${num(q.y)}</text></g>`;
  }else if(o.type==='missile'){
@@ -157,6 +159,7 @@ function scene(exporting=false,layer='all'){
  if(layer!=='overlay'){
  for(const o of displayObjects)if(M.coreSize(o))s+=`<rect data-theme-preserve="true" data-object="${esc(o.id)}" x="${o.x-o.w/2}" y="${-o.y-o.h/2}" width="${o.w}" height="${o.h}" fill="#765638" fill-opacity=".5" stroke="#ad865f" stroke-width=".06"/>`;
  if(M.isSeason4(state)&&state.showLight)for(const o of displayObjects)if(o.type==='base'&&o.beacon)s+=`<rect x="${o.x-o.lightSize/2}" y="${-o.y-o.lightSize/2}" width="${o.lightSize}" height="${o.lightSize}" fill="${color(o)}" fill-opacity=".045" stroke="${color(o)}" stroke-opacity=".8" stroke-width=".09" pointer-events="none"/>`;
+ for(const o of displayObjects)if(o.type==='center')s+=globalThis.HiveWorldMap.rechargeOverlay(state,o);
  const drawn=new Set();for(const o of displayObjects.filter(o=>o.type!=='missile')){if(o.terrainGroup){if(drawn.has(o.terrainGroup))continue;drawn.add(o.terrainGroup);s+=filterMapLabels(compoundTerrainSvg(displayObjects.filter(q=>q.terrainGroup===o.terrainGroup),exporting));}else s+=objectSvg(o,exporting);}
  for(const o of displayObjects)if(o.type==='missile')s+=objectSvg(o,exporting);
  }
@@ -286,6 +289,7 @@ function renderInspectorContent(){
   s+=`<form id="object-size-form" class="terrain-size-form"><h3>${h(M.coreSize(o)?'Äußere Schlammfläche':'Missile-Bereich')}</h3>${fields('object',o.w,o.h)}${M.coreSize(o)?`<h3>${h('Fester Kern')}</h3>${fields('core',M.coreSize(o),M.coreHeight(o))}`:''}<button class="full" type="submit">${h('Größe übernehmen')}</button><p class="field-help">${h('Die linke untere Ecke bleibt bei Größenänderungen über diese Felder fest.')}</p><p class="field-help">${h(M.coreSize(o)?'Der Kern liegt auf ganzen Feldern möglichst mittig. Nur der Kern blockiert Gebäude.':'Rote Markierung ohne Kollisionen. Andere Objekte bleiben frei platzierbar.')}</p><p class="field-help">${h('Zum Ändern der Größe an den Eckpfeilen auf der Karte ziehen.')}</p></form>`;
  }
  s+=objectPositionForm(o);
+ if(o.type==='center')s+=`<label class="check-label"><input id="center-recharge" type="checkbox" ${o.showRecharge?'checked':''}> ${h('Stromaufladebereich anzeigen (41 × 41)')}</label><p class="field-help">${h('Zentriert auf dem Allianzzentrum. Die Anzeige wird mit dem Plan gespeichert.')}</p>`;
  if(o.type==='base'&&M.isSeason4(state)){
   s+=`<label class="check-label"><input id="beacon-enabled" type="checkbox" ${o.beacon?'checked':''}> ${h('Dieser Spieler ist ein Beacon')}</label>`;
   if(o.beacon)s+=`<div class="inline-fields"><label>${h('Markierung')}<select id="beacon-letter">${Array.from('ABCDEFGHIJKLMNOPQRSTUVWXYZ').map(c=>`<option ${c===o.beacon?'selected':''} ${M.allianceObjects(state).some(a=>a.id!==o.id&&a.beacon===c)?'disabled':''}>${c}</option>`).join('')}</select></label><label>${h('Elektriker')}<input id="electricians" type="number" min="0" max="100" step="1" value="${o.electricians}"></label></div><label>${h('L4-Lichtbreite in Feldern')}<input id="light-size" type="number" min="1" max="101" step="1" value="${o.lightSize}"></label>`;
@@ -534,6 +538,7 @@ $('inspector').addEventListener('change',e=>{
   if(id==='terrain-color')return commit(M.updateObject(state,o.id,{color:e.target.value}));
   if(id==='terrain-group-name'){let next=state;for(const part of M.terrainParts(state,o))next=M.updateObject(next,part.id,{name:e.target.value});return commit(next);}
   if(id==='object-name-edit')return commit(M.updateObject(state,o.id,{name:e.target.value}));
+  if(id==='center-recharge')return commit(M.updateObject(state,o.id,{showRecharge:e.target.checked}));
   if(id==='beacon-enabled')return commit(M.updateObject(state,o.id,{beacon:e.target.checked?M.nextBeacon(state):null}));
   if(id==='beacon-letter')return commit(M.updateObject(state,o.id,{beacon:e.target.value}));
   if(id==='electricians')return commit(M.updateObject(state,o.id,{electricians:Number(e.target.value)}));

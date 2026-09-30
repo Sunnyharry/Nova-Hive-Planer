@@ -1,6 +1,6 @@
 # Nova Hive Planner
 
-Current application release: **2.0.0**. This user-requested major release introduces the Kartenatelier interface. Subsequent ordinary updates increment the final segment; see `AGENTS.md`. The JSON schema version remains independent.
+Current application release: **2.0.1**. See [2.0.1 release notes](RELEASE-2.0.1.md) for the Alliance Center artwork and optional 41×41 recharge display. This user-requested major release introduces the Kartenatelier interface. Subsequent ordinary updates increment the final segment; see `AGENTS.md`. The JSON schema version remains independent.
 
 ## Kartenatelier (2.0.0)
 

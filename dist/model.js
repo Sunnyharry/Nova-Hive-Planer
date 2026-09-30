@@ -480,6 +480,7 @@ function updateObject(state,id,patch){
  }
  if(patch.name!==undefined&&obj.type==='base'){const name=normalizeName(patch.name).slice(0,80);if(name){obj.name=name;obj.customName=true;}else{delete obj.name;delete obj.customName;}}
  if(patch.name!==undefined&&obj.type!=='base'){const name=normalizeName(patch.name).slice(0,80);obj.name=name||DEFAULT_NAMES[obj.type];if(name)obj.customName=true;else delete obj.customName;}
+ if(obj.type==='center'&&patch.showRecharge!==undefined){if(typeof patch.showRecharge!=='boolean')throw new Error(t('Ungültiges Kartenelement.'));obj.showRecharge=patch.showRecharge;}
  if(obj.type==='base'){
   if(patch.beacon!==undefined){if(patch.beacon!==null&&!/^[A-Z]$/.test(patch.beacon))throw new Error(t('Beacon-Buchstabe: A bis Z.'));if(patch.beacon&&next.objects.some(q=>q.id!==id&&q.beacon===patch.beacon&&allianceOf(q)===allianceOf(obj)))throw new Error(t('Dieser Beacon-Buchstabe ist bereits vergeben.'));obj.beacon=patch.beacon;}
   if(patch.lightSize!==undefined){if(!Number.isInteger(patch.lightSize)||!finite(patch.lightSize,1,101))throw new Error(t('Lichtbreite: 1 bis 101 Felder.'));obj.lightSize=patch.lightSize;}
@@ -509,10 +510,13 @@ function coverage(state,o){
  }
  return {singleFull:false,unionFull:Math.abs(area-o.w*o.h)<1e-7,center};
 }
+// Display-only range: never part of collisions, landing checks or beacon coverage.
+function rechargeArea(o){return o.type==='center'&&o.showRecharge===true?{x:o.x,y:o.y,w:41,h:41}:null;}
+function rechargeBounds(state,o){const area=rechargeArea(o);if(!area)return null;const r=rect(area),w=worldBounds(state);return {left:Math.max(r.left,w.left),right:Math.min(r.right,w.right),bottom:Math.max(r.bottom,w.bottom),top:Math.min(r.top,w.top)};}
 function bounds(state,includeLight=state.showLight){
  const all=[...state.objects];if(includeLight)for(const o of state.objects)if(o.beacon)all.push({x:o.x,y:o.y,w:o.lightSize,h:o.lightSize});
  if(!all.length)return {left:state.origin.mapX-20,right:state.origin.mapX+20,bottom:state.origin.mapY-20,top:state.origin.mapY+20};
- const rs=all.map(rect);return {left:Math.min(...rs.map(r=>r.left)),right:Math.max(...rs.map(r=>r.right)),bottom:Math.min(...rs.map(r=>r.bottom)),top:Math.max(...rs.map(r=>r.top))};
+ const rs=[...all.map(rect),...state.objects.map(o=>rechargeBounds(state,o)).filter(Boolean)];return {left:Math.min(...rs.map(r=>r.left)),right:Math.max(...rs.map(r=>r.right)),bottom:Math.min(...rs.map(r=>r.bottom)),top:Math.max(...rs.map(r=>r.top))};
 }
 function validate(raw){
  if(!raw||raw.schema!==SCHEMA||![1,2,3,4,5,6,7,8,9,10,11,VERSION].includes(raw.version))throw new Error(t('Das ist keine unterstützte Hive-Plan-Datei.'));
@@ -555,6 +559,7 @@ function validate(raw){
   if(raw.version<5&&o.type==='terrain'){q.x=Math.floor(o.x-(w-1)/2)+(w-1)/2;q.y=Math.floor(o.y-(h-1)/2)+(h-1)/2;}
   for(const key of ['centerConfirmedX','centerConfirmedY','locked'])if(o[key]!==undefined){if(typeof o[key]!=='boolean')throw new Error(t('Ungültige Größe oder Position eines Elements.'));q[key]=o[key];}
   if(o.selectionGroup!==undefined){if(typeof o.selectionGroup!=='string'||!o.selectionGroup.trim()||o.selectionGroup.length>80)throw new Error(t('Ungültige Gruppenliste.'));q.selectionGroup=o.selectionGroup;}
+  if(o.type==='center'&&o.showRecharge!==undefined){if(typeof o.showRecharge!=='boolean')throw new Error(t('Ungültiges Kartenelement.'));q.showRecharge=o.showRecharge;}
   if(o.type==='base'){
    if(o.name!==undefined){if(typeof o.name!=='string'||o.name.length>80)throw new Error(t('Ungültiger Elementname.'));q.name=o.name;}if(o.customName!==undefined){if(typeof o.customName!=='boolean')throw new Error(t('Ungültiger Elementname.'));q.customName=o.customName;}
    if(!Number.isInteger(o.slot)||!finite(o.slot,1,100000)||!Number.isInteger(o.lightSize)||!finite(o.lightSize,1,101)||!Number.isInteger(o.electricians)||!finite(o.electricians,0,100))throw new Error(t('Ungültige Basis-Einstellungen.'));
@@ -579,7 +584,7 @@ function validate(raw){
  if(raw.mapOptions!==undefined)state.mapOptions=root.HiveWorldMap.validateOptions(raw.mapOptions);
  state.allianceProfiles=validateAlliances(alliances(state));return state;
 }
-root.HiveModel={alliances,usedAlliances,allianceName,allianceColor,validateAlliances,editAlliance,geometry,prefix,tileCount,mudContact,baseSeatEligible,assertUnlocked,selectionCenter,setSelectionCenter,cornerCoords,displayCoords,centerLimits,setObjectCenter,coreSize,coreHeight,resizable,assertDimensions,solidFootprint,blocks,ALLIANCE_COLORS,allianceOf,activeAlliance,owns,allianceObjects,alliancePlayers,allianceGroups,priorityLabelsFor,referencePoint,setAlliance,resetAllianceLayout,SCHEMA,VERSION,WORLD_SIZE,worldBounds,referenceCoords,assertWorldPlacement,setObjectCorner,PRIORITY_DEFAULTS,priorityOf,priorityLabel,setPlayerPriorities,setPriorityLabel,setPlayerGroups,groupPriority,SEASONS,emptyGroups,isSeason4,isDeveloping,anchorType,setSeason,groupForPlayer,setPlayerGroup,clearPlayers,areNeighbors,groupComponents,terrainResizeCandidate,resizeTerrain,terrainCornerCoords,terrainPositionFromCornerCoords,setTerrainCorner,connectTerrains,disconnectTerrains,terrainTouching,terrainsConnected,terrainParts,expandObjectIds,objectBounds,terrainUnionGeometry,planBaseFill,fillBases,moveObjects,removeObjects,COLORS,clone,uid,normalizeName,snap,rect,overlaps,coords,positionFromCoords,playerFor,objectForPlayer,objectLabel,makeLayout,collision,assertPlacement,moveObject,nextBeacon,makeObject,addObject,removeObject,parsePlayerFile,decodePlayerFile,importPlayers,addPlayers,autofillOptions,autofill,assign,unassign,unassignAll,removePlayer,setOrigin,updateObject,coverage,bounds,validate};
+root.HiveModel={rechargeArea,rechargeBounds,alliances,usedAlliances,allianceName,allianceColor,validateAlliances,editAlliance,geometry,prefix,tileCount,mudContact,baseSeatEligible,assertUnlocked,selectionCenter,setSelectionCenter,cornerCoords,displayCoords,centerLimits,setObjectCenter,coreSize,coreHeight,resizable,assertDimensions,solidFootprint,blocks,ALLIANCE_COLORS,allianceOf,activeAlliance,owns,allianceObjects,alliancePlayers,allianceGroups,priorityLabelsFor,referencePoint,setAlliance,resetAllianceLayout,SCHEMA,VERSION,WORLD_SIZE,worldBounds,referenceCoords,assertWorldPlacement,setObjectCorner,PRIORITY_DEFAULTS,priorityOf,priorityLabel,setPlayerPriorities,setPriorityLabel,setPlayerGroups,groupPriority,SEASONS,emptyGroups,isSeason4,isDeveloping,anchorType,setSeason,groupForPlayer,setPlayerGroup,clearPlayers,areNeighbors,groupComponents,terrainResizeCandidate,resizeTerrain,terrainCornerCoords,terrainPositionFromCornerCoords,setTerrainCorner,connectTerrains,disconnectTerrains,terrainTouching,terrainsConnected,terrainParts,expandObjectIds,objectBounds,terrainUnionGeometry,planBaseFill,fillBases,moveObjects,removeObjects,COLORS,clone,uid,normalizeName,snap,rect,overlaps,coords,positionFromCoords,playerFor,objectForPlayer,objectLabel,makeLayout,collision,assertPlacement,moveObject,nextBeacon,makeObject,addObject,removeObject,parsePlayerFile,decodePlayerFile,importPlayers,addPlayers,autofillOptions,autofill,assign,unassign,unassignAll,removePlayer,setOrigin,updateObject,coverage,bounds,validate};
 })(globalThis);
 
 /* Editing helpers shared by the editor and its tests. Geometry stays in HiveModel. */
