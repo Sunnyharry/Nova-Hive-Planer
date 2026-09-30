@@ -1,6 +1,7 @@
 /* Version 2: product chrome; existing map geometry and semantic colors are retained. */
 html{--ui-bg:#f7f8f4;--ui-panel:#fff;--ui-raised:#eef2eb;--ui-text:#273b30;--ui-muted:#526459;--ui-border:#d4ddd3;--ui-brand:#376648;--ui-on-brand:#fff;--ui-danger:#a12d38;--ui-shadow:0 10px 32px #23362c18;--bg:var(--ui-bg);--panel:var(--ui-panel);--raised:var(--ui-raised);--border:var(--ui-border);--muted:var(--ui-muted);--accent:var(--ui-brand);--focus:var(--ui-brand);color-scheme:light}
-html[data-theme=night]{--ui-bg:#202823;--ui-panel:#29332d;--ui-raised:#344239;--ui-text:#edf3eb;--ui-muted:#bacabf;--ui-border:#53665a;--ui-brand:#b3d7b9;--ui-on-brand:#173420;--ui-danger:#ffb1b5;--ui-shadow:0 10px 32px #0005;color-scheme:dark}
+html[data-theme=night]{--ui-bg:#0b1522;--ui-panel:#132337;--ui-raised:#1c3049;--ui-text:#e6eff9;--ui-muted:#b0c3d8;--ui-border:#405b78;--ui-brand:#8dc6ff;--ui-on-brand:#0c2742;--ui-danger:#ffb1b5;--ui-shadow:0 10px 32px #0005;color-scheme:dark}
+html[data-theme=night] dialog::backdrop{background:#07132199}
 html[data-theme=sky]{--ui-bg:#f4f7fa;--ui-raised:#eaf1f7;--ui-text:#263c50;--ui-muted:#526b80;--ui-border:#cfdbe5;--ui-brand:#285e87}
 html[data-theme=sand]{--ui-bg:#f9f6ef;--ui-raised:#f0e9da;--ui-text:#443c30;--ui-muted:#685d49;--ui-border:#ded4c1;--ui-brand:#775829}
 body{background:var(--ui-bg);color:var(--ui-text);font-family:'Segoe UI',system-ui,sans-serif;font-size:14px;line-height:1.5}

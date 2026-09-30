@@ -4,7 +4,7 @@ const T=globalThis.HiveThemes??{svg:s=>s,init(){}},I=globalThis.HiveI18n,t=(key,
 const Q=globalThis.HiveQoL;
 const M=globalThis.HiveModel,W=globalThis.HiveWorkspace,$=id=>document.getElementById(id),svg=$('map'),stage=$('stage');
 // User-facing release: increment the final number for each later delivered update.
-const APP_VERSION='2.0.2';
+const APP_VERSION='2.0.3';
 let atelier=null;
 const editorUI={ready:false,left:'objects',inspector:'position',inspectorKey:null,selectionKey:null};
 const TOOL_SHORTCUTS={b:'base',m:'marshall',a:'center',t:'terrain',l:'beacon'};

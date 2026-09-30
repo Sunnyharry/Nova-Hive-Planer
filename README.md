@@ -1,6 +1,6 @@
 # Nova Hive Planner
 
-Current application release: **2.0.2**. See [2.0.2 release notes](RELEASE-2.0.2.md) for corrected mountain positions and Sushi Restaurant artwork. See [2.0.1 release notes](RELEASE-2.0.1.md) for the Alliance Center artwork and optional 41×41 recharge display. This user-requested major release introduces the Kartenatelier interface. Subsequent ordinary updates increment the final segment; see `AGENTS.md`. The JSON schema version remains independent.
+Current application release: **2.0.3**. See [2.0.3 release notes](RELEASE-2.0.3.md) for the marine-blue Night theme and default appearance. See [2.0.2 release notes](RELEASE-2.0.2.md) for corrected mountain positions and Sushi Restaurant artwork. See [2.0.1 release notes](RELEASE-2.0.1.md) for the Alliance Center artwork and optional 41×41 recharge display. This user-requested major release introduces the Kartenatelier interface. Subsequent ordinary updates increment the final segment; see `AGENTS.md`. The JSON schema version remains independent.
 
 ## Kartenatelier (2.0.0)
 
@@ -160,7 +160,7 @@ Optional WebMCP tools register only when `document.modelContext` supports them a
 
 ## Appearance themes
 
-The dropdown beside Language offers Night (the original), Sky (light blue), Sand (warm neutrals) and Sage (soft green). Themes cover the full editor, map, dialogs and both viewers; the selected palette is remembered per browser origin. Theme switching only repaints the view, keeping geometry, camera, selection, saved plans and temporary missile positions intact. SVG and PNG exports use the current theme. Custom terrain colors, landmark cores and semantic alliance strokes are preserved. Names are translated in all seven languages.
+The dropdown beside Language offers Night (dark marine blue, the default), Sky (light blue), Sand (warm neutrals) and Sage (soft green). Themes cover the full editor, map, dialogs and both viewers; the selected palette is remembered per browser origin. Theme switching only repaints the view, keeping geometry, camera, selection, saved plans and temporary missile positions intact. SVG and PNG exports use the current theme. Custom terrain colors, landmark cores and semantic alliance strokes are preserved. Names are translated in all seven languages.
 
 ## Center coordinates and object names (1.1.15)
 
